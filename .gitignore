@@ -1,0 +1,16 @@
+# Data files (too large for Git)
+data/*.csv
+data/*.parquet
+
+# Python/Jupyter
+__pycache__/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+.env
