@@ -1,6 +1,7 @@
 # Data files (too large for Git)
 data/*.csv
 data/*.parquet
+../photos_metadatas_filtered.csv
 
 # Python/Jupyter
 __pycache__/

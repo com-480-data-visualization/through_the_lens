@@ -179,6 +179,7 @@ canvas{display:block}
   </div>
 </section>
 
+<script src="viz_data.js"></script>
 <script>
 // ═══════════════════════════════════════════════
 // UTILITIES
@@ -222,7 +223,7 @@ function animCount(id,target,fmt){
 const io=new IntersectionObserver(entries=>{entries.forEach(e=>{
   if(!e.isIntersecting)return;
   const id=e.target.id;
-  if(id==='s-hero'){animCount('c1',56890);animCount('c2',847);animCount('c3',53)}
+  if(id==='s-hero'){animCount('c1',HERO_STATS.photos);animCount('c2',HERO_STATS.days);animCount('c3',HERO_STATS.lenses)}
   if(id==='s-exposure'){resizeExp();drawExposure()}
   if(id==='s-gear'){resizeGear();setRaceMonth(0)}
   io.unobserve(e.target);
@@ -275,23 +276,14 @@ const EXP_COLOR_MAPS={
   scene: {fn:d=>d.scene==='outdoor'?P.g4:d.scene==='indoor'?P.g5:P.g7,items:[{label:'Outdoor',color:P.g4},{label:'Indoor',color:P.g5},{label:'Event / night',color:P.g7}]},
 };
 
-const N_EXP=900;
-const expRnd=rng(55);
-const EXP_RAW=[];
-for(let i=0;i<N_EXP;i++){
-  const rv=expRnd(),scene=rv<.48?'outdoor':rv<.76?'indoor':'event';
-  const yr=String(YEARS[Math.floor(expRnd()*4)]);
-  const cr=expRnd(),cam=cr<.74?'Sony':cr<.89?'Fuji':'Other';
-  let iso,aperture,shutter,focal;
-  if(scene==='outdoor'){iso=100*Math.pow(2,expRnd()*3.5);aperture=2.8+expRnd()*5.6;shutter=1/(250+expRnd()*1750);}
-  else if(scene==='indoor'){iso=100*Math.pow(2,2.5+expRnd()*3.5);aperture=1.4+expRnd()*2.2;shutter=1/(60+expRnd()*300);}
-  else{iso=100*Math.pow(2,4+expRnd()*3.5);aperture=1.4+expRnd()*1.6;shutter=1/(30+expRnd()*200);}
-  const focals=[14,24,35,50,70,100,135,200],fw=cam==='Fuji'?[0,0,.1,.6,.15,.1,.05,0]:[.05,.1,.08,.42,.15,.1,.05,.05];
-  let cum=0,fr=expRnd(),fl=50;
-  for(let j=0;j<focals.length;j++){cum+=fw[j];if(fr<cum){fl=focals[j];break}}
-  focal=fl*(1+(expRnd()-.5)*.14);
-  EXP_RAW.push({iso,aperture,shutter,focal,yr,cam,scene,jx:(expRnd()-.5)*.016,jy:(expRnd()-.5)*.016});
-}
+// Add per-point jitter and derive scene from ISO
+const jRnd=rng(55);
+const EXP_RAW=EXP_DATA.map(d=>({
+  ...d,
+  scene: d.iso<800?'outdoor':d.iso<3200?'indoor':'event',
+  jx:(jRnd()-.5)*.016,
+  jy:(jRnd()-.5)*.016,
+}));
 
 const expSpeedRnd=rng(88);
 const expSprings=EXP_RAW.map(()=>({cx:0,cy:0,vx:0,vy:0,tx:0,ty:0,stiff:0.018+expSpeedRnd()*0.055,damp:0.78+expSpeedRnd()*0.14}));
@@ -455,21 +447,8 @@ function resizeExp(){EXP_C.width=EXP_C.parentElement.clientWidth;redrawExposure(
 const GR_C=document.getElementById('gear-canvas');
 const grCtx=GR_C.getContext('2d');
 
-const CAMERAS=['Sony A7M4','Fuji X100VI','iPhone 13 Pro','Sony A7M5','Panasonic LX100'];
-const CAM_COLS={'Sony A7M4':P.g1,'Fuji X100VI':P.g2,'iPhone 13 Pro':P.g4,'Sony A7M5':P.g7,'Panasonic LX100':P.g8};
-
-function camIncrement(cam,month){
-  const monthlyBase={
-    'Sony A7M4':   month<12?0:month<15?200+(month-12)*120:month<24?700+(month-15)*50:month<36?1150+(month-24)*20:1380+(month-36)*10,
-    'Fuji X100VI': month<16?0:month<20?100+(month-16)*100:month<36?500:month<42?480:450,
-    'iPhone 13 Pro':Math.max(40,820-month*18),
-    'Sony A7M5':   month<27?0:month<30?100+(month-27)*120:month<36?480+(month-30)*30:month<48?640+(month-36)*8:640,
-    'Panasonic LX100':month<8?380:month<18?Math.max(80,380-(month-8)*30):Math.max(20,80-(month-18)*5),
-  };
-  return Math.max(0,Math.round(monthlyBase[cam]||0));
-}
-
-const cumGear={};CAMERAS.forEach(c=>{cumGear[c]=[];let t=0;for(let m=0;m<48;m++){t+=camIncrement(c,m);cumGear[c].push(t)}});
+// CAMERAS, CAM_COLS and GEAR_CUMULATIVE come from viz_data.js
+const cumGear=GEAR_CUMULATIVE;
 
 let activeCams=new Set(CAMERAS);
 let raceMonth=0;let isPlaying=false;let playAF=null;
