@@ -1,0 +1,100 @@
+{
+  "version": "v1",
+  "default_confidence": 0.9,
+  "exact_album_rules": [
+    {
+      "album": "Artiphys",
+      "tags": ["event_epfl", "association_event", "party_festival", "campus_life"]
+    },
+    {
+      "album": "Balélec",
+      "tags": ["event_epfl", "concert_show", "party_festival", "campus_life"]
+    },
+    {
+      "album": "UICC ",
+      "tags": ["client_uicc", "conference", "corporate_event"]
+    },
+    {
+      "album": "STCC",
+      "tags": ["client_stcc", "corporate_event"]
+    },
+    {
+      "album": "World Cancer Congress",
+      "tags": ["conference", "corporate_event"]
+    },
+    {
+      "album": "Mariages",
+      "tags": ["wedding", "private_event"]
+    },
+    {
+      "album": "Welcome Day",
+      "tags": ["event_epfl", "association_event", "campus_life"]
+    },
+    {
+      "album": "AGEPoly",
+      "tags": ["event_epfl", "association_event", "campus_life"]
+    },
+    {
+      "album": "Assos EPFL",
+      "tags": ["event_epfl", "association_event", "campus_life"]
+    },
+    {
+      "album": "Challenge",
+      "tags": ["sports", "event_epfl", "campus_life"]
+    },
+    {
+      "album": "Randos",
+      "tags": ["sports", "travel", "outdoor"]
+    },
+    {
+      "album": "Summer 22",
+      "tags": ["travel", "private_event"]
+    },
+    {
+      "album": "Summer 2024",
+      "tags": ["travel", "private_event"]
+    },
+    {
+      "album": "Vacances d'été",
+      "tags": ["travel", "private_event"]
+    },
+    {
+      "album": "Famille : Vacances",
+      "tags": ["travel", "private_event"]
+    }
+  ],
+  "substring_album_rules": [
+    {
+      "contains": "camp",
+      "tags": ["event_epfl", "campus_life"]
+    },
+    {
+      "contains": "festival",
+      "tags": ["party_festival"]
+    },
+    {
+      "contains": "concert",
+      "tags": ["concert_show"]
+    },
+    {
+      "contains": "wedding",
+      "tags": ["wedding", "private_event"]
+    },
+    {
+      "contains": "mariag",
+      "tags": ["wedding", "private_event"]
+    },
+    {
+      "contains": "vacance",
+      "tags": ["travel", "private_event"]
+    },
+    {
+      "contains": "rando",
+      "tags": ["sports", "travel", "outdoor"]
+    },
+    {
+      "contains": "epfl",
+      "tags": ["event_epfl", "campus_life"]
+    }
+  ]
+}

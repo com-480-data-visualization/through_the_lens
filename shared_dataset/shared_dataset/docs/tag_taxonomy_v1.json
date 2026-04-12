@@ -1,0 +1,47 @@
+{
+  "version": "v1",
+  "description": "Taxonomie hybride métier + visuel pour tagging photo.",
+  "tag_groups": {
+    "business_context": [
+      "client_uicc",
+      "client_stcc",
+      "event_epfl",
+      "private_event",
+      "wedding",
+      "travel",
+      "sports",
+      "campus_life"
+    ],
+    "event_type": [
+      "concert_show",
+      "conference",
+      "ceremony",
+      "party_festival",
+      "association_event",
+      "corporate_event"
+    ],
+    "visual_scene": [
+      "has_people",
+      "indoor",
+      "outdoor",
+      "stage_scene",
+      "crowd",
+      "group_photo",
+      "portrait",
+      "action",
+      "night_scene"
+    ],
+    "capture_conditions": [
+      "low_light",
+      "flash_used",
+      "high_iso",
+      "long_exposure"
+    ]
+  },
+  "system_fields": [
+    "tag_confidence_overall",
+    "needs_review",
+    "review_status",
+    "tag_source"
+  ]
+}

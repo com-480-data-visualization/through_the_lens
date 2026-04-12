@@ -2,6 +2,14 @@
 data/*.csv
 data/*.parquet
 ../photos_metadatas_filtered.csv
+shared_dataset/shared_dataset/metadata/*.csv
+shared_dataset/shared_dataset/histograms/*.parquet
+shared_dataset/shared_dataset/histograms/*.json
+shared_dataset/shared_dataset/histograms/*.jsonl
+shared_dataset/shared_dataset/immich_embeddings/*.csv
+shared_dataset/shared_dataset/immich_embeddings/*.npz
+shared_dataset/shared_dataset/immich_embeddings/*.json
+__MACOSX/
 
 # Python/Jupyter
 __pycache__/
