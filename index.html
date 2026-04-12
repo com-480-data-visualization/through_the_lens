@@ -32,7 +32,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .nav-link:hover,.nav-link.on{color:var(--accent)}
 
 /* SECTIONS */
-section{min-height:100vh;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:80px 40px;position:relative}
+section{min-height:100vh;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px 24px;position:relative}
 
 /* HERO */
 #s-hero{background:var(--bg);text-align:center}
@@ -48,7 +48,7 @@ section{min-height:100vh;scroll-snap-align:start;display:flex;flex-direction:col
 @keyframes sdp{0%,100%{opacity:.3}50%{opacity:1}}
 
 /* VIZ CARD */
-.viz-card{background:var(--card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:1060px;padding:28px 32px;box-shadow:0 1px 4px rgba(15,23,42,.06)}
+.viz-card{background:var(--card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:min(1400px,calc(100vw - 48px));padding:28px 32px;box-shadow:0 1px 4px rgba(15,23,42,.06)}
 .viz-card-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:500;color:var(--text);margin-bottom:4px}
 .viz-card-sub{font-size:13px;color:var(--muted);margin-bottom:22px}
 
@@ -156,7 +156,7 @@ canvas{display:block}
         <div id="exp-insight-body" style="font-size:12px;color:var(--muted);line-height:1.75"></div>
       </div>
     </div>
-    <canvas id="exp-canvas" height="380"></canvas>
+    <canvas id="exp-canvas" height="500"></canvas>
     <div class="legend" id="exp-legend"></div>
   </div>
 </section>
@@ -164,18 +164,13 @@ canvas{display:block}
 <!-- ═══ GEAR RACE ═══ -->
 <section id="s-gear">
   <div class="viz-card">
-    <div class="viz-card-title">Gear Race</div>
-    <div class="viz-card-sub">Cumulative photos per camera body over time. Watch as the Sony takes over.</div>
-    <div class="play-row">
-      <button class="play-btn" id="play-btn" onclick="togglePlay()">▶</button>
-      <div class="time-label" id="race-label">Jan 2021</div>
-      <input type="range" id="race-slider" min="0" max="47" value="0" oninput="setRaceMonth(+this.value)">
-    </div>
+    <div class="viz-card-title">Gear Timeline</div>
+    <div class="viz-card-sub">Each row is a camera. Each column is a month. Colour intensity = shots taken. Hover for details.</div>
     <div class="ctrl-row">
       <span class="ctrl-label">Show cameras</span>
       <div class="toggle-group" id="cam-toggles"></div>
     </div>
-    <canvas id="gear-canvas" height="280"></canvas>
+    <canvas id="gear-canvas" height="420"></canvas>
   </div>
 </section>
 
@@ -225,7 +220,7 @@ const io=new IntersectionObserver(entries=>{entries.forEach(e=>{
   const id=e.target.id;
   if(id==='s-hero'){animCount('c1',HERO_STATS.photos);animCount('c2',HERO_STATS.days);animCount('c3',HERO_STATS.lenses)}
   if(id==='s-exposure'){resizeExp();drawExposure()}
-  if(id==='s-gear'){resizeGear();setRaceMonth(0)}
+  if(id==='s-gear'){resizeGear()}
   io.unobserve(e.target);
 })},{threshold:.25});
 ['s-hero','s-exposure','s-gear'].forEach(id=>io.observe(document.getElementById(id)));
@@ -344,10 +339,12 @@ function computeExpTargets(){
   const yKey=document.getElementById('y-axis').value;
   const W=EXP_C.width,H=EXP_C.height;
   const PL=64,PR=20,PT=22,PB=50,PW=W-PL-PR,PH=H-PT-PB;
+  const PAD=20;
   EXP_RAW.forEach((d,i)=>{
-    const xn=clamp(AXES[xKey].xform(d[xKey])+d.jx,0.01,0.99);
-    const yn=clamp(AXES[yKey].xform(d[yKey])+d.jy,0.01,0.99);
-    expSprings[i].tx=PL+xn*PW;expSprings[i].ty=PT+(1-yn)*PH;
+    const xn=clamp(AXES[xKey].xform(d[xKey])+d.jx,0,1);
+    const yn=clamp(AXES[yKey].xform(d[yKey])+d.jy,0,1);
+    expSprings[i].tx=PL+PAD+xn*(PW-2*PAD);
+    expSprings[i].ty=PT+PAD+(1-yn)*(PH-2*PAD);
   });
 }
 
@@ -380,7 +377,10 @@ function drawExpFrame(){
   expCtx.strokeStyle=P.dim;expCtx.lineWidth=1;
   expCtx.beginPath();expCtx.moveTo(PL,PT);expCtx.lineTo(PL,PT+PH);expCtx.lineTo(PL+PW,PT+PH);expCtx.stroke();
 
-  // Dots
+  // Dots — clipped to padded plot area (PAD matches computeExpTargets)
+  const DOT_PAD=20;
+  expCtx.save();
+  expCtx.beginPath();expCtx.rect(PL+DOT_PAD-6,PT+DOT_PAD-6,PW-2*(DOT_PAD-6),PH-2*(DOT_PAD-6));expCtx.clip();
   EXP_RAW.forEach((d,i)=>{
     const s=expSprings[i],col=colMap.fn(d);
     expCtx.beginPath();expCtx.arc(s.cx,s.cy,4.5,0,Math.PI*2);
@@ -388,6 +388,7 @@ function drawExpFrame(){
     expCtx.globalAlpha=1;expCtx.strokeStyle='rgba(255,255,255,0.6)';expCtx.lineWidth=0.8;expCtx.stroke();
     expCtx.globalAlpha=1;
   });
+  expCtx.restore();
 
   // Legend
   const lg=document.getElementById('exp-legend');lg.innerHTML='';
@@ -439,7 +440,8 @@ EXP_C.addEventListener('mousemove',e=>{
   else hideTT();
 });
 EXP_C.addEventListener('mouseleave',hideTT);
-function resizeExp(){EXP_C.width=EXP_C.parentElement.clientWidth;redrawExposure()}
+function cardInnerWidth(el){const cs=getComputedStyle(el.parentElement);return el.parentElement.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);}
+function resizeExp(){EXP_C.width=cardInnerWidth(EXP_C);redrawExposure()}
 
 // ═══════════════════════════════════════════════
 // 2. GEAR RACE
@@ -447,21 +449,20 @@ function resizeExp(){EXP_C.width=EXP_C.parentElement.clientWidth;redrawExposure(
 const GR_C=document.getElementById('gear-canvas');
 const grCtx=GR_C.getContext('2d');
 
-// CAMERAS, CAM_COLS and GEAR_CUMULATIVE come from viz_data.js
-const cumGear=GEAR_CUMULATIVE;
+// CAMERAS, CAM_COLS and GEAR_MONTHLY come from viz_data.js
+const cumGear=GEAR_MONTHLY;
 
 let activeCams=new Set(CAMERAS);
-let raceMonth=0;let isPlaying=false;let playAF=null;
-
-const MONTH_LABELS=[];
-for(let y=2021;y<=2024;y++)for(let m=0;m<12;m++)MONTH_LABELS.push(MONTHS_SHORT[m]+' '+y);
+const MONTH_LABELS=GEAR_MONTH_LABELS;
+const camMax={};
+CAMERAS.forEach(c=>{camMax[c]=Math.max(...cumGear[c],1)});
 
 // Camera toggle buttons
 (function(){
   const cont=document.getElementById('cam-toggles');
   CAMERAS.forEach(c=>{
     const btn=document.createElement('button');
-    const label=c==='iPhone 13 Pro'?'iPhone':c.split(' ')[0]==='Sony'?c:c.split(' ')[0];
+    const label=c.replace('Sony ','').replace('Fuji ','').replace('Canon ','').replace('Panasonic ','');
     btn.className='tg-btn on';btn.textContent=label;
     btn.style.borderColor=CAM_COLS[c];btn.style.color=CAM_COLS[c];
     btn.style.background=CAM_COLS[c]+'18';
@@ -477,85 +478,81 @@ for(let y=2021;y<=2024;y++)for(let m=0;m<12;m++)MONTH_LABELS.push(MONTHS_SHORT[m
   });
 })();
 
-function setRaceMonth(m){
-  raceMonth=m;
-  document.getElementById('race-slider').value=m;
-  document.getElementById('race-label').textContent=MONTH_LABELS[m];
-  drawGear();
-}
-
 function drawGear(){
   const W=GR_C.width,H=GR_C.height;grCtx.clearRect(0,0,W,H);
-  const PL=140,PR=60,PT=16,PB=30,PW=W-PL-PR,PH=H-PT-PB;
+  const PL=150,PR=16,PT=32,PB=16,PW=W-PL-PR,PH=H-PT-PB;
   const active=[...activeCams];
-  const vals=active.map(c=>({cam:c,val:cumGear[c][raceMonth]}));
-  vals.sort((a,b)=>b.val-a.val);
-  const maxV=Math.max(...vals.map(v=>v.val),1);
-  const barH=Math.floor((PH-8*(vals.length-1))/vals.length);
-  const barH2=Math.min(barH,36);
+  const nM=MONTH_LABELS.length;
+  const cellW=PW/nM;
+  const rowGap=6;
+  const rowH=Math.min(Math.floor((PH-rowGap*(active.length-1))/active.length),42);
 
-  // Grid lines
-  [0,.25,.5,.75,1].forEach(p=>{
-    const x=PL+p*PW;
-    grCtx.strokeStyle=P.dim;grCtx.lineWidth=.8;
-    grCtx.beginPath();grCtx.moveTo(x,PT);grCtx.lineTo(x,PT+PH);grCtx.stroke();
-    grCtx.fillStyle=P.muted;grCtx.font='11px DM Sans';grCtx.textAlign='center';
-    const v=Math.round(maxV*p/1000);
-    grCtx.fillText(v?v+'k':'0',x,PT+PH+18);
+  // Year markers
+  MONTH_LABELS.forEach((lbl,i)=>{
+    if(!lbl.startsWith('Jan'))return;
+    const x=PL+i*cellW;
+    grCtx.strokeStyle=P.dim;grCtx.lineWidth=0.8;grCtx.setLineDash([3,4]);
+    grCtx.beginPath();grCtx.moveTo(x,PT-14);grCtx.lineTo(x,PT+active.length*(rowH+rowGap)-rowGap);grCtx.stroke();
+    grCtx.setLineDash([]);
+    grCtx.fillStyle=P.muted;grCtx.font='11px DM Sans';grCtx.textAlign='left';
+    grCtx.fillText(lbl.split(' ')[1],x+3,PT-4);
   });
 
-  vals.forEach((v,i)=>{
-    const y=PT+i*(barH2+8);
-    const bw=(v.val/maxV)*PW;
-    const col=CAM_COLS[v.cam];
-
-    // Bar with rounded right edge
-    grCtx.fillStyle=col;grCtx.globalAlpha=.88;
-    grCtx.beginPath();
-    grCtx.roundRect(PL,y,Math.max(bw,4),barH2,4);
-    grCtx.fill();grCtx.globalAlpha=1;
+  active.forEach((cam,row)=>{
+    const y=PT+row*(rowH+rowGap);
+    const col=CAM_COLS[cam];
+    const mx=camMax[cam];
 
     // Camera label
     grCtx.fillStyle=P.muted;grCtx.font='500 12px DM Sans';grCtx.textAlign='right';
-    grCtx.fillText(v.cam,PL-8,y+barH2/2+4);
+    grCtx.fillText(cam,PL-8,y+rowH/2+4);
 
-    // Value label
-    if(bw>52){
-      grCtx.fillStyle='rgba(255,255,255,.9)';grCtx.font='500 12px DM Sans';grCtx.textAlign='right';
-      grCtx.fillText(v.val.toLocaleString(),PL+bw-8,y+barH2/2+4);
-    }else{
-      grCtx.fillStyle=col;grCtx.font='11px DM Sans';grCtx.textAlign='left';
-      grCtx.fillText(v.val.toLocaleString(),PL+bw+6,y+barH2/2+4);
-    }
+    // Track background
+    grCtx.fillStyle=P.dim;grCtx.globalAlpha=0.35;
+    grCtx.beginPath();grCtx.roundRect(PL,y,PW,rowH,4);grCtx.fill();
+    grCtx.globalAlpha=1;
+
+    // Cells — clipped to the rounded track shape
+    grCtx.save();
+    grCtx.beginPath();grCtx.roundRect(PL,y,PW,rowH,4);grCtx.clip();
+    cumGear[cam].forEach((shots,mi)=>{
+      if(shots===0)return;
+      const cx=PL+mi*cellW;
+      const cw=Math.min(cellW-0.5, PL+PW-cx);
+      if(cw<=0)return;
+      const alpha=0.2+0.8*Math.sqrt(shots/mx);
+      grCtx.fillStyle=col;grCtx.globalAlpha=alpha;
+      grCtx.fillRect(cx, y, cw, rowH);
+      grCtx.globalAlpha=1;
+    });
+    grCtx.restore();
   });
-  GR_C._meta={vals};
+  GR_C._meta={active,rowH,rowGap,PT,PL,PW,nM};
 }
 
 GR_C.addEventListener('mousemove',e=>{
   const m=GR_C._meta;if(!m)return;
   const rect=GR_C.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*(GR_C.width/rect.width);
   const my=(e.clientY-rect.top)*(GR_C.height/rect.height);
-  const PL=140,PT=16,PH=GR_C.height-46;
-  const vals=m.vals;const barH2=Math.min(Math.floor((PH-8*(vals.length-1))/vals.length),36);
+  const {active,rowH,rowGap,PT,PL,PW,nM}=m;
+  const cellW=PW/nM;
   let found=false;
-  vals.forEach((v,i)=>{const y=PT+i*(barH2+8);if(my>=y&&my<=y+barH2){showTT(e,v.cam,`${v.val.toLocaleString()} photos total<br>as of ${MONTH_LABELS[raceMonth]}`);found=true}});
+  active.forEach((cam,row)=>{
+    const y=PT+row*(rowH+rowGap);
+    if(my>=y&&my<=y+rowH&&mx>=PL&&mx<=PL+PW){
+      const mi=clamp(Math.floor((mx-PL)/cellW),0,nM-1);
+      const shots=cumGear[cam][mi];
+      if(shots>0)showTT(e,cam,`${shots.toLocaleString()} shots<br>${MONTH_LABELS[mi]}`);
+      else showTT(e,cam,`Not used<br>${MONTH_LABELS[mi]}`);
+      found=true;
+    }
+  });
   if(!found)hideTT();
 });
 GR_C.addEventListener('mouseleave',hideTT);
 
-function togglePlay(){
-  isPlaying=!isPlaying;
-  document.getElementById('play-btn').textContent=isPlaying?'⏸':'▶';
-  if(isPlaying){if(raceMonth>=47)raceMonth=0;playStep();}else{if(playAF)cancelAnimationFrame(playAF)}
-}
-function playStep(){
-  if(!isPlaying)return;
-  if(raceMonth>=47){isPlaying=false;document.getElementById('play-btn').textContent='▶';return}
-  setRaceMonth(raceMonth+1);
-  setTimeout(()=>{playAF=requestAnimationFrame(playStep)},80);
-}
-
-function resizeGear(){GR_C.width=GR_C.parentElement.clientWidth;drawGear()}
+function resizeGear(){GR_C.width=cardInnerWidth(GR_C);drawGear()}
 
 // ═══════════════════════════════════════════════
 // RESIZE
