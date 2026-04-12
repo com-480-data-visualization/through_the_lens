@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Through the Lens — Data Visualizations</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Playfair+Display:ital,wght@0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F8FAFC; --card:#FFFFFF; --card2:#F8FAFC;
+  --accent:#F97316; --accent-dim:rgba(249,115,22,0.12);
+  --text:#0F172A; --muted:#475569; --dim:#E2E8F0; --border:#E2E8F0;
+  /* graph palette */
+  --g1:#2563EB; --g2:#0EA5E9; --g3:#14B8A6; --g4:#22C55E;
+  --g5:#F59E0B; --g6:#F97316; --g7:#EF4444; --g8:#8B5CF6;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-snap-type:y mandatory;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-weight:300;overflow-x:hidden}
+
+/* NAV DOTS */
+#nav-dots{position:fixed;right:22px;top:50%;transform:translateY(-50%);z-index:100;display:flex;flex-direction:column;gap:12px}
+.nd{width:6px;height:6px;border-radius:50%;background:var(--dim);cursor:pointer;transition:all .3s;border:none}
+.nd.on{background:var(--accent);transform:scale(1.5)}
+.nd:hover{background:var(--g1)}
+
+/* NAV BAR */
+#topnav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;justify-content:space-between;align-items:center;padding:18px 44px;background:linear-gradient(to bottom,rgba(248,250,252,.97),transparent)}
+.logo{font-family:'Playfair Display',serif;font-style:italic;font-size:15px;color:var(--text);opacity:.8}
+.nav-links{display:flex;gap:24px}
+.nav-link{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);cursor:pointer;background:none;border:none;font-family:'DM Sans',sans-serif;transition:color .2s}
+.nav-link:hover,.nav-link.on{color:var(--accent)}
+
+/* SECTIONS */
+section{min-height:100vh;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:80px 40px;position:relative}
+
+/* HERO */
+#s-hero{background:var(--bg);text-align:center}
+#s-hero h1{font-family:'Playfair Display',serif;font-size:clamp(44px,7vw,88px);font-weight:500;line-height:.95;margin-bottom:24px}
+#s-hero h1 em{color:var(--accent);font-style:italic}
+#s-hero p{color:var(--muted);font-size:16px;max-width:500px;line-height:1.8;margin:0 auto 48px}
+.hero-stats{display:flex;gap:56px;justify-content:center}
+.hs{text-align:center}
+.hs-n{font-family:'Playfair Display',serif;font-size:48px;color:var(--g1)}
+.hs-l{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.scroll-down{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted);font-size:10px;letter-spacing:.12em;text-transform:uppercase;opacity:.5}
+.sd-line{width:1px;height:40px;background:linear-gradient(to bottom,var(--accent),transparent);animation:sdp 2s ease-in-out infinite}
+@keyframes sdp{0%,100%{opacity:.3}50%{opacity:1}}
+
+/* VIZ CARD */
+.viz-card{background:var(--card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:1060px;padding:28px 32px;box-shadow:0 1px 4px rgba(15,23,42,.06)}
+.viz-card-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:500;color:var(--text);margin-bottom:4px}
+.viz-card-sub{font-size:13px;color:var(--muted);margin-bottom:22px}
+
+/* CONTROLS */
+.ctrl-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+.ctrl-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.ctrl-select{background:var(--card2);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 32px 8px 12px;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23475569' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border-color .2s}
+.ctrl-select:focus{outline:none;border-color:var(--g1)}
+.ctrl-divider{width:1px;height:24px;background:var(--dim)}
+.toggle-group{display:flex;gap:6px}
+.tg-btn{padding:7px 16px;border-radius:20px;border:1.5px solid var(--dim);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.tg-btn.on{border-color:var(--g1);color:var(--g1);background:rgba(37,99,235,.08)}
+.tg-btn:hover:not(.on){border-color:rgba(37,99,235,.3);color:var(--text)}
+
+/* PLAY CONTROLS */
+.play-row{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.play-btn{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:var(--card2);color:var(--g1);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s;flex-shrink:0}
+.play-btn:hover{border-color:var(--g1);background:rgba(37,99,235,.08)}
+.time-label{font-family:'DM Sans',monospace;font-size:22px;font-weight:500;color:var(--text);min-width:90px}
+input[type=range]{flex:1;height:4px;-webkit-appearance:none;background:var(--dim);border-radius:2px;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--g1);cursor:pointer;border:2px solid var(--bg)}
+
+/* LEGEND */
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px}
+.li{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;transition:color .2s}
+.li:hover{color:var(--text)}
+.li-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.li-line{width:20px;height:2.5px;border-radius:2px;flex-shrink:0}
+
+/* TOOLTIP */
+#tt{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 15px;font-size:12px;pointer-events:none;z-index:500;display:none;max-width:220px;box-shadow:0 4px 16px rgba(15,23,42,.1)}
+#tt-head{color:var(--g1);font-size:13px;font-weight:500;margin-bottom:5px}
+#tt-body{color:var(--muted);line-height:1.85}
+
+canvas{display:block}
+@media(max-width:700px){section{padding:60px 16px}.ctrl-row{gap:8px}.hero-stats{gap:28px}}
+</style>
+</head>
+<body>
+<div id="tt"><div id="tt-head"></div><div id="tt-body"></div></div>
+
+<nav id="topnav">
+  <div class="logo">Through the Lens</div>
+  <div class="nav-links">
+    <button class="nav-link on" onclick="goto('s-hero')">Intro</button>
+    <button class="nav-link" onclick="goto('s-exposure')">Exposure</button>
+    <button class="nav-link" onclick="goto('s-gear')">Gear Race</button>
+  </div>
+</nav>
+
+<div id="nav-dots">
+  <button class="nd on" title="Intro" onclick="goto('s-hero')"></button>
+  <button class="nd" title="Exposure" onclick="goto('s-exposure')"></button>
+  <button class="nd" title="Gear Race" onclick="goto('s-gear')"></button>
+</div>
+
+<!-- ═══ HERO ═══ -->
+<section id="s-hero">
+  <div style="position:absolute;inset:0;overflow:hidden;pointer-events:none">
+    <div style="position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(37,99,235,.07) 0%,transparent 65%);top:-50px;left:50%;transform:translateX(-50%)"></div>
+    <div style="position:absolute;width:350px;height:350px;background:radial-gradient(circle,rgba(249,115,22,.05) 0%,transparent 65%);bottom:0;right:10%"></div>
+  </div>
+  <h1>4 years.<br><em>57,000 frames.</em></h1>
+  <p>A visual story hidden in camera metadata — when, how, with what, and with what creative style.</p>
+  <div class="hero-stats">
+    <div class="hs"><div class="hs-n" id="c1">0</div><div class="hs-l">photographs</div></div>
+    <div class="hs"><div class="hs-n" id="c2">0</div><div class="hs-l">days shooting</div></div>
+    <div class="hs"><div class="hs-n" id="c3">0</div><div class="hs-l">lenses used</div></div>
+  </div>
+  <div class="scroll-down"><div class="sd-line"></div><span>scroll</span></div>
+</section>
+
+<!-- ═══ EXPOSURE EXPLORER ═══ -->
+<section id="s-exposure">
+  <div class="viz-card">
+    <div class="viz-card-title">Exposure Explorer</div>
+    <div class="viz-card-sub">Each dot is one photo. Choose what to put on each axis — then find your own story.</div>
+    <div class="ctrl-row">
+      <span class="ctrl-label">X axis</span>
+      <select class="ctrl-select" id="x-axis" onchange="redrawExposure()" style="border-color:var(--g1)">
+        <option value="iso">ISO</option>
+        <option value="aperture">Aperture (f/)</option>
+        <option value="shutter">Shutter speed</option>
+        <option value="focal">Focal length (mm)</option>
+      </select>
+      <span class="ctrl-label">Y axis</span>
+      <select class="ctrl-select" id="y-axis" onchange="redrawExposure()" style="border-color:var(--g2)">
+        <option value="aperture">Aperture (f/)</option>
+        <option value="iso">ISO</option>
+        <option value="shutter">Shutter speed</option>
+        <option value="focal">Focal length (mm)</option>
+      </select>
+      <div class="ctrl-divider"></div>
+      <span class="ctrl-label">Color by</span>
+      <select class="ctrl-select" id="color-by" onchange="redrawExposure()" style="border-color:var(--g4)">
+        <option value="year">Year</option>
+        <option value="camera">Camera</option>
+        <option value="scene">Scene type</option>
+      </select>
+    </div>
+    <div id="exp-insight" style="margin-top:14px;padding:14px 18px;background:var(--card2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;display:flex;gap:16px;align-items:flex-start;margin-bottom:14px">
+      <div style="font-size:18px;flex-shrink:0" id="exp-insight-icon">📷</div>
+      <div>
+        <div id="exp-insight-title" style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px"></div>
+        <div id="exp-insight-body" style="font-size:12px;color:var(--muted);line-height:1.75"></div>
+      </div>
+    </div>
+    <canvas id="exp-canvas" height="380"></canvas>
+    <div class="legend" id="exp-legend"></div>
+  </div>
+</section>
+
+<!-- ═══ GEAR RACE ═══ -->
+<section id="s-gear">
+  <div class="viz-card">
+    <div class="viz-card-title">Gear Race</div>
+    <div class="viz-card-sub">Cumulative photos per camera body over time. Watch as the Sony takes over.</div>
+    <div class="play-row">
+      <button class="play-btn" id="play-btn" onclick="togglePlay()">▶</button>
+      <div class="time-label" id="race-label">Jan 2021</div>
+      <input type="range" id="race-slider" min="0" max="47" value="0" oninput="setRaceMonth(+this.value)">
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-label">Show cameras</span>
+      <div class="toggle-group" id="cam-toggles"></div>
+    </div>
+    <canvas id="gear-canvas" height="280"></canvas>
+  </div>
+</section>
+
+<script>
+// ═══════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════
+function rng(s){let x=s;return()=>{x=(x*1664525+1013904223)&0xffffffff;return(x>>>0)/4294967296}}
+function lerp(a,b,t){return a+(b-a)*t}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function ease(t){return 1-Math.pow(1-clamp(t,0,1),3)}
+function goto(id){document.getElementById(id).scrollIntoView({behavior:'smooth'})}
+
+// Tooltip
+const TT=document.getElementById('tt');
+function showTT(e,head,body){document.getElementById('tt-head').textContent=head;document.getElementById('tt-body').innerHTML=body;TT.style.display='block'}
+function moveTT(e){TT.style.left=(e.clientX+16)+'px';TT.style.top=(e.clientY-12)+'px'}
+function hideTT(){TT.style.display='none'}
+document.addEventListener('mousemove',moveTT);
+
+// Nav scroll highlight
+window.addEventListener('scroll',()=>{
+  const ids=['s-hero','s-exposure','s-gear'];
+  const nds=document.querySelectorAll('.nd');
+  const nls=document.querySelectorAll('.nav-link');
+  ids.forEach((id,i)=>{
+    const el=document.getElementById(id);if(!el)return;
+    const r=el.getBoundingClientRect();
+    if(r.top<window.innerHeight/2&&r.bottom>window.innerHeight/2){
+      nds.forEach((d,j)=>d.classList.toggle('on',i===j));
+      nls.forEach((l,j)=>l.classList.toggle('on',i===j));
+    }
+  });
+});
+
+// Counter anim
+function animCount(id,target,fmt){
+  let s=null;const el=document.getElementById(id);
+  const f=ts=>{if(!s)s=ts;const p=clamp((ts-s)/2000,0,1);el.textContent=fmt?fmt(Math.round(ease(p)*target)):Math.round(ease(p)*target).toLocaleString();if(p<1)requestAnimationFrame(f)};
+  requestAnimationFrame(f);
+}
+
+// Intersection observer
+const io=new IntersectionObserver(entries=>{entries.forEach(e=>{
+  if(!e.isIntersecting)return;
+  const id=e.target.id;
+  if(id==='s-hero'){animCount('c1',56890);animCount('c2',847);animCount('c3',53)}
+  if(id==='s-exposure'){resizeExp();drawExposure()}
+  if(id==='s-gear'){resizeGear();setRaceMonth(0)}
+  io.unobserve(e.target);
+})},{threshold:.25});
+['s-hero','s-exposure','s-gear'].forEach(id=>io.observe(document.getElementById(id)));
+
+// ═══════════════════════════════════════════════
+// PALETTE
+// ═══════════════════════════════════════════════
+const P = {
+  bg:      '#F8FAFC',
+  card:    '#FFFFFF',
+  text:    '#0F172A',
+  muted:   '#475569',
+  dim:     '#E2E8F0',
+  accent:  '#F97316',
+  g1:      '#2563EB',
+  g2:      '#0EA5E9',
+  g3:      '#14B8A6',
+  g4:      '#22C55E',
+  g5:      '#F59E0B',
+  g6:      '#F97316',
+  g7:      '#EF4444',
+  g8:      '#8B5CF6',
+};
+
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+const MONTHS_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const YEARS=[2021,2022,2023,2024];
+const YR_COLS={'2021':P.g1,'2022':P.g2,'2023':P.g3,'2024':P.g6};
+
+// ═══════════════════════════════════════════════
+// 1. EXPOSURE EXPLORER
+// ═══════════════════════════════════════════════
+const EXP_C=document.getElementById('exp-canvas');
+const expCtx=EXP_C.getContext('2d');
+
+const AXES={
+  iso:     {label:'ISO sensitivity',ticks:[100,400,1600,6400,25600],tickFmt:v=>v>=1000?(v/1000)+'k':String(v),xform:v=>Math.log2(v/100)/Math.log2(256)},
+  aperture:{label:'Aperture (f/)',  ticks:[1.4,2,2.8,4,5.6,8,11],  tickFmt:v=>'f/'+v,                        xform:v=>(v-1.4)/(11-1.4)},
+  shutter: {label:'Shutter speed', ticks:[1/2000,1/500,1/125,1/30],tickFmt:v=>'1/'+Math.round(1/v)+'s',      xform:v=>clamp(Math.log2(v/0.0005)/Math.log2(0.0333/0.0005),0,1)},
+  focal:   {label:'Focal length',  ticks:[14,24,35,50,70,100,200], tickFmt:v=>v+'mm',                         xform:v=>Math.log2(v/14)/Math.log2(200/14)},
+};
+
+const EXP_COLOR_MAPS={
+  year:  {fn:d=>YR_COLS[d.yr],items:YEARS.map(y=>({label:String(y),color:YR_COLS[y]}))},
+  camera:{fn:d=>d.cam==='Sony'?P.g1:d.cam==='Fuji'?P.g2:P.g4,items:[{label:'Sony',color:P.g1},{label:'Fuji X100VI',color:P.g2},{label:'Other',color:P.g4}]},
+  scene: {fn:d=>d.scene==='outdoor'?P.g4:d.scene==='indoor'?P.g5:P.g7,items:[{label:'Outdoor',color:P.g4},{label:'Indoor',color:P.g5},{label:'Event / night',color:P.g7}]},
+};
+
+const N_EXP=900;
+const expRnd=rng(55);
+const EXP_RAW=[];
+for(let i=0;i<N_EXP;i++){
+  const rv=expRnd(),scene=rv<.48?'outdoor':rv<.76?'indoor':'event';
+  const yr=String(YEARS[Math.floor(expRnd()*4)]);
+  const cr=expRnd(),cam=cr<.74?'Sony':cr<.89?'Fuji':'Other';
+  let iso,aperture,shutter,focal;
+  if(scene==='outdoor'){iso=100*Math.pow(2,expRnd()*3.5);aperture=2.8+expRnd()*5.6;shutter=1/(250+expRnd()*1750);}
+  else if(scene==='indoor'){iso=100*Math.pow(2,2.5+expRnd()*3.5);aperture=1.4+expRnd()*2.2;shutter=1/(60+expRnd()*300);}
+  else{iso=100*Math.pow(2,4+expRnd()*3.5);aperture=1.4+expRnd()*1.6;shutter=1/(30+expRnd()*200);}
+  const focals=[14,24,35,50,70,100,135,200],fw=cam==='Fuji'?[0,0,.1,.6,.15,.1,.05,0]:[.05,.1,.08,.42,.15,.1,.05,.05];
+  let cum=0,fr=expRnd(),fl=50;
+  for(let j=0;j<focals.length;j++){cum+=fw[j];if(fr<cum){fl=focals[j];break}}
+  focal=fl*(1+(expRnd()-.5)*.14);
+  EXP_RAW.push({iso,aperture,shutter,focal,yr,cam,scene,jx:(expRnd()-.5)*.016,jy:(expRnd()-.5)*.016});
+}
+
+const expSpeedRnd=rng(88);
+const expSprings=EXP_RAW.map(()=>({cx:0,cy:0,vx:0,vy:0,tx:0,ty:0,stiff:0.018+expSpeedRnd()*0.055,damp:0.78+expSpeedRnd()*0.14}));
+let expAnimAF=null;
+
+const EXP_INSIGHTS={
+  'iso|aperture':   {icon:'🌑',title:'The dark scene link',body:'Shooting in the dark forces two things simultaneously: high ISO (to amplify the sensor signal) and wide aperture (to let in more light). The bottom-left cluster is bright outdoor shots; the top-right is concerts and night events.',corr:-1,arrow:[.75,.2,.25,.8]},
+  'aperture|iso':   {icon:'🌑',title:'The dark scene link',body:'Shooting in the dark forces two things simultaneously: high ISO (to amplify the sensor signal) and wide aperture (to let in more light). The bottom-left cluster is bright outdoor shots; the top-right is concerts and night events.',corr:-1,arrow:[.25,.8,.75,.2]},
+  'iso|shutter':    {icon:'⚡',title:'Low light = slow + high ISO',body:'When light is scarce, both ISO and shutter speed suffer. Night events cluster top-right (high ISO, slow shutter). Bright outdoor moments cluster bottom-left.',corr:1,arrow:[.2,.75,.8,.25]},
+  'shutter|iso':    {icon:'⚡',title:'Low light = slow + high ISO',body:'When light is scarce, both ISO and shutter speed suffer. Night events cluster top-right (high ISO, slow shutter). Bright outdoor moments cluster bottom-left.',corr:1,arrow:[.8,.25,.2,.75]},
+  'aperture|shutter':{icon:'⚖️',title:'The exposure tradeoff',body:'A wider aperture lets in more light, which means you can use a faster shutter for the same brightness. Classic creative tradeoff: freeze motion (fast shutter) vs blur background (wide aperture).',corr:-0.6,arrow:[.7,.25,.3,.75]},
+  'shutter|aperture':{icon:'⚖️',title:'The exposure tradeoff',body:'A wider aperture lets in more light, which means you can use a faster shutter for the same brightness. Classic creative tradeoff: freeze motion (fast shutter) vs blur background (wide aperture).',corr:-0.6,arrow:[.3,.75,.7,.25]},
+  'focal|aperture': {icon:'🔭',title:'Telephoto lenses are slower',body:'Wide-angle lenses (14–35mm) are typically faster (f/1.4–f/2.8), while telephoto lenses (100–200mm) tend to be slower (f/4–f/5.6). Prime lenses at 50mm are often the fastest of all.',corr:0.4,arrow:[.2,.7,.8,.3]},
+  'aperture|focal': {icon:'🔭',title:'Telephoto lenses are slower',body:'Wide-angle lenses (14–35mm) are typically faster (f/1.4–f/2.8), while telephoto lenses (100–200mm) tend to be slower (f/4–f/5.6). Prime lenses at 50mm are often the fastest of all.',corr:0.4,arrow:[.7,.3,.2,.8]},
+  'focal|shutter':  {icon:'📐',title:'The 1/focal length rule',body:'To avoid camera shake blur, photographers intuitively use faster shutters with longer lenses. Shooting at 200mm typically means 1/250s or faster; at 14mm you can get away with 1/30s.',corr:0.5,arrow:[.2,.7,.8,.3]},
+  'shutter|focal':  {icon:'📐',title:'The 1/focal length rule',body:'To avoid camera shake blur, photographers intuitively use faster shutters with longer lenses. Shooting at 200mm typically means 1/250s or faster; at 14mm you can get away with 1/30s.',corr:0.5,arrow:[.7,.3,.2,.8]},
+  'iso|focal':      {icon:'🎭',title:'Telephoto shots tend to be darker',body:'Telephoto focal lengths (100–200mm) are often used for events and indoor performances, which require higher ISO. Wide-angle shots tend to be outdoor scenes with plenty of light.',corr:0.3,arrow:[.2,.6,.8,.4]},
+  'focal|iso':      {icon:'🎭',title:'Telephoto shots tend to be darker',body:'Telephoto focal lengths (100–200mm) are often used for events and indoor performances, which require higher ISO. Wide-angle shots tend to be outdoor scenes with plenty of light.',corr:0.3,arrow:[.4,.8,.6,.2]},
+};
+
+function getInsight(xKey,yKey){
+  return EXP_INSIGHTS[xKey+'|'+yKey]||{icon:'🔍',title:'Explore freely',body:'This combination doesn\'t have a strong photographic rule behind it — but you might find unexpected patterns. Color by Scene to see if outdoor, indoor and event shots cluster differently.',corr:0,arrow:null};
+}
+
+function updateInsightCard(xKey,yKey){
+  const ins=getInsight(xKey,yKey);
+  document.getElementById('exp-insight-icon').textContent=ins.icon;
+  document.getElementById('exp-insight-title').textContent=ins.title;
+  document.getElementById('exp-insight-body').textContent=ins.body;
+}
+
+function drawAnnotations(xKey,yKey,PL,PT,PW,PH){
+  const ins=getInsight(xKey,yKey);
+  if(!ins.arrow)return;
+  const [x1n,y1n,x2n,y2n]=ins.arrow;
+  const x1=PL+x1n*PW,y1=PT+y1n*PH,x2=PL+x2n*PW,y2=PT+y2n*PH;
+  expCtx.save();
+  expCtx.strokeStyle='rgba(249,115,22,0.35)';expCtx.lineWidth=1.5;expCtx.setLineDash([6,5]);
+  expCtx.beginPath();expCtx.moveTo(x1,y1);expCtx.lineTo(x2,y2);expCtx.stroke();
+  expCtx.setLineDash([]);
+  const angle=Math.atan2(y2-y1,x2-x1),AL=10,AW=5;
+  expCtx.fillStyle='rgba(249,115,22,0.5)';
+  expCtx.beginPath();expCtx.moveTo(x2,y2);
+  expCtx.lineTo(x2-AL*Math.cos(angle-AW/AL*1.2),y2-AL*Math.sin(angle-AW/AL*1.2));
+  expCtx.lineTo(x2-AL*Math.cos(angle+AW/AL*1.2),y2-AL*Math.sin(angle+AW/AL*1.2));
+  expCtx.closePath();expCtx.fill();
+  if(ins.corr!==0){
+    const lbl=ins.corr>0?'positive correlation':'negative correlation';
+    const mx=(x1+x2)/2,my=(y1+y2)/2;
+    expCtx.fillStyle='rgba(249,115,22,0.6)';expCtx.font='10px DM Sans';expCtx.textAlign='center';
+    expCtx.fillText(lbl,mx,my-8);
+  }
+  expCtx.restore();
+}
+
+function computeExpTargets(){
+  const xKey=document.getElementById('x-axis').value;
+  const yKey=document.getElementById('y-axis').value;
+  const W=EXP_C.width,H=EXP_C.height;
+  const PL=64,PR=20,PT=22,PB=50,PW=W-PL-PR,PH=H-PT-PB;
+  EXP_RAW.forEach((d,i)=>{
+    const xn=clamp(AXES[xKey].xform(d[xKey])+d.jx,0.01,0.99);
+    const yn=clamp(AXES[yKey].xform(d[yKey])+d.jy,0.01,0.99);
+    expSprings[i].tx=PL+xn*PW;expSprings[i].ty=PT+(1-yn)*PH;
+  });
+}
+
+function drawExpFrame(){
+  const W=EXP_C.width,H=EXP_C.height;
+  expCtx.clearRect(0,0,W,H);
+  const PL=64,PR=20,PT=22,PB=50,PW=W-PL-PR,PH=H-PT-PB;
+  const xKey=document.getElementById('x-axis').value;
+  const yKey=document.getElementById('y-axis').value;
+  const colKey=document.getElementById('color-by').value;
+  const colMap=EXP_COLOR_MAPS[colKey];
+
+  // Grid
+  expCtx.strokeStyle=P.dim;expCtx.lineWidth=.8;
+  AXES[xKey].ticks.forEach(t=>{const x=PL+clamp(AXES[xKey].xform(t),0,1)*PW;expCtx.beginPath();expCtx.moveTo(x,PT);expCtx.lineTo(x,PT+PH);expCtx.stroke()});
+  AXES[yKey].ticks.forEach(t=>{const y=PT+(1-clamp(AXES[yKey].xform(t),0,1))*PH;expCtx.beginPath();expCtx.moveTo(PL,y);expCtx.lineTo(PL+PW,y);expCtx.stroke()});
+
+  // Tick labels
+  expCtx.fillStyle=P.muted;expCtx.font='10px DM Sans';expCtx.textAlign='center';
+  AXES[xKey].ticks.forEach(t=>expCtx.fillText(AXES[xKey].tickFmt(t),PL+clamp(AXES[xKey].xform(t),0,1)*PW,PT+PH+14));
+  expCtx.textAlign='right';
+  AXES[yKey].ticks.forEach(t=>expCtx.fillText(AXES[yKey].tickFmt(t),PL-5,PT+(1-clamp(AXES[yKey].xform(t),0,1))*PH+4));
+
+  // Axis labels
+  expCtx.fillStyle=P.muted;expCtx.font='12px DM Sans';expCtx.textAlign='center';
+  expCtx.fillText(AXES[xKey].label,PL+PW/2,PT+PH+34);
+  expCtx.save();expCtx.translate(14,PT+PH/2);expCtx.rotate(-Math.PI/2);expCtx.fillText(AXES[yKey].label,0,0);expCtx.restore();
+
+  // Border
+  expCtx.strokeStyle=P.dim;expCtx.lineWidth=1;
+  expCtx.beginPath();expCtx.moveTo(PL,PT);expCtx.lineTo(PL,PT+PH);expCtx.lineTo(PL+PW,PT+PH);expCtx.stroke();
+
+  // Dots
+  EXP_RAW.forEach((d,i)=>{
+    const s=expSprings[i],col=colMap.fn(d);
+    expCtx.beginPath();expCtx.arc(s.cx,s.cy,4.5,0,Math.PI*2);
+    expCtx.globalAlpha=0.72;expCtx.fillStyle=col;expCtx.fill();
+    expCtx.globalAlpha=1;expCtx.strokeStyle='rgba(255,255,255,0.6)';expCtx.lineWidth=0.8;expCtx.stroke();
+    expCtx.globalAlpha=1;
+  });
+
+  // Legend
+  const lg=document.getElementById('exp-legend');lg.innerHTML='';
+  colMap.items.forEach(it=>{lg.innerHTML+=`<div class="li"><div class="li-dot" style="background:${it.color}"></div>${it.label}</div>`});
+  drawAnnotations(xKey,yKey,PL,PT,PW,PH);
+  EXP_C._meta={PL,PT,PW,PH};
+}
+
+function runExpSprings(){
+  let moving=false;
+  EXP_RAW.forEach((_,i)=>{
+    const s=expSprings[i];
+    s.vx=(s.vx+(s.tx-s.cx)*s.stiff)*s.damp;s.cx+=s.vx;
+    s.vy=(s.vy+(s.ty-s.cy)*s.stiff)*s.damp;s.cy+=s.vy;
+    if(Math.abs(s.cx-s.tx)>.3||Math.abs(s.cy-s.ty)>.3)moving=true;
+  });
+  drawExpFrame();
+  if(moving)expAnimAF=requestAnimationFrame(runExpSprings);
+}
+
+function redrawExposure(){
+  const xKey=document.getElementById('x-axis').value;
+  const yKey=document.getElementById('y-axis').value;
+  updateInsightCard(xKey,yKey);computeExpTargets();
+  if(expAnimAF)cancelAnimationFrame(expAnimAF);
+  expAnimAF=requestAnimationFrame(runExpSprings);
+}
+
+function drawExposure(){
+  const xKey=document.getElementById('x-axis').value;
+  const yKey=document.getElementById('y-axis').value;
+  updateInsightCard(xKey,yKey);
+  const W=EXP_C.width,H=EXP_C.height;
+  const PL=64,PR=20,PT=22,PB=50,PW=W-PL-PR,PH=H-PT-PB;
+  const r2=rng(77);
+  expSprings.forEach(s=>{s.cx=PL+r2()*PW;s.cy=PT+r2()*PH;s.vx=0;s.vy=0});
+  computeExpTargets();
+  if(expAnimAF)cancelAnimationFrame(expAnimAF);
+  expAnimAF=requestAnimationFrame(runExpSprings);
+}
+
+EXP_C.addEventListener('mousemove',e=>{
+  const m=EXP_C._meta;if(!m)return;
+  const rect=EXP_C.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*(EXP_C.width/rect.width),my=(e.clientY-rect.top)*(EXP_C.height/rect.height);
+  let cl=null,md=22;
+  EXP_RAW.forEach((d,i)=>{const s=expSprings[i],ds=Math.hypot(s.cx-mx,s.cy-my);if(ds<md){md=ds;cl=d}});
+  if(cl)showTT(e,`${cl.cam} · ${cl.yr}`,`ISO ${Math.round(cl.iso).toLocaleString()}<br>f/${cl.aperture.toFixed(1)}<br>1/${Math.round(1/cl.shutter)}s<br>${Math.round(cl.focal)}mm<br><span style="color:var(--muted)">${cl.scene}</span>`);
+  else hideTT();
+});
+EXP_C.addEventListener('mouseleave',hideTT);
+function resizeExp(){EXP_C.width=EXP_C.parentElement.clientWidth;redrawExposure()}
+
+// ═══════════════════════════════════════════════
+// 2. GEAR RACE
+// ═══════════════════════════════════════════════
+const GR_C=document.getElementById('gear-canvas');
+const grCtx=GR_C.getContext('2d');
+
+const CAMERAS=['Sony A7M4','Fuji X100VI','iPhone 13 Pro','Sony A7M5','Panasonic LX100'];
+const CAM_COLS={'Sony A7M4':P.g1,'Fuji X100VI':P.g2,'iPhone 13 Pro':P.g4,'Sony A7M5':P.g7,'Panasonic LX100':P.g8};
+
+function camIncrement(cam,month){
+  const monthlyBase={
+    'Sony A7M4':   month<12?0:month<15?200+(month-12)*120:month<24?700+(month-15)*50:month<36?1150+(month-24)*20:1380+(month-36)*10,
+    'Fuji X100VI': month<16?0:month<20?100+(month-16)*100:month<36?500:month<42?480:450,
+    'iPhone 13 Pro':Math.max(40,820-month*18),
+    'Sony A7M5':   month<27?0:month<30?100+(month-27)*120:month<36?480+(month-30)*30:month<48?640+(month-36)*8:640,
+    'Panasonic LX100':month<8?380:month<18?Math.max(80,380-(month-8)*30):Math.max(20,80-(month-18)*5),
+  };
+  return Math.max(0,Math.round(monthlyBase[cam]||0));
+}
+
+const cumGear={};CAMERAS.forEach(c=>{cumGear[c]=[];let t=0;for(let m=0;m<48;m++){t+=camIncrement(c,m);cumGear[c].push(t)}});
+
+let activeCams=new Set(CAMERAS);
+let raceMonth=0;let isPlaying=false;let playAF=null;
+
+const MONTH_LABELS=[];
+for(let y=2021;y<=2024;y++)for(let m=0;m<12;m++)MONTH_LABELS.push(MONTHS_SHORT[m]+' '+y);
+
+// Camera toggle buttons
+(function(){
+  const cont=document.getElementById('cam-toggles');
+  CAMERAS.forEach(c=>{
+    const btn=document.createElement('button');
+    const label=c==='iPhone 13 Pro'?'iPhone':c.split(' ')[0]==='Sony'?c:c.split(' ')[0];
+    btn.className='tg-btn on';btn.textContent=label;
+    btn.style.borderColor=CAM_COLS[c];btn.style.color=CAM_COLS[c];
+    btn.style.background=CAM_COLS[c]+'18';
+    btn.onclick=()=>{
+      if(activeCams.has(c)&&activeCams.size>1)activeCams.delete(c);else activeCams.add(c);
+      btn.classList.toggle('on',activeCams.has(c));
+      btn.style.background=activeCams.has(c)?CAM_COLS[c]+'18':'transparent';
+      btn.style.borderColor=activeCams.has(c)?CAM_COLS[c]:P.dim;
+      btn.style.color=activeCams.has(c)?CAM_COLS[c]:P.muted;
+      drawGear();
+    };
+    cont.appendChild(btn);
+  });
+})();
+
+function setRaceMonth(m){
+  raceMonth=m;
+  document.getElementById('race-slider').value=m;
+  document.getElementById('race-label').textContent=MONTH_LABELS[m];
+  drawGear();
+}
+
+function drawGear(){
+  const W=GR_C.width,H=GR_C.height;grCtx.clearRect(0,0,W,H);
+  const PL=140,PR=60,PT=16,PB=30,PW=W-PL-PR,PH=H-PT-PB;
+  const active=[...activeCams];
+  const vals=active.map(c=>({cam:c,val:cumGear[c][raceMonth]}));
+  vals.sort((a,b)=>b.val-a.val);
+  const maxV=Math.max(...vals.map(v=>v.val),1);
+  const barH=Math.floor((PH-8*(vals.length-1))/vals.length);
+  const barH2=Math.min(barH,36);
+
+  // Grid lines
+  [0,.25,.5,.75,1].forEach(p=>{
+    const x=PL+p*PW;
+    grCtx.strokeStyle=P.dim;grCtx.lineWidth=.8;
+    grCtx.beginPath();grCtx.moveTo(x,PT);grCtx.lineTo(x,PT+PH);grCtx.stroke();
+    grCtx.fillStyle=P.muted;grCtx.font='11px DM Sans';grCtx.textAlign='center';
+    const v=Math.round(maxV*p/1000);
+    grCtx.fillText(v?v+'k':'0',x,PT+PH+18);
+  });
+
+  vals.forEach((v,i)=>{
+    const y=PT+i*(barH2+8);
+    const bw=(v.val/maxV)*PW;
+    const col=CAM_COLS[v.cam];
+
+    // Bar with rounded right edge
+    grCtx.fillStyle=col;grCtx.globalAlpha=.88;
+    grCtx.beginPath();
+    grCtx.roundRect(PL,y,Math.max(bw,4),barH2,4);
+    grCtx.fill();grCtx.globalAlpha=1;
+
+    // Camera label
+    grCtx.fillStyle=P.muted;grCtx.font='500 12px DM Sans';grCtx.textAlign='right';
+    grCtx.fillText(v.cam,PL-8,y+barH2/2+4);
+
+    // Value label
+    if(bw>52){
+      grCtx.fillStyle='rgba(255,255,255,.9)';grCtx.font='500 12px DM Sans';grCtx.textAlign='right';
+      grCtx.fillText(v.val.toLocaleString(),PL+bw-8,y+barH2/2+4);
+    }else{
+      grCtx.fillStyle=col;grCtx.font='11px DM Sans';grCtx.textAlign='left';
+      grCtx.fillText(v.val.toLocaleString(),PL+bw+6,y+barH2/2+4);
+    }
+  });
+  GR_C._meta={vals};
+}
+
+GR_C.addEventListener('mousemove',e=>{
+  const m=GR_C._meta;if(!m)return;
+  const rect=GR_C.getBoundingClientRect();
+  const my=(e.clientY-rect.top)*(GR_C.height/rect.height);
+  const PL=140,PT=16,PH=GR_C.height-46;
+  const vals=m.vals;const barH2=Math.min(Math.floor((PH-8*(vals.length-1))/vals.length),36);
+  let found=false;
+  vals.forEach((v,i)=>{const y=PT+i*(barH2+8);if(my>=y&&my<=y+barH2){showTT(e,v.cam,`${v.val.toLocaleString()} photos total<br>as of ${MONTH_LABELS[raceMonth]}`);found=true}});
+  if(!found)hideTT();
+});
+GR_C.addEventListener('mouseleave',hideTT);
+
+function togglePlay(){
+  isPlaying=!isPlaying;
+  document.getElementById('play-btn').textContent=isPlaying?'⏸':'▶';
+  if(isPlaying){if(raceMonth>=47)raceMonth=0;playStep();}else{if(playAF)cancelAnimationFrame(playAF)}
+}
+function playStep(){
+  if(!isPlaying)return;
+  if(raceMonth>=47){isPlaying=false;document.getElementById('play-btn').textContent='▶';return}
+  setRaceMonth(raceMonth+1);
+  setTimeout(()=>{playAF=requestAnimationFrame(playStep)},80);
+}
+
+function resizeGear(){GR_C.width=GR_C.parentElement.clientWidth;drawGear()}
+
+// ═══════════════════════════════════════════════
+// RESIZE
+// ═══════════════════════════════════════════════
+window.addEventListener('resize',()=>{
+  resizeExp();resizeGear();
+});
+setTimeout(()=>{resizeExp();resizeGear();},80);
+</script>
+</body>
+</html>
