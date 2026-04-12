@@ -95,14 +95,16 @@ canvas{display:block}
   <div class="nav-links">
     <button class="nav-link on" onclick="goto('s-hero')">Intro</button>
     <button class="nav-link" onclick="goto('s-exposure')">Exposure</button>
-    <button class="nav-link" onclick="goto('s-gear')">Gear Race</button>
+    <button class="nav-link" onclick="goto('s-gear')">Gear Timeline</button>
+    <button class="nav-link" onclick="goto('s-lens')">Lens Race</button>
   </div>
 </nav>
 
 <div id="nav-dots">
   <button class="nd on" title="Intro" onclick="goto('s-hero')"></button>
   <button class="nd" title="Exposure" onclick="goto('s-exposure')"></button>
-  <button class="nd" title="Gear Race" onclick="goto('s-gear')"></button>
+  <button class="nd" title="Gear Timeline" onclick="goto('s-gear')"></button>
+  <button class="nd" title="Lens Race" onclick="goto('s-lens')"></button>
 </div>
 
 <!-- ═══ HERO ═══ -->
@@ -165,12 +167,27 @@ canvas{display:block}
 <section id="s-gear">
   <div class="viz-card">
     <div class="viz-card-title">Gear Timeline</div>
-    <div class="viz-card-sub">Each row is a camera. Each column is a month. Colour intensity = shots taken. Hover for details.</div>
+    <div class="viz-card-sub">Each row is a camera body (boîtier). Each column is a month. Colour intensity = shots taken. Hover for details.</div>
     <div class="ctrl-row">
       <span class="ctrl-label">Show cameras</span>
       <div class="toggle-group" id="cam-toggles"></div>
     </div>
     <canvas id="gear-canvas" height="420"></canvas>
+  </div>
+</section>
+
+<!-- ═══ LENS RACE ═══ -->
+<section id="s-lens">
+  <div class="viz-card">
+    <div class="viz-card-title">Lens Race</div>
+    <div class="viz-card-sub">Cumulative shots per interchangeable lens (objectif) over time. Fixed-lens cameras excluded.</div>
+    <div class="play-row">
+      <button class="play-btn" id="lr-play-btn" onclick="lrTogglePlay()">▶</button>
+      <span class="time-label" id="lr-time-label">Feb 2022</span>
+      <input type="range" id="lr-slider" min="0" value="0" oninput="lrSeek(+this.value)">
+    </div>
+    <canvas id="lens-canvas" height="360"></canvas>
+    <div class="legend" id="lens-legend"></div>
   </div>
 </section>
 
@@ -194,7 +211,7 @@ document.addEventListener('mousemove',moveTT);
 
 // Nav scroll highlight
 window.addEventListener('scroll',()=>{
-  const ids=['s-hero','s-exposure','s-gear'];
+  const ids=['s-hero','s-exposure','s-gear','s-lens'];
   const nds=document.querySelectorAll('.nd');
   const nls=document.querySelectorAll('.nav-link');
   ids.forEach((id,i)=>{
@@ -221,9 +238,10 @@ const io=new IntersectionObserver(entries=>{entries.forEach(e=>{
   if(id==='s-hero'){animCount('c1',HERO_STATS.photos);animCount('c2',HERO_STATS.days);animCount('c3',HERO_STATS.lenses)}
   if(id==='s-exposure'){resizeExp();drawExposure()}
   if(id==='s-gear'){resizeGear()}
+  if(id==='s-lens'){resizeLens();lrInit()}
   io.unobserve(e.target);
 })},{threshold:.25});
-['s-hero','s-exposure','s-gear'].forEach(id=>io.observe(document.getElementById(id)));
+['s-hero','s-exposure','s-gear','s-lens'].forEach(id=>io.observe(document.getElementById(id)));
 
 // ═══════════════════════════════════════════════
 // PALETTE
@@ -555,10 +573,142 @@ GR_C.addEventListener('mouseleave',hideTT);
 function resizeGear(){GR_C.width=cardInnerWidth(GR_C);drawGear()}
 
 // ═══════════════════════════════════════════════
+// 3. LENS RACE — animated bar chart race
+// ═══════════════════════════════════════════════
+const LR_C=document.getElementById('lens-canvas');
+const lrCtx=LR_C.getContext('2d');
+
+// Build cumulative totals per lens
+const lensCum={};
+LENSES.forEach(l=>{
+  let acc=0;
+  lensCum[l]=LENS_MONTHLY[l].map(v=>(acc+=v,acc));
+});
+
+const nLensMonths=LENS_MONTH_LABELS.length;
+document.getElementById('lr-slider').max=nLensMonths-1;
+
+// Current displayed values (smooth interpolation targets)
+const lrCur={};
+LENSES.forEach(l=>{lrCur[l]=0});
+
+let lrFrameF=0; // float frame index for smooth animation
+let lrPlaying=false;
+let lrAF=null;
+let lrInited=false;
+
+function lrMaxAt(fi){
+  const fi0=Math.floor(fi);
+  return Math.max(...LENSES.map(l=>lensCum[l][fi0]||0),1);
+}
+
+function lrDrawFrame(){
+  const W=LR_C.width,H=LR_C.height;
+  lrCtx.clearRect(0,0,W,H);
+
+  const nL=LENSES.length;
+  const PL=130,PR=16,PT=20,PB=20,PW=W-PL-PR,PH=H-PT-PB;
+  const rowH=Math.min(Math.floor((PH-8*(nL-1))/nL),56);
+  const rowGap=8;
+
+  // Sort by current cumulative count descending (creates the race)
+  const sorted=[...LENSES].sort((a,b)=>lrCur[b]-lrCur[a]);
+  const maxVal=Math.max(...LENSES.map(l=>lrCur[l]),1);
+
+  sorted.forEach((lens,rank)=>{
+    const y=PT+rank*(rowH+rowGap);
+    const col=LENS_COLS[lens];
+    const frac=lrCur[lens]/maxVal;
+    const barW=Math.max(frac*PW,1);
+
+    // Track
+    lrCtx.fillStyle=P.dim;lrCtx.globalAlpha=0.35;
+    lrCtx.beginPath();lrCtx.roundRect(PL,y,PW,rowH,6);lrCtx.fill();
+    lrCtx.globalAlpha=1;
+
+    // Bar — clipped to track
+    lrCtx.save();
+    lrCtx.beginPath();lrCtx.roundRect(PL,y,PW,rowH,6);lrCtx.clip();
+    lrCtx.fillStyle=col;lrCtx.globalAlpha=0.82;
+    lrCtx.fillRect(PL,y,barW,rowH);
+    lrCtx.globalAlpha=1;
+    lrCtx.restore();
+
+    // Lens name label
+    lrCtx.fillStyle=P.muted;lrCtx.font='500 12px DM Sans';lrCtx.textAlign='right';
+    lrCtx.fillText(lens,PL-8,y+rowH/2+4);
+
+    // Shot count inside/outside bar
+    const val=Math.round(lrCur[lens]).toLocaleString();
+    const textX=PL+barW+(barW>PW*0.15?-8:6);
+    lrCtx.fillStyle=barW>PW*0.15?'#fff':P.muted;
+    lrCtx.font='500 12px DM Sans';
+    lrCtx.textAlign=barW>PW*0.15?'right':'left';
+    lrCtx.fillText(val+' shots',textX,y+rowH/2+4);
+  });
+
+  // Month label top-right
+  const fi0=clamp(Math.floor(lrFrameF),0,nLensMonths-1);
+  lrCtx.fillStyle=P.muted;lrCtx.font='11px DM Sans';lrCtx.textAlign='right';
+  lrCtx.fillText(LENS_MONTH_LABELS[fi0],W-PR,PT-6);
+}
+
+function lrTickValues(){
+  // Lerp current values toward target frame
+  const fi=clamp(lrFrameF,0,nLensMonths-1);
+  const fi0=Math.floor(fi);
+  const fi1=Math.min(fi0+1,nLensMonths-1);
+  const t=fi-fi0;
+  LENSES.forEach(l=>{
+    const v0=lensCum[l][fi0];
+    const v1=lensCum[l][fi1];
+    lrCur[l]=v0+(v1-v0)*t;
+  });
+}
+
+function lrStep(ts){
+  if(!lrPlaying){lrAF=null;return}
+  lrFrameF+=0.06; // ~0.06 months per frame at ~60fps → ~1 month per second
+  if(lrFrameF>=nLensMonths-1){lrFrameF=nLensMonths-1;lrPlaying=false;document.getElementById('lr-play-btn').textContent='▶'}
+  lrTickValues();
+  lrDrawFrame();
+  document.getElementById('lr-slider').value=Math.round(lrFrameF);
+  document.getElementById('lr-time-label').textContent=LENS_MONTH_LABELS[clamp(Math.round(lrFrameF),0,nLensMonths-1)];
+  if(lrPlaying)lrAF=requestAnimationFrame(lrStep);else lrAF=null;
+}
+
+function lrTogglePlay(){
+  lrPlaying=!lrPlaying;
+  document.getElementById('lr-play-btn').textContent=lrPlaying?'⏸':'▶';
+  if(lrPlaying){
+    if(lrFrameF>=nLensMonths-1)lrFrameF=0;
+    lrAF=requestAnimationFrame(lrStep);
+  }
+}
+
+function lrSeek(fi){
+  lrPlaying=false;document.getElementById('lr-play-btn').textContent='▶';
+  if(lrAF){cancelAnimationFrame(lrAF);lrAF=null}
+  lrFrameF=fi;
+  lrTickValues();lrDrawFrame();
+  document.getElementById('lr-time-label').textContent=LENS_MONTH_LABELS[clamp(fi,0,nLensMonths-1)];
+}
+
+function lrInit(){
+  if(lrInited)return;lrInited=true;
+  // Populate legend
+  const lg=document.getElementById('lens-legend');lg.innerHTML='';
+  LENSES.forEach(l=>{lg.innerHTML+=`<div class="li"><div class="li-line" style="background:${LENS_COLS[l]}"></div>${l}</div>`});
+  lrSeek(0);
+}
+
+function resizeLens(){LR_C.width=cardInnerWidth(LR_C);if(lrInited)lrDrawFrame()}
+
+// ═══════════════════════════════════════════════
 // RESIZE
 // ═══════════════════════════════════════════════
 window.addEventListener('resize',()=>{
-  resizeExp();resizeGear();
+  resizeExp();resizeGear();resizeLens();
 });
 setTimeout(()=>{resizeExp();resizeGear();},80);
 </script>

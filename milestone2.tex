@@ -1,0 +1,148 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{parskip}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\geometry{a4paper, margin=2.5cm}
+
+\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule\vspace{0.4em}]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+\hypersetup{colorlinks=true, linkcolor=black, urlcolor=black}
+
+\title{\textbf{Milestone 2 -- Data Visualization (COM-480)}\\[0.4em]
+\large Through the Lens: 4 Years of Campus Life in 57k Photos}
+\author{Adrien Buttier \and Martina Gatti \and Lea Grieder}
+\date{April 2026}
+
+\begin{document}
+
+\maketitle
+
+\noindent
+Our dataset consists of 56{,}890 photographs taken over four years on the EPFL campus, accompanied by 952 metadata fields: capture parameters (ISO, aperture, shutter speed, focal length), temporal context, camera and lens identifiers, and Lightroom post-processing adjustments. Rather than analyzing the images themselves, we turn this invisible technical layer into a visual narrative about campus life and creative evolution.
+
+The website follows a scroll-driven structure, guiding the user from broad temporal patterns toward increasingly technical photographic detail. It is live at \url{https://com-480-data-visualization.github.io/through_the_lens/}.
+
+% -------------------------------------------
+\section{Visualizations}
+% -------------------------------------------
+
+\subsection{Visualization 1 -- Photo Activity}
+
+Shooting volume is not uniform across time: some years, months, and hours of the day concentrate far more photographs than others.
+This visualization asks: \textit{when does shooting happen, and does that rhythm repeat across years?}
+
+The design is a single interactive panel that operates on three drill-down levels, each revealing finer temporal granularity.
+At the top level the user sees a vertical bar chart of annual photo counts (Figure~\ref{fig:bar_year}).
+Clicking any bar transitions to a $4{\times}3$ monthly heatmap for that year (Figure~\ref{fig:heatmap_month}), where cell colour is proportional to activity.
+Clicking any cell in the heatmap transitions to a polar clock showing the hourly distribution for that specific month (Figure~\ref{fig:polar_hour}).
+
+\medskip
+\noindent\textbf{Year view.}
+Each bar represents one year, coloured with a distinct data-series colour and highlighted in amber at the peak.
+Partial years are rendered at reduced opacity to avoid misleading comparisons.
+
+\medskip
+\noindent\textbf{Month view.}
+The heatmap encodes activity as a colour gradient from near-black (low count) to bright green (peak count).
+Two months consistently emerge as the most active across years, corresponding to the start of each EPFL semester.
+
+\medskip
+\noindent\textbf{Hour view.}
+The polar clock maps each of the 24 hours to an arc segment whose radius encodes photo count.
+Segments are coloured by time-of-day class, night, morning, day, and golden hour, making the dominant shooting window immediately visible without reading any numbers.
+
+\medskip
+\noindent\textbf{Core MVP:} Three-level drill-down (year $\to$ month $\to$ hour) with animated transitions.\\
+\noindent\textbf{Extra ideas:} A persistent side panel updating with contextual statistics at each level; a breadcrumb bar and back button for upward navigation.
+
+\medskip
+\noindent Course: \href{https://moodle.epfl.ch/pluginfile.php/2321913/mod_resource/content/0/5_1_Interaction.pdf}{Interactions (5.1)}
+
+\begin{figure}[h]
+  \centering
+  \begin{minipage}[t]{0.32\linewidth}
+    \includegraphics[width=\linewidth]{illustrations/fig1_bar_year.png}
+    \caption{Year view: annual photo counts. Peak year in amber; partial years dimmed.}
+    \label{fig:bar_year}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.32\linewidth}
+    \includegraphics[width=\linewidth]{illustrations/fig2_heatmap_month.png}
+    \caption{Month view: $4{\times}3$ heatmap of monthly counts. Semester-start months are the brightest cells.}
+    \label{fig:heatmap_month}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.32\linewidth}
+    \includegraphics[width=\linewidth]{illustrations/fig3_polar_clock.png}
+    \caption{Hour view: polar clock of photo count per hour. Colour encodes time of day.}
+    \label{fig:polar_hour}
+  \end{minipage}
+\end{figure}
+
+\subsection{Visualization 2 -- Gear Timeline}
+
+Camera equipment changed significantly over the four years, spanning compact cameras, phones, and several mirrorless bodies. This visualization asks: \textit{which gear was active during each period, and how abruptly did transitions happen?}
+
+The chart is a swimlane heatmap: one horizontal row per camera body, one column per month (September~2021 -- December~2024), with cell colour intensity proportional to the number of shots taken that month by each camera (normalised per body so that all cameras remain visible regardless of total volume). Empty cells are rendered as a faint track, making gaps in usage immediately apparent. The user can toggle individual bodies on or off via labelled buttons, and hovering over any cell reveals the exact shot count and month.
+
+This static design was chosen over an animated bar-chart race because the data is strongly skewed toward a single body (Sony~A7~IV, ${\approx}$96\% of shots); a race would collapse to one dominant bar. The swimlane preserves the full temporal picture: the Sony dominates throughout, the Panasonic~LX100 appears briefly in early~2023, the DJI drone in summer~2023, and the Fuji~X100VI enters strongly from July~2024 onwards.
+
+\medskip
+\noindent\textbf{Core MVP:} Static swimlane heatmap with per-body toggle and hover tooltips (shot count + month label).\\
+\noindent\textbf{Extra ideas:} Click a cell to surface sample shots from that camera/month; colour-code cells by shooting location.
+
+\medskip
+\noindent Course: \href{https://moodle.epfl.ch/pluginfile.php/2483604/mod_resource/content/0/11_1_Tabular_data.pdf}{Tabular Data (11.1)}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{illustrations/gear_timeline.png}
+  \caption{Gear Timeline: swimlane heatmap of monthly shot counts per camera body. Cell intensity is normalised per row so all cameras remain visible. Hover reveals exact counts and month.}
+  \label{fig:gear_timeline}
+\end{figure}
+
+\subsection{Visualization 3 -- Exposure Explorer}
+
+ISO, aperture, and shutter speed form the \emph{exposure triangle}: adjusting one forces tradeoffs on the others. This visualization places all ${\approx}$57{,}000 photos as individual points in a two-axis space, letting the user choose which parameters to compare and discover correlations themselves.
+
+The user picks X and Y axes from four parameters (ISO, aperture, shutter speed, focal length); when axes change, every point animates smoothly to its new position using spring physics. Points are colored by a third dimension (year, camera body, or scene type inferred from ISO level), and hovering reveals full metadata. A contextual insight card explains in plain language what the selected pair of axes reveals -- for instance, that plotting ISO against aperture exposes the classic dark-scene tradeoff, where both values are forced high simultaneously.
+
+\medskip
+\noindent\textbf{Core MVP:} Scatter plot with selectable X/Y axes, color dimension, hover tooltips, and spring-animated axis transitions.\\
+\noindent\textbf{Extra ideas:} Lasso selection to isolate a cluster; linked highlighting with the Gear Timeline.
+
+\medskip
+\noindent Courses: \href{https://moodle.epfl.ch/pluginfile.php/2321913/mod_resource/content/0/5_1_Interaction.pdf}{Interactions (5.1)}, \href{https://moodle.epfl.ch/pluginfile.php/2483604/mod_resource/content/0/11_1_Tabular_data.pdf}{Tabular Data (11.1)}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{illustrations/exposure_explorer.png}
+  \caption{Exposure Explorer: each dot is one photo in a user-configured two-axis space. Switching axes animates every point to its new position via spring physics. A contextual insight card explains the selected combination.}
+  \label{fig:exposure_explorer}
+\end{figure}
+
+% -------------------------------------------
+\section{Website and Extra Ideas}
+% -------------------------------------------
+
+\begin{itemize}[leftmargin=*, itemsep=0.4em]
+  \item \textbf{Website name and identity.} \textit{Through the Lens} ---
+        live at \url{https://com-480-data-visualization.github.io/through_the_lens/}.
+  \item \textbf{Color palette.} Light off-white background (\texttt{\#F8FAFC}), white cards, orange accent (\texttt{\#F97316}) for highlights, and a sequential blue palette (\texttt{\#2563EB} $\to$ \texttt{\#8B5CF6}) for data series. Typography: Playfair Display (headings, italic) and DM Sans (body, weight 300--500).
+  \item \textbf{Navigation style.} Full-screen scroll-snap layout, one visualization per section. Fixed top navigation bar with section labels; fixed right-side dot indicators for quick section jumping.
+  \item \textbf{Transitions.} Spring-physics animation for scatter-plot point movement on axis change; smooth scroll between sections.
+\end{itemize}
+
+\noindent\textbf{Additional ideas:}
+\begin{itemize}[leftmargin=*, itemsep=0.4em]
+  \item \textbf{Photo Activity drill-down.} Year $\to$ month heatmap $\to$ hourly polar clock, with animated transitions between levels (Visualization~1 above).
+  \item \textbf{Photo Timeline.} A zoomable timeline of shooting frequency where clicking into a month surfaces representative photographs from that period.
+  \item \textbf{Lens Report Card.} A per-lens summary showing average aperture, focal-length distribution, and a ``personality'' profile derived from typical ISO and shutter combinations.
+\end{itemize}
+
+\end{document}
