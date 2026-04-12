@@ -6,7 +6,7 @@ import json
 import pandas as pd
 import numpy as np
 
-CSV = "../photos_metadatas_filtered.csv"
+CSV = "shared_dataset/shared_dataset/metadata/photos_metadatas_filtered_v3.csv"
 df = pd.read_csv(CSV, low_memory=False)
 print(f"Loaded {len(df)} rows")
 
