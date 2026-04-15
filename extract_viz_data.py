@@ -6,20 +6,8 @@ import json
 import pandas as pd
 import numpy as np
 
-CSV_CANDIDATES = [
-    "shared_dataset/metadata/photos_metadatas_filtered_v3.csv",
-    "shared_dataset/shared_dataset/metadata/photos_metadatas_filtered_v3.csv",
-]
-for CSV in CSV_CANDIDATES:
-    try:
-        df = pd.read_csv(CSV, low_memory=False)
-        break
-    except FileNotFoundError:
-        continue
-else:
-    raise FileNotFoundError(
-        f"Could not find metadata CSV. Tried: {CSV_CANDIDATES}"
-    )
+CSV = "./data/metadata/photos_metadatas_filtered_v3.csv"
+df = pd.read_csv(CSV, low_memory=False)
 print(f"Loaded {len(df)} rows")
 
 # ── Normalise camera model ──────────────────────────────────────────────────
@@ -282,6 +270,31 @@ for l in top5_lenses:
     print(f"  {l}: max {max(lens_monthly[l])} shots/month")
 
 # ══════════════════════════════════════════════════════════════════════════════
+# 4. PHOTO ACTIVITY — year counts + daily counts
+# ══════════════════════════════════════════════════════════════════════════════
+year_counts = df.groupby('Year').size().reset_index(name='count')
+partial_years = {2021, 2026}  # adjust if needed
+year_data = [
+    {"year": int(r['Year']), "count": int(r['count']), "partial": int(r['Year']) in partial_years}
+    for _, r in year_counts.iterrows()
+]
+
+df['date_str'] = df['DateTime'].dt.strftime('%Y-%m-%d')
+daily_counts = df.groupby('date_str').size().reset_index(name='count')
+daily_data = [
+    {"date": row['date_str'], "count": int(row['count'])}
+    for _, row in daily_counts.iterrows()
+]
+
+# Album: top session per day (highest count album wins)
+df2 = df.dropna(subset=['album']) if 'album' in df.columns else df.copy()
+album_daily = (df2.groupby(['date_str', 'album'])
+               .size().reset_index(name='count')
+               .sort_values('count', ascending=False)
+               .drop_duplicates('date_str'))
+album_map = {row['date_str']: row['album'] for _, row in album_daily.iterrows()}
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Write viz_data.js
 # ══════════════════════════════════════════════════════════════════════════════
 cameras_js = json.dumps(top6)
@@ -317,6 +330,10 @@ const LENSES = {json.dumps(top5_lenses)};
 const LENS_COLS = {lens_cols_js};
 const LENS_MONTHLY = {json.dumps(lens_monthly, indent=2)};
 const LENS_MONTH_LABELS = {json.dumps(lens_month_labels)};
+
+const YEAR_DATA = {json.dumps(year_data)};
+const DAILY_DATA = {json.dumps(daily_data)};
+const ALBUM_MAP = {json.dumps(album_map)};
 
 const SANKEY_DATA = {json.dumps(sankey_data, indent=2)};
 """
