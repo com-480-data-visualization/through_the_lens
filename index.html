@@ -94,6 +94,7 @@ canvas{display:block}
   <div class="logo">Through the Lens</div>
   <div class="nav-links">
     <button class="nav-link on" onclick="goto('s-hero')">Intro</button>
+    <button class="nav-link" onclick="goto('s-activity')">Photo Activity</button>
     <button class="nav-link" onclick="goto('s-exposure')">Exposure</button>
     <button class="nav-link" onclick="goto('s-gear')">Gear Timeline</button>
     <button class="nav-link" onclick="goto('s-lens')">Lens Race</button>
@@ -103,6 +104,7 @@ canvas{display:block}
 
 <div id="nav-dots">
   <button class="nd on" title="Intro" onclick="goto('s-hero')"></button>
+  <button class="nd" title="Photo Activity" onclick="goto('s-activity')"></button>
   <button class="nd" title="Exposure" onclick="goto('s-exposure')"></button>
   <button class="nd" title="Gear Timeline" onclick="goto('s-gear')"></button>
   <button class="nd" title="Lens Race" onclick="goto('s-lens')"></button>
@@ -123,6 +125,29 @@ canvas{display:block}
     <div class="hs"><div class="hs-n" id="c3">0</div><div class="hs-l">lenses used</div></div>
   </div>
   <div class="scroll-down"><div class="sd-line"></div><span>scroll</span></div>
+</section>
+
+<!-- ═══ PHOTO ACTIVITY ═══ -->
+<section id="s-activity">
+  <div class="viz-card">
+    <div class="viz-card-title">Photo Activity</div>
+    <div class="viz-card-sub" id="pa-sub">Annual photo counts — click a bar to explore that year day by day.</div>
+    <canvas id="pa-canvas" height="380"></canvas>
+    <div id="pa-panel" style="display:none;margin-top:16px;padding:16px 20px;background:var(--card2);border:1px solid var(--border);border-radius:10px;max-width:460px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div id="pa-panel-date" style="font-size:15px;font-weight:500;color:var(--text)"></div>
+          <div id="pa-panel-count" style="font-size:13px;color:var(--accent);margin-top:2px"></div>
+        </div>
+        <button onclick="document.getElementById('pa-panel').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1">×</button>
+      </div>
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Shooting session</div>
+        <div id="pa-panel-albums"></div>
+      </div>
+    </div>
+    <div class="legend" id="pa-legend" style="margin-top:14px"></div>
+  </div>
 </section>
 
 <!-- ═══ EXPOSURE EXPLORER ═══ -->
@@ -223,7 +248,7 @@ document.addEventListener('mousemove',moveTT);
 
 // Nav scroll highlight
 window.addEventListener('scroll',()=>{
-  const ids=['s-hero','s-exposure','s-gear','s-lens','s-sankey'];
+  const ids=['s-hero','s-activity','s-exposure','s-gear','s-lens','s-sankey'];
   const nds=document.querySelectorAll('.nd');
   const nls=document.querySelectorAll('.nav-link');
   ids.forEach((id,i)=>{
@@ -252,9 +277,10 @@ const io=new IntersectionObserver(entries=>{entries.forEach(e=>{
   if(id==='s-gear'){resizeGear()}
   if(id==='s-lens'){resizeLens();lrInit()}
   if(id==='s-sankey'){resizeSankey();sankeyStart()}
+  if(id==='s-activity'){paResize();drawYears()}
   io.unobserve(e.target);
 })},{threshold:.25});
-['s-hero','s-exposure','s-gear','s-lens','s-sankey'].forEach(id=>io.observe(document.getElementById(id)));
+['s-hero','s-activity','s-exposure','s-gear','s-lens','s-sankey'].forEach(id=>io.observe(document.getElementById(id)));
 
 // ═══════════════════════════════════════════════
 // PALETTE
@@ -945,10 +971,235 @@ SK_C.addEventListener('mouseleave',()=>{skHover=null;hideTT();drawSankey()});
 function resizeSankey(){SK_C.width=cardInnerWidth(SK_C);if(skInited)drawSankey()}
 
 // ═══════════════════════════════════════════════
+// 5. PHOTO ACTIVITY
+// ═══════════════════════════════════════════════
+const PA_C = document.getElementById('pa-canvas');
+const paCtx = PA_C.getContext('2d');
+const dailyMap = {};
+DAILY_DATA.forEach(d => { dailyMap[d.date] = d.count; });
+const YR_BAR_COLS = {2021:P.g1,2022:P.g2,2023:P.g3,2024:P.g6,2025:P.g8,2026:P.g1};
+const PA_PEAK = YEAR_DATA.reduce((a,b)=>b.count>a.count?b:a).year;
+let paView='years', paYear=null, paHits=[];
+
+function paColorForCount(c,mx){
+  if(!c)return'#F1F5F9';
+  const r=c/mx;
+  if(r<0.15)return'#DBEAFE';
+  if(r<0.40)return'#60A5FA';
+  if(r<0.70)return'#2563EB';
+  return'#1E3A8A';
+}
+
+function drawYears(){
+  paHits=[];
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = cardInnerWidth(PA_C);
+  const cssH = 380;
+  PA_C.width = cssW * dpr;
+  PA_C.height = cssH * dpr;
+  PA_C.style.width = cssW + 'px';
+  PA_C.style.height = cssH + 'px';
+  paCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = cssW, H = cssH;
+  paCtx.clearRect(0,0,W,H);
+  const PL=56,PR=16,PT=20,PB=44,PW=W-PL-PR,PH=H-PT-PB;
+  const n=YEAR_DATA.length,gap=PW/n;
+  const barW=Math.min(Math.floor(gap*0.55),90);
+  const mx=Math.max(...YEAR_DATA.map(d=>d.count));
+
+  // Gridlines + y-labels
+  [4000,8000,12000,16000].forEach(t=>{
+    const y=PT+(1-t/mx)*PH;
+    paCtx.strokeStyle=P.dim;paCtx.lineWidth=.8;
+    paCtx.beginPath();paCtx.moveTo(PL,y);paCtx.lineTo(PL+PW,y);paCtx.stroke();
+    paCtx.fillStyle=P.muted;paCtx.font='10px DM Sans';paCtx.textAlign='right';
+    paCtx.fillText(t>=1000?(t/1000)+'k':t,PL-6,y+4);
+  });
+  paCtx.strokeStyle=P.dim;paCtx.lineWidth=1;
+  paCtx.beginPath();paCtx.moveTo(PL,PT);paCtx.lineTo(PL,PT+PH);paCtx.lineTo(PL+PW,PT+PH);paCtx.stroke();
+
+  YEAR_DATA.forEach((d,i)=>{
+    const cx=PL+(i+.5)*gap;
+    const bh=(d.count/mx)*PH;
+    const by=PT+PH-bh;
+    const isPeak=d.year===PA_PEAK;
+    const col=isPeak?P.accent:YR_BAR_COLS[d.year]||P.g1;
+    paCtx.globalAlpha=d.partial?.35:1;
+    paCtx.fillStyle=col;
+    paCtx.beginPath();paCtx.roundRect(cx-barW/2,by,barW,bh,[4,4,0,0]);paCtx.fill();
+    paCtx.globalAlpha=1;
+    const lbl=d.count>=1000?(d.count/1000).toFixed(1)+'k':String(d.count);
+    paCtx.fillStyle=isPeak?P.accent:P.muted;
+    paCtx.font=(isPeak?'500 ':'')+'11px DM Sans';paCtx.textAlign='center';
+    paCtx.fillText(lbl,cx,by-6);
+    paCtx.fillStyle=isPeak?P.accent:P.muted;
+    paCtx.fillText(String(d.year),cx,PT+PH+16);
+    if(!d.partial) paHits.push({x:cx-barW/2,y:by,w:barW,h:bh+PH-(bh+by-PT),year:d.year});
+  });
+
+  // Legend
+  const lg=document.getElementById('pa-legend');lg.innerHTML='';
+  YEAR_DATA.forEach(d=>{
+    const isPeak=d.year===PA_PEAK;
+    const col=isPeak?P.accent:YR_BAR_COLS[d.year]||P.g1;
+    lg.innerHTML+=`<div class="li" style="opacity:${d.partial?.45:1}"><div class="li-dot" style="background:${col}"></div>${d.year}</div>`;
+  });
+  document.getElementById('pa-sub').textContent='Annual photo counts — click a bar to explore that year day by day.';
+}
+
+function drawHeatmap(year){
+  paHits=[];
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = cardInnerWidth(PA_C);
+  const cssH = 220;
+  PA_C.width = cssW * dpr;
+  PA_C.height = cssH * dpr;
+  PA_C.style.width = cssW + 'px';
+  PA_C.style.height = cssH + 'px';
+  paCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = cssW, H = cssH;
+
+  const LPAD = 40;
+  const TOP = 32;
+  const isLeap = (year%4===0&&year%100!==0)||year%400===0;
+  const totalDays = isLeap ? 366 : 365;
+  const jan1 = new Date(year, 0, 1);
+  const startDow = jan1.getDay()===0 ? 6 : jan1.getDay()-1;
+  const numWeeks = Math.ceil((startDow + totalDays) / 7);
+
+  // Compute cell size dynamically to fill available width
+  const availW = W - LPAD - 8;
+  const STEP = Math.floor(availW / numWeeks);
+  const CELL = Math.max(STEP - 2, 1);
+
+  const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const yearMax = Math.max(...DAILY_DATA.filter(d=>d.date.startsWith(String(year))).map(d=>d.count), 1);
+
+  paCtx.clearRect(0, 0, W, H);
+
+  // Month labels
+  const shown = new Set();
+  for(let w=0; w<numWeeks; w++){
+    for(let dow=0; dow<7; dow++){
+      const off = w*7 + dow - startDow;
+      if(off>=0 && off<totalDays){
+        const d = new Date(year, 0, 1+off);
+        if(d.getDate()<=7 && !shown.has(d.getMonth())){
+          shown.add(d.getMonth());
+          paCtx.fillStyle=P.muted; paCtx.font='9px DM Sans'; paCtx.textAlign='left';
+          paCtx.fillText(MN[d.getMonth()], LPAD + w*STEP, TOP-8);
+        }
+      }
+    }
+  }
+
+  // DoW labels
+  [[0,'Mon'],[2,'Wed'],[4,'Fri']].forEach(([dow,lbl])=>{
+    paCtx.fillStyle=P.muted; paCtx.font='9px DM Sans'; paCtx.textAlign='left';
+    paCtx.fillText(lbl, 4, TOP + dow*STEP + CELL/2 + 3);
+  });
+
+  // Cells
+  for(let w=0; w<numWeeks; w++){
+    for(let dow=0; dow<7; dow++){
+      const off = w*7 + dow - startDow;
+      if(off<0 || off>=totalDays) continue;
+      const d = new Date(year, 0, 1+off);
+      const ds = d.toISOString().slice(0,10);
+      const count = dailyMap[ds] || 0;
+      const cx = LPAD + w*STEP;
+      const cy = TOP + dow*STEP;
+      paCtx.fillStyle = paColorForCount(count, yearMax);
+      paCtx.beginPath(); paCtx.roundRect(cx, cy, CELL, CELL, 2); paCtx.fill();
+      paHits.push({x:cx, y:cy, w:CELL, h:CELL, date:ds, count});
+    }
+  }
+
+  // Legend
+  const lx = LPAD, ly = TOP + 7*STEP + 6;
+  paCtx.fillStyle=P.muted; paCtx.font='9px DM Sans'; paCtx.textAlign='left';
+  paCtx.fillText('Less', lx, ly+9);
+  ['#F1F5F9','#DBEAFE','#60A5FA','#2563EB','#1E3A8A'].forEach((c,i)=>{
+    paCtx.fillStyle=c; paCtx.beginPath(); paCtx.roundRect(lx+28+i*14, ly, 11, 11, 2); paCtx.fill();
+  });
+  paCtx.fillStyle=P.muted; paCtx.fillText('More', lx+28+5*14+4, ly+9);
+
+  document.getElementById('pa-sub').innerHTML=`Daily activity for ${year} — click a day to see its shooting session. <span style="color:var(--accent);cursor:pointer;text-decoration:underline" onclick="paShowYears()">← all years</span>`;
+  document.getElementById('pa-legend').innerHTML='';
+  document.getElementById('pa-panel').style.display='none';
+}
+
+PA_C.addEventListener('click',e=>{
+  const dpr = window.devicePixelRatio || 1;
+  const rect = PA_C.getBoundingClientRect();
+  const mx = (e.clientX - rect.left);
+  const my = (e.clientY - rect.top);
+  for(const b of paHits){
+    if(mx>=b.x&&mx<=b.x+b.w&&my>=b.y&&my<=b.y+b.h){
+      if(paView==='years'){
+        paView='heatmap';
+        paYear=b.year;
+        drawHeatmap(b.year);
+      } else if(paView==='heatmap'&& b.count>0){
+        const dateObj=new Date(b.date+'T12:00:00');
+        const fmt=dateObj.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+        document.getElementById('pa-panel-date').textContent=fmt;
+        document.getElementById('pa-panel-count').textContent=b.count.toLocaleString()+' photos';
+        const session=ALBUM_MAP[b.date];
+        document.getElementById('pa-panel-albums').innerHTML=session
+          ?`<div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:${P.g1};flex-shrink:0"></div><span style="font-size:13px;color:var(--text)">${session}</span></div>`
+          :`<span style="font-size:12px;color:var(--muted);font-style:italic">No named session</span>`;
+        document.getElementById('pa-panel').style.display='block';
+      }
+      break;
+    }
+  }
+});
+
+PA_C.addEventListener('mousemove',e=>{
+  const dpr = window.devicePixelRatio || 1;
+  const rect = PA_C.getBoundingClientRect();
+  const mx = (e.clientX - rect.left);
+  const my = (e.clientY - rect.top);
+  let hit=false;
+  for(const b of paHits){
+    if(mx>=b.x&&mx<=b.x+b.w&&my>=b.y&&my<=b.y+b.h){
+      if(paView==='years'||(paView==='heatmap'&&b.count>0)){
+        PA_C.style.cursor='pointer';
+        if(paView==='years') showTT(e,String(b.year),b.year+': '+(YEAR_DATA.find(d=>d.year===b.year)?.count||0).toLocaleString()+' photos<br><span style="color:var(--muted)">click to explore days</span>');
+        else{ const session=ALBUM_MAP[b.date]; showTT(e,new Date(b.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}),b.count.toLocaleString()+' photos'+(session?'<br>'+session:'')); }
+        hit=true;break;
+      }
+    }
+  }
+  if(!hit){PA_C.style.cursor='default';hideTT();}
+});
+PA_C.addEventListener('mouseleave',()=>{hideTT();PA_C.style.cursor='default';});
+
+// Back button (double-click canvas or call paShowYears())
+function paShowYears(){
+  paView='years';
+  paYear=null;
+  document.getElementById('pa-panel').style.display='none';
+  drawYears();
+}
+function paResize(){
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = cardInnerWidth(PA_C);
+  const cssH = parseInt(PA_C.getAttribute('height'));
+  PA_C.width = cssW * dpr;
+  PA_C.height = cssH * dpr;
+  PA_C.style.width = cssW + 'px';
+  PA_C.style.height = cssH + 'px';
+  paCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  paView === 'years' ? drawYears() : drawHeatmap(paYear);
+}
+
+// ═══════════════════════════════════════════════
 // RESIZE
 // ═══════════════════════════════════════════════
 window.addEventListener('resize',()=>{
-  resizeExp();resizeGear();resizeLens();resizeSankey();
+  resizeExp();resizeGear();resizeLens();resizeSankey();paResize();
 });
 setTimeout(()=>{resizeExp();resizeGear();resizeSankey();},80);
 </script>
