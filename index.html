@@ -97,6 +97,7 @@ canvas{display:block}
     <button class="nav-link" onclick="goto('s-exposure')">Exposure</button>
     <button class="nav-link" onclick="goto('s-gear')">Gear Timeline</button>
     <button class="nav-link" onclick="goto('s-lens')">Lens Race</button>
+    <button class="nav-link" onclick="goto('s-sankey')">Workflow</button>
   </div>
 </nav>
 
@@ -105,6 +106,7 @@ canvas{display:block}
   <button class="nd" title="Exposure" onclick="goto('s-exposure')"></button>
   <button class="nd" title="Gear Timeline" onclick="goto('s-gear')"></button>
   <button class="nd" title="Lens Race" onclick="goto('s-lens')"></button>
+  <button class="nd" title="Workflow" onclick="goto('s-sankey')"></button>
 </div>
 
 <!-- ═══ HERO ═══ -->
@@ -191,6 +193,16 @@ canvas{display:block}
   </div>
 </section>
 
+<!-- ═══ WORKFLOW SANKEY ═══ -->
+<section id="s-sankey">
+  <div class="viz-card">
+    <div class="viz-card-title">Workflow Funnel</div>
+    <div class="viz-card-sub">Estimated flow from captured frames to published photos, including losses at each stage. Hover links to inspect counts and conversion/drop-off rates.</div>
+    <canvas id="sankey-canvas" height="360"></canvas>
+    <div class="legend" id="sankey-legend"></div>
+  </div>
+</section>
+
 <script src="viz_data.js"></script>
 <script>
 // ═══════════════════════════════════════════════
@@ -211,7 +223,7 @@ document.addEventListener('mousemove',moveTT);
 
 // Nav scroll highlight
 window.addEventListener('scroll',()=>{
-  const ids=['s-hero','s-exposure','s-gear','s-lens'];
+  const ids=['s-hero','s-exposure','s-gear','s-lens','s-sankey'];
   const nds=document.querySelectorAll('.nd');
   const nls=document.querySelectorAll('.nav-link');
   ids.forEach((id,i)=>{
@@ -239,9 +251,10 @@ const io=new IntersectionObserver(entries=>{entries.forEach(e=>{
   if(id==='s-exposure'){resizeExp();drawExposure()}
   if(id==='s-gear'){resizeGear()}
   if(id==='s-lens'){resizeLens();lrInit()}
+  if(id==='s-sankey'){resizeSankey();sankeyStart()}
   io.unobserve(e.target);
 })},{threshold:.25});
-['s-hero','s-exposure','s-gear','s-lens'].forEach(id=>io.observe(document.getElementById(id)));
+['s-hero','s-exposure','s-gear','s-lens','s-sankey'].forEach(id=>io.observe(document.getElementById(id)));
 
 // ═══════════════════════════════════════════════
 // PALETTE
@@ -705,12 +718,239 @@ function lrInit(){
 function resizeLens(){LR_C.width=cardInnerWidth(LR_C);if(lrInited)lrDrawFrame()}
 
 // ═══════════════════════════════════════════════
+// 4. WORKFLOW SANKEY
+// ═══════════════════════════════════════════════
+const SK_C=document.getElementById('sankey-canvas');
+const skCtx=SK_C.getContext('2d');
+const SK_NODE_COLS={shots:P.g1,selection:P.g2,edition:P.g3,published:P.g6};
+let skHover=null;
+let skAnimT=0;
+let skAnimAF=null;
+let skInited=false;
+
+function sankeyDataSafe(){
+  const d=typeof SANKEY_DATA!=='undefined'?SANKEY_DATA:null;
+  if(!d||!d.nodes||!d.links||!d.totals)return null;
+  return d;
+}
+
+function skLabel(id){
+  const map={
+    shots:'Picture shots',
+    selection:'Selection',
+    edition:'Edition',
+    published:'Published',
+    lost_selection:'Lost after selection',
+    lost_edition:'Not edited',
+    lost_published:'Not published',
+  };
+  return map[id]||id;
+}
+
+function buildSankeyGraph(data){
+  const t=data.totals||{};
+  const shots=Math.max(0,+t.shots||0);
+  const selection=Math.max(0,Math.min(shots,+t.selection||0));
+  const edition=Math.max(0,Math.min(selection,+t.edition||0));
+  const published=Math.max(0,Math.min(edition,+t.published||0));
+  const lossSelection=Math.max(0,shots-selection);
+  const lossEdition=Math.max(0,selection-edition);
+  const lossPublished=Math.max(0,edition-published);
+  return {
+    nodes:[
+      {id:'shots',value:shots,col:0,row:'main'},
+      {id:'selection',value:selection,col:1,row:'main'},
+      {id:'edition',value:edition,col:2,row:'main'},
+      {id:'published',value:published,col:3,row:'main'},
+      {id:'lost_selection',value:lossSelection,col:1,row:'loss'},
+      {id:'lost_edition',value:lossEdition,col:2,row:'loss'},
+      {id:'lost_published',value:lossPublished,col:3,row:'loss'},
+    ],
+    links:[
+      {source:'shots',target:'selection',value:selection,kind:'kept'},
+      {source:'shots',target:'lost_selection',value:lossSelection,kind:'loss'},
+      {source:'selection',target:'edition',value:edition,kind:'kept'},
+      {source:'selection',target:'lost_edition',value:lossEdition,kind:'loss'},
+      {source:'edition',target:'published',value:published,kind:'kept'},
+      {source:'edition',target:'lost_published',value:lossPublished,kind:'loss'},
+    ]
+  };
+}
+
+function sankeyGeom(){
+  const data=sankeyDataSafe();
+  if(!data)return null;
+  const graph=buildSankeyGraph(data);
+  const W=SK_C.width,H=SK_C.height;
+  const PL=52,PR=56,PT=24,PB=54;
+  const PW=W-PL-PR,PH=H-PT-PB;
+  const nodeW=12;
+  const xStep=PW/3;
+  const mainY=PT+PH*0.18;
+  const lossY=PT+PH*0.66;
+  const maxV=Math.max(...graph.nodes.map(n=>n.value),1);
+
+  const nodes=graph.nodes.map(n=>{
+    const x=PL+n.col*xStep;
+    const y=n.row==='main'?mainY:lossY;
+    const h=Math.max(10,Math.min(90,10+Math.sqrt((n.value||0)/maxV)*76))*Math.max(skAnimT,0.08);
+    return {id:n.id,x,y,w:nodeW,h,value:n.value,row:n.row,col:n.col,inSum:0,outSum:0};
+  });
+  const byId=Object.fromEntries(nodes.map(n=>[n.id,n]));
+  const activeLinks=graph.links.filter(l=>l.value>0);
+  activeLinks.forEach(l=>{
+    const s=byId[l.source],t=byId[l.target];
+    if(s)s.outSum+=l.value;
+    if(t)t.inSum+=l.value;
+  });
+
+  const nodeScale={};
+  nodes.forEach(n=>{
+    const den=Math.max(n.inSum,n.outSum,1);
+    nodeScale[n.id]=n.h/den;
+  });
+
+  const outCursor={},inCursor={};
+  nodes.forEach(n=>{outCursor[n.id]=0;inCursor[n.id]=0;});
+
+  const links=activeLinks.map((l,idx)=>{
+    const s=byId[l.source],t=byId[l.target];
+    const sy=s.y + outCursor[s.id]*nodeScale[s.id];
+    const ty=t.y + inCursor[t.id]*nodeScale[t.id];
+    const sTh=Math.max(2,l.value*nodeScale[s.id]);
+    const tTh=Math.max(2,l.value*nodeScale[t.id]);
+    outCursor[s.id]+=l.value;
+    inCursor[t.id]+=l.value;
+    return {
+      ...l,idx,s,t,srcValue:s.value,
+      sy0:sy,sy1:sy+sTh,
+      ty0:ty,ty1:ty+tTh,
+      thMid:(sTh+tTh)/2
+    };
+  });
+  return {W,H,PL,PT,PW,PH,nodes,links,maxV};
+}
+
+function drawLink(link,hovered){
+  const {s,t,sy0,sy1,ty0,ty1}=link;
+  const x1=s.x+s.w,x2=t.x;
+  const y1m=(sy0+sy1)/2,y2m=(ty0+ty1)/2;
+  const c1=x1+(x2-x1)*0.45,c2=x1+(x2-x1)*0.55;
+  skCtx.beginPath();
+  skCtx.moveTo(x1,sy0);
+  skCtx.bezierCurveTo(c1,sy0,c2,ty0,x2,ty0);
+  skCtx.lineTo(x2,ty1);
+  skCtx.bezierCurveTo(c2,ty1,c1,sy1,x1,sy1);
+  skCtx.closePath();
+  const grad=skCtx.createLinearGradient(x1,0,x2,0);
+  if(link.kind==='loss'){
+    grad.addColorStop(0,P.g7+'26');
+    grad.addColorStop(1,P.g7+'45');
+  }else{
+    grad.addColorStop(0,(SK_NODE_COLS[link.source]||P.g1)+'30');
+    grad.addColorStop(1,(SK_NODE_COLS[link.target]||P.g2)+'42');
+  }
+  skCtx.fillStyle=grad;
+  skCtx.globalAlpha=hovered?0.98:(link.kind==='loss'?0.72:0.8);
+  skCtx.fill();
+  skCtx.globalAlpha=1;
+}
+
+function drawSankey(){
+  const g=sankeyGeom();if(!g)return;
+  const {W,H,nodes,links}=g;
+  skCtx.clearRect(0,0,W,H);
+
+  links.forEach(l=>drawLink(l,skHover&&skHover.type==='link'&&skHover.idx===l.idx));
+
+  nodes.forEach(n=>{
+    skCtx.fillStyle=n.row==='loss'?P.g7:(SK_NODE_COLS[n.id]||P.g1);
+    skCtx.globalAlpha=0.95;
+    skCtx.fillRect(n.x,n.y,n.w,n.h);
+    skCtx.globalAlpha=1;
+  });
+
+  skCtx.fillStyle=P.text;
+  skCtx.font='600 13px DM Sans';
+  skCtx.textAlign='center';
+  nodes.forEach(n=>{skCtx.fillText(skLabel(n.id),n.x+n.w/2,n.y+n.h+24)});
+
+  skCtx.fillStyle=P.muted;
+  skCtx.font='11px DM Sans';
+  nodes.forEach(n=>{skCtx.fillText((n.value||0).toLocaleString(),n.x+n.w/2,n.y+n.h+40)});
+
+  SK_C._meta={nodes,links};
+}
+
+function sankeyStart(){
+  if(skAnimAF)cancelAnimationFrame(skAnimAF);
+  skAnimT=0;
+  const start=performance.now();
+  const tick=(ts)=>{
+    skAnimT=clamp((ts-start)/900,0,1);
+    drawSankey();
+    if(skAnimT<1)skAnimAF=requestAnimationFrame(tick);else skAnimAF=null;
+  };
+  skAnimAF=requestAnimationFrame(tick);
+
+  if(!skInited){
+    skInited=true;
+    const lg=document.getElementById('sankey-legend');
+    lg.innerHTML=[
+      `<div class="li"><div class="li-dot" style="background:${SK_NODE_COLS.shots}"></div>Picture shots</div>`,
+      `<div class="li"><div class="li-line" style="background:${P.g2}"></div>Kept flow</div>`,
+      `<div class="li"><div class="li-line" style="background:${P.g7}"></div>Loss flow</div>`,
+      `<div class="li"><div class="li-dot" style="background:${SK_NODE_COLS.published}"></div>Published</div>`,
+    ].join('');
+  }
+}
+
+SK_C.addEventListener('mousemove',e=>{
+  const m=SK_C._meta;if(!m)return;
+  const rect=SK_C.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*(SK_C.width/rect.width),my=(e.clientY-rect.top)*(SK_C.height/rect.height);
+  skHover=null;
+
+  // Nodes first (easier target)
+  for(const n of m.nodes){
+    if(mx>=n.x&&mx<=n.x+n.w&&my>=n.y&&my<=n.y+n.h){
+      skHover={type:'node',id:n.id};
+      const title=skLabel(n.id);
+      showTT(e,title,`${n.value.toLocaleString()} photos`);
+      drawSankey();
+      return;
+    }
+  }
+
+  // Then links using y-distance around link centerline.
+  for(const l of m.links){
+    const x1=l.s.x+l.s.w,x2=l.t.x;
+    if(mx<x1||mx>x2)continue;
+    const t=(mx-x1)/(x2-x1);
+    const top=(1-t)*(1-t)*(1-t)*l.sy0 + 3*(1-t)*(1-t)*t*l.sy0 + 3*(1-t)*t*t*l.ty0 + t*t*t*l.ty0;
+    const bot=(1-t)*(1-t)*(1-t)*l.sy1 + 3*(1-t)*(1-t)*t*l.sy1 + 3*(1-t)*t*t*l.ty1 + t*t*t*l.ty1;
+    if(my>=Math.min(top,bot)-2 && my<=Math.max(top,bot)+2){
+      skHover={type:'link',idx:l.idx};
+      const pct=l.srcValue?((l.value/l.srcValue)*100):0;
+      const metric=l.kind==='loss'?'drop-off':'conversion';
+      showTT(e,`${skLabel(l.source)} → ${skLabel(l.target)}`,`${l.value.toLocaleString()} photos<br>${pct.toFixed(1)}% ${metric}`);
+      drawSankey();
+      return;
+    }
+  }
+  hideTT();
+  drawSankey();
+});
+SK_C.addEventListener('mouseleave',()=>{skHover=null;hideTT();drawSankey()});
+function resizeSankey(){SK_C.width=cardInnerWidth(SK_C);if(skInited)drawSankey()}
+
+// ═══════════════════════════════════════════════
 // RESIZE
 // ═══════════════════════════════════════════════
 window.addEventListener('resize',()=>{
-  resizeExp();resizeGear();resizeLens();
+  resizeExp();resizeGear();resizeLens();resizeSankey();
 });
-setTimeout(()=>{resizeExp();resizeGear();},80);
+setTimeout(()=>{resizeExp();resizeGear();resizeSankey();},80);
 </script>
 </body>
 </html>

@@ -6,8 +6,20 @@ import json
 import pandas as pd
 import numpy as np
 
-CSV = "shared_dataset/shared_dataset/metadata/photos_metadatas_filtered_v3.csv"
-df = pd.read_csv(CSV, low_memory=False)
+CSV_CANDIDATES = [
+    "shared_dataset/metadata/photos_metadatas_filtered_v3.csv",
+    "shared_dataset/shared_dataset/metadata/photos_metadatas_filtered_v3.csv",
+]
+for CSV in CSV_CANDIDATES:
+    try:
+        df = pd.read_csv(CSV, low_memory=False)
+        break
+    except FileNotFoundError:
+        continue
+else:
+    raise FileNotFoundError(
+        f"Could not find metadata CSV. Tried: {CSV_CANDIDATES}"
+    )
 print(f"Loaded {len(df)} rows")
 
 # ── Normalise camera model ──────────────────────────────────────────────────
@@ -56,6 +68,92 @@ print(f"Hero: {total_photos} photos, {shooting_days} shooting days, {unique_lens
 # Filter to 2021-2024 for viz
 df4 = df[df["Year"].between(2021, 2024)].copy()
 print(f"2021-2024: {len(df4)} rows")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 0. SANKEY — photo flow estimation
+# ══════════════════════════════════════════════════════════════════════════════
+def _to_bool(series):
+    return series.astype(str).str.strip().str.lower().isin({"true", "1", "yes"})
+
+
+def _extract_filename_counter(series):
+    return pd.to_numeric(
+        series.astype(str).str.extract(r"(\d+)(?=\.[^.]+$)")[0],
+        errors="coerce",
+    )
+
+
+def _estimate_from_filename(group):
+    """
+    Conservative estimate from filename counters within local groups.
+    Uses counter span and caps inflation to avoid huge overestimates.
+    """
+    counters = group["file_counter"].dropna().astype(int)
+    if counters.empty:
+        return 0
+    span_est = int(counters.max() - counters.min() + 1)
+    # Keep estimate local and realistic if filename pattern is irregular.
+    cap_est = int(len(counters) * 3)
+    return max(len(counters), min(span_est, cap_est))
+
+
+def estimate_picture_shots(df_period):
+    """
+    Prefer shutter count span by camera when available.
+    Fallback to per-camera local filename counters.
+    """
+    work = df_period.copy()
+    work["ShutterCount_num"] = pd.to_numeric(work.get("ShutterCount"), errors="coerce")
+    work["file_counter"] = _extract_filename_counter(work.get("FileName", pd.Series(index=work.index)))
+    work["file_prefix"] = work.get("FileName", pd.Series(index=work.index)).astype(str).str.extract(r"^([A-Za-z_\\-]+)")[0].fillna("GEN")
+    work = work.sort_values("DateTime")
+
+    est_total = 0
+    for model, grp in work.groupby("Model_norm", dropna=False):
+        sc = grp["ShutterCount_num"].dropna()
+        coverage = len(sc) / max(len(grp), 1)
+        if len(sc) >= 25 and coverage >= 0.6:
+            est = int(sc.max() - sc.min() + 1)
+        else:
+            est = 0
+            for (_, _), sub in grp.groupby([grp["DateTime"].dt.year, "file_prefix"], dropna=False):
+                est += _estimate_from_filename(sub)
+            if est == 0:
+                est = len(grp)
+        est_total += max(est, len(grp))
+    return int(est_total)
+
+
+selected_photos = int(len(df))
+picture_shots_est = estimate_picture_shots(df)
+picture_shots_est = max(picture_shots_est, selected_photos)
+
+# Business rule: current dataset already corresponds to selected (and edited) photos.
+edited_photos = selected_photos
+
+published_photos = 500  # User-provided estimate
+published_photos = min(published_photos, edited_photos)
+
+sankey_data = {
+    "nodes": [
+        {"id": "shots", "label": "Picture shots"},
+        {"id": "selection", "label": "Selection"},
+        {"id": "edition", "label": "Edition"},
+        {"id": "published", "label": "Published"},
+    ],
+    "links": [
+        {"source": "shots", "target": "selection", "value": selected_photos},
+        {"source": "selection", "target": "edition", "value": edited_photos},
+        {"source": "edition", "target": "published", "value": published_photos},
+    ],
+    "totals": {
+        "shots": picture_shots_est,
+        "selection": selected_photos,
+        "edition": edited_photos,
+        "published": published_photos,
+    },
+}
+print(f"Sankey totals: {sankey_data['totals']}")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 1. EXPOSURE EXPLORER
@@ -219,6 +317,8 @@ const LENSES = {json.dumps(top5_lenses)};
 const LENS_COLS = {lens_cols_js};
 const LENS_MONTHLY = {json.dumps(lens_monthly, indent=2)};
 const LENS_MONTH_LABELS = {json.dumps(lens_month_labels)};
+
+const SANKEY_DATA = {json.dumps(sankey_data, indent=2)};
 """
 
 with open("viz_data.js", "w") as f:
