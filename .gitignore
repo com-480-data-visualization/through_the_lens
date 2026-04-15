@@ -1,14 +1,11 @@
 # Data files (too large for Git)
-data/*.csv
-data/*.parquet
-../photos_metadatas_filtered.csv
-shared_dataset/shared_dataset/metadata/*.csv
-shared_dataset/shared_dataset/histograms/*.parquet
-shared_dataset/shared_dataset/histograms/*.json
-shared_dataset/shared_dataset/histograms/*.jsonl
-shared_dataset/shared_dataset/immich_embeddings/*.csv
-shared_dataset/shared_dataset/immich_embeddings/*.npz
-shared_dataset/shared_dataset/immich_embeddings/*.json
+data/metadata/*.csv
+data/histograms/*.parquet
+data/histograms/*.json
+data/histograms/*.jsonl
+data/immich_embeddings/*.csv
+data/immich_embeddings/*.npz
+data/immich_embeddings/*.json
 __MACOSX/
 
 # Python/Jupyter
