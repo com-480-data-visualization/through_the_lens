@@ -822,13 +822,13 @@ function buildSankeyGraph(data){
   const lossPublished=Math.max(0,edition-published);
   return {
     nodes:[
-      {id:'shots',value:shots,row:'main'},
-      {id:'selection',value:selection,row:'main'},
-      {id:'edition',value:edition,row:'main'},
-      {id:'published',value:published,row:'main'},
-      {id:'lost_selection',value:lossSelection,row:'loss'},
-      {id:'lost_edition',value:lossEdition,row:'loss'},
-      {id:'lost_published',value:lossPublished,row:'loss'},
+      {id:'shots',value:shots,col:0,row:'main'},
+      {id:'selection',value:selection,col:1,row:'main'},
+      {id:'edition',value:edition,col:2,row:'main'},
+      {id:'published',value:published,col:3,row:'main'},
+      {id:'lost_selection',value:lossSelection,col:1,row:'loss'},
+      {id:'lost_edition',value:lossEdition,col:2,row:'loss'},
+      {id:'lost_published',value:lossPublished,col:3,row:'loss'},
     ],
     links:[
       {source:'shots',target:'selection',value:selection,kind:'kept'},
