@@ -81,8 +81,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
 /* TOOLTIP */
 #tt{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 15px;font-size:12px;pointer-events:none;z-index:500;display:none;max-width:220px;box-shadow:0 4px 16px rgba(15,23,42,.1)}
+#tt.tt-with-preview{max-width:min(200px,calc(100vw - 40px))}
 #tt-head{color:var(--g1);font-size:13px;font-weight:500;margin-bottom:5px}
 #tt-body{color:var(--muted);line-height:1.85}
+#tt .tt-preview-wrap{margin-top:10px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--card2);aspect-ratio:16/10}
+#tt .tt-preview-img{display:block;width:100%;height:100%;object-fit:cover;vertical-align:top}
 
 canvas{display:block}
 @media(max-width:700px){section{padding:60px 16px}.ctrl-row{gap:8px}.hero-stats{gap:28px}}
@@ -264,9 +267,15 @@ function goto(id){document.getElementById(id).scrollIntoView({behavior:'smooth'}
 
 // Tooltip
 const TT=document.getElementById('tt');
-function showTT(e,head,body){document.getElementById('tt-head').innerHTML=head;document.getElementById('tt-body').innerHTML=body;TT.style.display='block'}
+function showTT(e,head,body,opts){
+  opts=opts||{};
+  document.getElementById('tt-head').innerHTML=head;
+  document.getElementById('tt-body').innerHTML=body;
+  TT.classList.toggle('tt-with-preview',!!opts.preview);
+  TT.style.display='block';
+}
 function moveTT(e){TT.style.left=(e.clientX+16)+'px';TT.style.top=(e.clientY-12)+'px'}
-function hideTT(){TT.style.display='none'}
+function hideTT(){TT.classList.remove('tt-with-preview');TT.style.display='none'}
 document.addEventListener('mousemove',moveTT);
 
 // Nav scroll highlight
@@ -1057,6 +1066,8 @@ function paColorForCount(c,mx){
   if(r<0.80) return '#2563EB';
   return '#7C3AED';
 }
+// Blue shared by all-years bars (2021/2022/2026) and Winter months after drill-down
+const PA_BAR_BLUE = '#3B82F6';
 // sequential blue→purple per month index 0..11 (used for sessions chart)
 function paMonthCol(i){
   const t=i/11;
@@ -1064,15 +1075,40 @@ function paMonthCol(i){
 }
 // season-tinted colour for monthly bar chart — tones match the heatmap palette
 function paSeasonCol(monthIdx){
-  if(monthIdx<=2) return '#3B82F6'; // Winter  — same blue as heatmap mid-tone
+  if(monthIdx<=2) return PA_BAR_BLUE; // Winter — same blue as yearly bar chart
   if(monthIdx<=5) return P.g3;      // Spring  — same teal as yearly chart (e.g. 2023 bar)
   if(monthIdx<=8) return '#F97316'; // Summer  — exact heatmap accent orange
   return '#8B5CF6';                  // Autumn  — exact heatmap purple end
 }
 
-const YR_BAR_COLS = {2021:P.g1,2022:P.g2,2023:P.g3,2024:P.g6,2025:P.g8,2026:P.g1};
+const YR_BAR_COLS = {2021:PA_BAR_BLUE,2022:PA_BAR_BLUE,2023:P.g3,2024:P.g6,2025:P.g8,2026:PA_BAR_BLUE};
 const PA_PEAK = YEAR_DATA.reduce((a,b)=>b.count>a.count?b:a).year;
 const PA_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// Previews on heatmap hover: PA_YEAR_THUMB = one image per year (data/pa-previews/2024.jpg).
+// PA_DAY_THUMB overrides specific dates (e.g. data/pa-previews/day-2024-05-03.jpg).
+const PA_YEAR_THUMB={
+};
+const PA_DAY_THUMB={
+  '2022-07-23':'data/pa-previews/day-2022-07-23.jpg',
+  '2023-01-17':'data/pa-previews/day-2023-01-17.jpg',
+  '2024-05-03':'data/pa-previews/day-2024-05-03.jpg',
+  '2025-10-14':'data/pa-previews/day-2025-10-14.jpg',
+};
+function paYearPlaceholderSvgUri(year){
+  const hue=210+(year%6)*22;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200"><rect fill="hsl(${hue},28%,94%)" width="320" height="200"/><text x="160" y="104" text-anchor="middle" fill="#94a3b8" font-family="DM Sans,sans-serif" font-size="14" font-weight="500">${year}</text><text x="160" y="128" text-anchor="middle" fill="#cbd5e1" font-family="DM Sans,sans-serif" font-size="10">Drop preview in data/pa-previews/</text></svg>`;
+  return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+}
+function paThumbSrc(isoDate){
+  if(PA_DAY_THUMB[isoDate]) return PA_DAY_THUMB[isoDate];
+  const y=+isoDate.slice(0,4);
+  return PA_YEAR_THUMB[y]||paYearPlaceholderSvgUri(y);
+}
+function paThumbTooltipHtml(isoDate){
+  const src=paThumbSrc(isoDate);
+  return `<div class="tt-preview-wrap"><img class="tt-preview-img" src="${src}" alt="" loading="lazy" decoding="async" onerror="this.closest('.tt-preview-wrap').style.display='none'"/></div>`;
+}
 
 // ── state ────────────────────────────────────────
 // paView: 'years' | 'months' | 'heatmap' | 'morphing'
@@ -1547,7 +1583,7 @@ PA_C.addEventListener('mousemove',e=>{
           showTT(e,`<span style="color:${barCol}">${yr}</span>`,`${total} photos${vsLine}${peakMonthLine}${daysLine}${hint}`);
         }
         else if(paView==='detail'&&b.type==='month'){const mc=paSeasonCol(b.month-1);showTT(e,`<span style="color:${mc}">${PA_MONTHS[b.month-1]}</span>`,b.count.toLocaleString()+' photos');}
-        else if(paView==='detail'&&b.type==='day'){const s=ALBUM_MAP[b.date];const dl=new Date(b.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});const tc=(b.col==='#F1F5F9'||b.col==='#DBEAFE')?'#93C5FD':(b.col||P.g1);showTT(e,`<span style="color:${tc}">${dl}</span>`,b.count.toLocaleString()+' photos'+(s?'<br>'+s:''));}
+        else if(paView==='detail'&&b.type==='day'){const s=ALBUM_MAP[b.date];const dl=new Date(b.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});const tc=(b.col==='#F1F5F9'||b.col==='#DBEAFE')?'#93C5FD':(b.col||P.g1);showTT(e,`<span style="color:${tc}">${dl}</span>`,b.count.toLocaleString()+' photos'+(s?'<br>'+s:'')+paThumbTooltipHtml(b.date),{preview:true});}
         hit=true; break;
       }
     }
