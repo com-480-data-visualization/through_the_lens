@@ -185,7 +185,10 @@ canvas{display:block}
         <div id="exp-insight-body" style="font-size:12px;color:var(--muted);line-height:1.75"></div>
       </div>
     </div>
-    <canvas id="exp-canvas" height="500"></canvas>
+    <div id="exp-wrap" style="position:relative;width:100%">
+      <canvas id="exp-canvas" height="500" style="display:block"></canvas>
+      <svg id="exp-svg" style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible"></svg>
+    </div>
     <div class="legend" id="exp-legend"></div>
   </div>
 </section>
@@ -223,11 +226,13 @@ canvas{display:block}
   <div class="viz-card">
     <div class="viz-card-title">Workflow Funnel</div>
     <div class="viz-card-sub">Estimated flow from captured frames to published photos, including losses at each stage. Hover links to inspect counts and conversion/drop-off rates.</div>
-    <canvas id="sankey-canvas" height="360"></canvas>
+    <div id="sankey-container" style="width:100%;min-height:360px"></div>
     <div class="legend" id="sankey-legend"></div>
   </div>
 </section>
 
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
 <script src="viz_data.js"></script>
 <script>
 // ═══════════════════════════════════════════════
@@ -419,16 +424,7 @@ function drawExpFrame(){
   AXES[xKey].ticks.forEach(t=>{const x=PL+clamp(AXES[xKey].xform(t),0,1)*PW;expCtx.beginPath();expCtx.moveTo(x,PT);expCtx.lineTo(x,PT+PH);expCtx.stroke()});
   AXES[yKey].ticks.forEach(t=>{const y=PT+(1-clamp(AXES[yKey].xform(t),0,1))*PH;expCtx.beginPath();expCtx.moveTo(PL,y);expCtx.lineTo(PL+PW,y);expCtx.stroke()});
 
-  // Tick labels
-  expCtx.fillStyle=P.muted;expCtx.font='10px DM Sans';expCtx.textAlign='center';
-  AXES[xKey].ticks.forEach(t=>expCtx.fillText(AXES[xKey].tickFmt(t),PL+clamp(AXES[xKey].xform(t),0,1)*PW,PT+PH+14));
-  expCtx.textAlign='right';
-  AXES[yKey].ticks.forEach(t=>expCtx.fillText(AXES[yKey].tickFmt(t),PL-5,PT+(1-clamp(AXES[yKey].xform(t),0,1))*PH+4));
-
-  // Axis labels
-  expCtx.fillStyle=P.muted;expCtx.font='12px DM Sans';expCtx.textAlign='center';
-  expCtx.fillText(AXES[xKey].label,PL+PW/2,PT+PH+34);
-  expCtx.save();expCtx.translate(14,PT+PH/2);expCtx.rotate(-Math.PI/2);expCtx.fillText(AXES[yKey].label,0,0);expCtx.restore();
+  // axis tick labels and axis labels rendered by D3 SVG overlay (see updateExpAxesSVG)
 
   // Border
   expCtx.strokeStyle=P.dim;expCtx.lineWidth=1;
@@ -469,7 +465,7 @@ function runExpSprings(){
 function redrawExposure(){
   const xKey=document.getElementById('x-axis').value;
   const yKey=document.getElementById('y-axis').value;
-  updateInsightCard(xKey,yKey);computeExpTargets();
+  updateInsightCard(xKey,yKey);computeExpTargets();updateExpAxesSVG();
   if(expAnimAF)cancelAnimationFrame(expAnimAF);
   expAnimAF=requestAnimationFrame(runExpSprings);
 }
@@ -477,7 +473,7 @@ function redrawExposure(){
 function drawExposure(){
   const xKey=document.getElementById('x-axis').value;
   const yKey=document.getElementById('y-axis').value;
-  updateInsightCard(xKey,yKey);
+  updateInsightCard(xKey,yKey);updateExpAxesSVG();
   const W=EXP_C.width,H=EXP_C.height;
   const PL=64,PR=20,PT=22,PB=50,PW=W-PL-PR,PH=H-PT-PB;
   const r2=rng(77);
@@ -499,6 +495,54 @@ EXP_C.addEventListener('mousemove',e=>{
 EXP_C.addEventListener('mouseleave',hideTT);
 function cardInnerWidth(el){const cs=getComputedStyle(el.parentElement);return el.parentElement.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);}
 function resizeExp(){EXP_C.width=cardInnerWidth(EXP_C);redrawExposure()}
+
+// ─── D3 SVG axes overlay for Exposure Explorer ───────────────────────────────
+const expSVG=d3.select('#exp-svg');
+
+function updateExpAxesSVG(){
+  const xKey=document.getElementById('x-axis').value;
+  const yKey=document.getElementById('y-axis').value;
+  const W=EXP_C.width,H=EXP_C.height;
+  const PL=64,PR=20,PT=22,PB=50,PW=W-PL-PR,PH=H-PT-PB;
+
+  expSVG
+    .attr('width',W).attr('height',H)
+    .style('width',W+'px').style('height',H+'px')
+    .selectAll('*').remove();
+  const g=expSVG.append('g');
+
+  const axX=AXES[xKey],axY=AXES[yKey];
+
+  // X tick labels
+  axX.ticks.forEach(t=>{
+    g.append('text')
+      .attr('x',PL+clamp(axX.xform(t),0,1)*PW).attr('y',PT+PH+14)
+      .attr('text-anchor','middle')
+      .attr('font-family','DM Sans,sans-serif').attr('font-size',10).attr('fill',P.muted)
+      .text(axX.tickFmt(t));
+  });
+  // X axis label
+  g.append('text')
+    .attr('x',PL+PW/2).attr('y',PT+PH+34)
+    .attr('text-anchor','middle')
+    .attr('font-family','DM Sans,sans-serif').attr('font-size',12).attr('fill',P.muted)
+    .text(axX.label);
+
+  // Y tick labels
+  axY.ticks.forEach(t=>{
+    g.append('text')
+      .attr('x',PL-5).attr('y',PT+(1-clamp(axY.xform(t),0,1))*PH+4)
+      .attr('text-anchor','end')
+      .attr('font-family','DM Sans,sans-serif').attr('font-size',10).attr('fill',P.muted)
+      .text(axY.tickFmt(t));
+  });
+  // Y axis label
+  g.append('text')
+    .attr('transform',`translate(14,${PT+PH/2}) rotate(-90)`)
+    .attr('text-anchor','middle')
+    .attr('font-family','DM Sans,sans-serif').attr('font-size',12).attr('fill',P.muted)
+    .text(axY.label);
+}
 
 // ═══════════════════════════════════════════════
 // 2. GEAR RACE
@@ -744,15 +788,9 @@ function lrInit(){
 function resizeLens(){LR_C.width=cardInnerWidth(LR_C);if(lrInited)lrDrawFrame()}
 
 // ═══════════════════════════════════════════════
-// 4. WORKFLOW SANKEY
+// 4. WORKFLOW SANKEY — D3
 // ═══════════════════════════════════════════════
-const SK_C=document.getElementById('sankey-canvas');
-const skCtx=SK_C.getContext('2d');
 const SK_NODE_COLS={shots:P.g1,selection:P.g2,edition:P.g3,published:P.g6};
-let skHover=null;
-let skAnimT=0;
-let skAnimAF=null;
-let skInited=false;
 
 function sankeyDataSafe(){
   const d=typeof SANKEY_DATA!=='undefined'?SANKEY_DATA:null;
@@ -784,13 +822,13 @@ function buildSankeyGraph(data){
   const lossPublished=Math.max(0,edition-published);
   return {
     nodes:[
-      {id:'shots',value:shots,col:0,row:'main'},
-      {id:'selection',value:selection,col:1,row:'main'},
-      {id:'edition',value:edition,col:2,row:'main'},
-      {id:'published',value:published,col:3,row:'main'},
-      {id:'lost_selection',value:lossSelection,col:1,row:'loss'},
-      {id:'lost_edition',value:lossEdition,col:2,row:'loss'},
-      {id:'lost_published',value:lossPublished,col:3,row:'loss'},
+      {id:'shots',value:shots,row:'main'},
+      {id:'selection',value:selection,row:'main'},
+      {id:'edition',value:edition,row:'main'},
+      {id:'published',value:published,row:'main'},
+      {id:'lost_selection',value:lossSelection,row:'loss'},
+      {id:'lost_edition',value:lossEdition,row:'loss'},
+      {id:'lost_published',value:lossPublished,row:'loss'},
     ],
     links:[
       {source:'shots',target:'selection',value:selection,kind:'kept'},
@@ -803,172 +841,112 @@ function buildSankeyGraph(data){
   };
 }
 
-function sankeyGeom(){
+function buildD3Sankey(){
+  const container=document.getElementById('sankey-container');
+  if(!container)return;
   const data=sankeyDataSafe();
-  if(!data)return null;
+  if(!data)return;
+
+  container.innerHTML='';
+  const W=container.clientWidth||800;
+  const H=380;
+  const margin={top:28,right:64,bottom:72,left:52};
+
+  const svg=d3.select('#sankey-container')
+    .append('svg')
+    .attr('width',W)
+    .attr('height',H);
+
   const graph=buildSankeyGraph(data);
-  const W=SK_C.width,H=SK_C.height;
-  const PL=52,PR=56,PT=24,PB=54;
-  const PW=W-PL-PR,PH=H-PT-PB;
-  const nodeW=12;
-  const xStep=PW/3;
-  const mainY=PT+PH*0.18;
-  const lossY=PT+PH*0.66;
-  const maxV=Math.max(...graph.nodes.map(n=>n.value),1);
 
-  const nodes=graph.nodes.map(n=>{
-    const x=PL+n.col*xStep;
-    const y=n.row==='main'?mainY:lossY;
-    const h=Math.max(10,Math.min(90,10+Math.sqrt((n.value||0)/maxV)*76))*Math.max(skAnimT,0.08);
-    return {id:n.id,x,y,w:nodeW,h,value:n.value,row:n.row,col:n.col,inSum:0,outSum:0};
-  });
-  const byId=Object.fromEntries(nodes.map(n=>[n.id,n]));
-  const activeLinks=graph.links.filter(l=>l.value>0);
-  activeLinks.forEach(l=>{
-    const s=byId[l.source],t=byId[l.target];
-    if(s)s.outSum+=l.value;
-    if(t)t.inSum+=l.value;
-  });
+  const layout=d3.sankey()
+    .nodeId(d=>d.id)
+    .nodeWidth(14)
+    .nodePadding(20)
+    .extent([[margin.left,margin.top],[W-margin.right,H-margin.bottom]]);
 
-  const nodeScale={};
-  nodes.forEach(n=>{
-    const den=Math.max(n.inSum,n.outSum,1);
-    nodeScale[n.id]=n.h/den;
-  });
+  let sk;
+  try{
+    sk=layout({
+      nodes:graph.nodes.map(d=>({...d})),
+      links:graph.links.filter(l=>l.value>0).map(l=>({...l}))
+    });
+  }catch(e){console.error('d3-sankey error:',e);return;}
 
-  const outCursor={},inCursor={};
-  nodes.forEach(n=>{outCursor[n.id]=0;inCursor[n.id]=0;});
+  const{nodes,links}=sk;
+  const nodeColor=d=>d.row==='loss'?P.g7:(SK_NODE_COLS[d.id]||P.g1);
 
-  const links=activeLinks.map((l,idx)=>{
-    const s=byId[l.source],t=byId[l.target];
-    const sy=s.y + outCursor[s.id]*nodeScale[s.id];
-    const ty=t.y + inCursor[t.id]*nodeScale[t.id];
-    const sTh=Math.max(2,l.value*nodeScale[s.id]);
-    const tTh=Math.max(2,l.value*nodeScale[t.id]);
-    outCursor[s.id]+=l.value;
-    inCursor[t.id]+=l.value;
-    return {
-      ...l,idx,s,t,srcValue:s.value,
-      sy0:sy,sy1:sy+sTh,
-      ty0:ty,ty1:ty+tTh,
-      thMid:(sTh+tTh)/2
-    };
-  });
-  return {W,H,PL,PT,PW,PH,nodes,links,maxV};
+  // Links (drawn before nodes so nodes sit on top)
+  svg.append('g').attr('fill','none')
+    .selectAll('path')
+    .data(links)
+    .join('path')
+    .attr('d',d3.sankeyLinkHorizontal())
+    .attr('stroke',d=>d.kind==='loss'?P.g7:(SK_NODE_COLS[d.source.id]||P.g1))
+    .attr('stroke-width',d=>Math.max(1,d.width))
+    .attr('stroke-opacity',0)
+    .on('mousemove',(event,d)=>{
+      const srcVal=d.source.value||1;
+      const pct=(d.value/srcVal*100).toFixed(1);
+      const metric=d.kind==='loss'?'drop-off':'conversion';
+      showTT(event,`${skLabel(d.source.id)} → ${skLabel(d.target.id)}`,
+        `${d.value.toLocaleString()} photos<br>${pct}% ${metric}`);
+    })
+    .on('mouseleave',hideTT)
+    .transition().duration(900).ease(d3.easeCubicOut)
+    .attr('stroke-opacity',d=>d.kind==='loss'?0.32:0.45);
+
+  // Nodes
+  svg.append('g')
+    .selectAll('rect')
+    .data(nodes)
+    .join('rect')
+    .attr('x',d=>d.x0).attr('y',d=>d.y0)
+    .attr('height',d=>Math.max(1,d.y1-d.y0))
+    .attr('width',d=>d.x1-d.x0)
+    .attr('fill',nodeColor)
+    .attr('rx',3).attr('opacity',0)
+    .on('mousemove',(event,d)=>{
+      showTT(event,skLabel(d.id),`${(d.value||0).toLocaleString()} photos`);
+    })
+    .on('mouseleave',hideTT)
+    .transition().duration(800).ease(d3.easeCubicOut)
+    .attr('opacity',0.92);
+
+  // Node name labels
+  svg.append('g')
+    .attr('font-family','DM Sans,sans-serif')
+    .attr('font-size',13).attr('font-weight',600).attr('fill',P.text)
+    .selectAll('text')
+    .data(nodes)
+    .join('text')
+    .attr('x',d=>(d.x0+d.x1)/2).attr('y',d=>d.y1+18)
+    .attr('text-anchor','middle')
+    .text(d=>skLabel(d.id));
+
+  // Value labels
+  svg.append('g')
+    .attr('font-family','DM Sans,sans-serif')
+    .attr('font-size',11).attr('fill',P.muted)
+    .selectAll('text')
+    .data(nodes)
+    .join('text')
+    .attr('x',d=>(d.x0+d.x1)/2).attr('y',d=>d.y1+34)
+    .attr('text-anchor','middle')
+    .text(d=>(d.value||0).toLocaleString());
+
+  // Legend
+  const lg=document.getElementById('sankey-legend');
+  if(lg)lg.innerHTML=[
+    `<div class="li"><div class="li-dot" style="background:${SK_NODE_COLS.shots}"></div>Picture shots</div>`,
+    `<div class="li"><div class="li-line" style="background:${P.g2}"></div>Kept flow</div>`,
+    `<div class="li"><div class="li-line" style="background:${P.g7}"></div>Loss flow</div>`,
+    `<div class="li"><div class="li-dot" style="background:${SK_NODE_COLS.published}"></div>Published</div>`,
+  ].join('');
 }
 
-function drawLink(link,hovered){
-  const {s,t,sy0,sy1,ty0,ty1}=link;
-  const x1=s.x+s.w,x2=t.x;
-  const y1m=(sy0+sy1)/2,y2m=(ty0+ty1)/2;
-  const c1=x1+(x2-x1)*0.45,c2=x1+(x2-x1)*0.55;
-  skCtx.beginPath();
-  skCtx.moveTo(x1,sy0);
-  skCtx.bezierCurveTo(c1,sy0,c2,ty0,x2,ty0);
-  skCtx.lineTo(x2,ty1);
-  skCtx.bezierCurveTo(c2,ty1,c1,sy1,x1,sy1);
-  skCtx.closePath();
-  const grad=skCtx.createLinearGradient(x1,0,x2,0);
-  if(link.kind==='loss'){
-    grad.addColorStop(0,P.g7+'26');
-    grad.addColorStop(1,P.g7+'45');
-  }else{
-    grad.addColorStop(0,(SK_NODE_COLS[link.source]||P.g1)+'30');
-    grad.addColorStop(1,(SK_NODE_COLS[link.target]||P.g2)+'42');
-  }
-  skCtx.fillStyle=grad;
-  skCtx.globalAlpha=hovered?0.98:(link.kind==='loss'?0.72:0.8);
-  skCtx.fill();
-  skCtx.globalAlpha=1;
-}
-
-function drawSankey(){
-  const g=sankeyGeom();if(!g)return;
-  const {W,H,nodes,links}=g;
-  skCtx.clearRect(0,0,W,H);
-
-  links.forEach(l=>drawLink(l,skHover&&skHover.type==='link'&&skHover.idx===l.idx));
-
-  nodes.forEach(n=>{
-    skCtx.fillStyle=n.row==='loss'?P.g7:(SK_NODE_COLS[n.id]||P.g1);
-    skCtx.globalAlpha=0.95;
-    skCtx.fillRect(n.x,n.y,n.w,n.h);
-    skCtx.globalAlpha=1;
-  });
-
-  skCtx.fillStyle=P.text;
-  skCtx.font='600 13px DM Sans';
-  skCtx.textAlign='center';
-  nodes.forEach(n=>{skCtx.fillText(skLabel(n.id),n.x+n.w/2,n.y+n.h+24)});
-
-  skCtx.fillStyle=P.muted;
-  skCtx.font='11px DM Sans';
-  nodes.forEach(n=>{skCtx.fillText((n.value||0).toLocaleString(),n.x+n.w/2,n.y+n.h+40)});
-
-  SK_C._meta={nodes,links};
-}
-
-function sankeyStart(){
-  if(skAnimAF)cancelAnimationFrame(skAnimAF);
-  skAnimT=0;
-  const start=performance.now();
-  const tick=(ts)=>{
-    skAnimT=clamp((ts-start)/900,0,1);
-    drawSankey();
-    if(skAnimT<1)skAnimAF=requestAnimationFrame(tick);else skAnimAF=null;
-  };
-  skAnimAF=requestAnimationFrame(tick);
-
-  if(!skInited){
-    skInited=true;
-    const lg=document.getElementById('sankey-legend');
-    lg.innerHTML=[
-      `<div class="li"><div class="li-dot" style="background:${SK_NODE_COLS.shots}"></div>Picture shots</div>`,
-      `<div class="li"><div class="li-line" style="background:${P.g2}"></div>Kept flow</div>`,
-      `<div class="li"><div class="li-line" style="background:${P.g7}"></div>Loss flow</div>`,
-      `<div class="li"><div class="li-dot" style="background:${SK_NODE_COLS.published}"></div>Published</div>`,
-    ].join('');
-  }
-}
-
-SK_C.addEventListener('mousemove',e=>{
-  const m=SK_C._meta;if(!m)return;
-  const rect=SK_C.getBoundingClientRect();
-  const mx=(e.clientX-rect.left)*(SK_C.width/rect.width),my=(e.clientY-rect.top)*(SK_C.height/rect.height);
-  skHover=null;
-
-  // Nodes first (easier target)
-  for(const n of m.nodes){
-    if(mx>=n.x&&mx<=n.x+n.w&&my>=n.y&&my<=n.y+n.h){
-      skHover={type:'node',id:n.id};
-      const title=skLabel(n.id);
-      showTT(e,title,`${n.value.toLocaleString()} photos`);
-      drawSankey();
-      return;
-    }
-  }
-
-  // Then links using y-distance around link centerline.
-  for(const l of m.links){
-    const x1=l.s.x+l.s.w,x2=l.t.x;
-    if(mx<x1||mx>x2)continue;
-    const t=(mx-x1)/(x2-x1);
-    const top=(1-t)*(1-t)*(1-t)*l.sy0 + 3*(1-t)*(1-t)*t*l.sy0 + 3*(1-t)*t*t*l.ty0 + t*t*t*l.ty0;
-    const bot=(1-t)*(1-t)*(1-t)*l.sy1 + 3*(1-t)*(1-t)*t*l.sy1 + 3*(1-t)*t*t*l.ty1 + t*t*t*l.ty1;
-    if(my>=Math.min(top,bot)-2 && my<=Math.max(top,bot)+2){
-      skHover={type:'link',idx:l.idx};
-      const pct=l.srcValue?((l.value/l.srcValue)*100):0;
-      const metric=l.kind==='loss'?'drop-off':'conversion';
-      showTT(e,`${skLabel(l.source)} → ${skLabel(l.target)}`,`${l.value.toLocaleString()} photos<br>${pct.toFixed(1)}% ${metric}`);
-      drawSankey();
-      return;
-    }
-  }
-  hideTT();
-  drawSankey();
-});
-SK_C.addEventListener('mouseleave',()=>{skHover=null;hideTT();drawSankey()});
-function resizeSankey(){SK_C.width=cardInnerWidth(SK_C);if(skInited)drawSankey()}
+function sankeyStart(){buildD3Sankey()}
+function resizeSankey(){buildD3Sankey()}
 
 // ═══════════════════════════════════════════════
 // 5. PHOTO ACTIVITY
