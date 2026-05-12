@@ -199,7 +199,7 @@ canvas{display:block}
 <section id="s-exposure">
   <div class="viz-card">
     <div class="viz-card-title">Exposure Explorer</div>
-    <div class="viz-card-sub">Each dot is one photo. Choose what to put on each axis — then find your own story.</div>
+    <div class="viz-card-sub">Each dot is one photo. Choose axes, then <strong>drag on the chart</strong> to select a region and see statistics for those shots.</div>
     <div class="ctrl-row">
       <span class="ctrl-label">X axis</span>
       <select class="ctrl-select" id="x-axis" onchange="redrawExposure()" style="border-color:var(--g1)">
@@ -232,8 +232,9 @@ canvas{display:block}
     </div>
     <div id="exp-wrap" style="position:relative;width:100%">
       <canvas id="exp-canvas" height="500" style="display:block"></canvas>
-      <svg id="exp-svg" style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible"></svg>
+      <svg id="exp-svg" style="position:absolute;top:0;left:0;overflow:visible"></svg>
     </div>
+    <div id="exp-stats" style="display:none;margin-top:10px;padding:12px 18px;background:var(--card2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;font-size:13px"></div>
     <div class="legend" id="exp-legend"></div>
   </div>
 </section>
@@ -463,10 +464,14 @@ function drawExpFrame(){
   const DOT_PAD=20;
   expCtx.save();
   expCtx.beginPath();expCtx.rect(PL+DOT_PAD-6,PT+DOT_PAD-6,PW-2*(DOT_PAD-6),PH-2*(DOT_PAD-6));expCtx.clip();
+  const hasSel=expBrushSel!==null&&expBrushSel.size>0;
   EXP_RAW.forEach((d,i)=>{
     const s=expSprings[i],col=colMap.fn(d);
-    expCtx.beginPath();expCtx.arc(s.cx,s.cy,3,0,Math.PI*2);
-    expCtx.globalAlpha=0.45;expCtx.fillStyle=col;expCtx.fill();
+    const inSel=!hasSel||expBrushSel.has(i);
+    expCtx.beginPath();expCtx.arc(s.cx,s.cy,inSel?3.5:2,0,Math.PI*2);
+    expCtx.globalAlpha=inSel?(hasSel?0.82:0.45):0.07;
+    expCtx.fillStyle=inSel?col:P.muted;
+    expCtx.fill();
     expCtx.globalAlpha=1;
   });
   expCtx.restore();
@@ -490,6 +495,7 @@ function runExpSprings(){
 }
 
 function redrawExposure(){
+  expBrushSel=null;updateExpStats();
   const xKey=document.getElementById('x-axis').value;
   const yKey=document.getElementById('y-axis').value;
   updateInsightCard(xKey,yKey);computeExpTargets();updateExpAxesSVG();
@@ -510,24 +516,62 @@ function drawExposure(){
   expAnimAF=requestAnimationFrame(runExpSprings);
 }
 
-EXP_C.addEventListener('mousemove',e=>{
-  const m=EXP_C._meta;if(!m)return;
-  const rect=EXP_C.getBoundingClientRect();
-  const mx=(e.clientX-rect.left)*(EXP_C.width/rect.width),my=(e.clientY-rect.top)*(EXP_C.height/rect.height);
-  let cl=null,md=22;
-  EXP_RAW.forEach((d,i)=>{const s=expSprings[i],ds=Math.hypot(s.cx-mx,s.cy-my);if(ds<md){md=ds;cl=d}});
-  if(cl){
-    const sstr=cl.shutter>=1?cl.shutter.toFixed(1)+'s':'1/'+Math.round(1/cl.shutter)+'s';
-    const fcat=cl.focal<35?'Wide angle':cl.focal<85?'Normal':'Telephoto';
-    showTT(e,`${cl.cam} · ${cl.yr}`,`ISO ${Math.round(cl.iso).toLocaleString()}<br>f/${cl.aperture.toFixed(1)}<br>${sstr}<br>${Math.round(cl.focal)}mm<br><span style="color:var(--muted)">${fcat}</span>`);
-  }else hideTT();
-});
-EXP_C.addEventListener('mouseleave',hideTT);
+let expBrushSel=null;
+let expD3Brush=null;
 function cardInnerWidth(el){const cs=getComputedStyle(el.parentElement);return el.parentElement.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);}
 function resizeExp(){EXP_C.width=cardInnerWidth(EXP_C);redrawExposure()}
 
-// ─── D3 SVG axes overlay for Exposure Explorer ───────────────────────────────
+// ─── D3 SVG axes overlay + brush for Exposure Explorer ───────────────────────
 const expSVG=d3.select('#exp-svg');
+
+// Tooltip via SVG (SVG intercepts mouse events; canvas tooltip moved here)
+expSVG.on('mousemove',function(event){
+  if(expBrushSel!==null){hideTT();return;}
+  const [mx,my]=d3.pointer(event,this);
+  let cl=null,md=22;
+  EXP_RAW.forEach((d,i)=>{const s=expSprings[i],ds=Math.hypot(s.cx-mx,s.cy-my);if(ds<md){md=ds;cl=d;}});
+  if(cl){
+    const sstr=cl.shutter>=1?cl.shutter.toFixed(1)+'s':'1/'+Math.round(1/cl.shutter)+'s';
+    const fcat=cl.focal<35?'Wide angle':cl.focal<85?'Normal':'Telephoto';
+    showTT(event,`${cl.cam} · ${cl.yr}`,`ISO ${Math.round(cl.iso).toLocaleString()}<br>f/${cl.aperture.toFixed(1)}<br>${sstr}<br>${Math.round(cl.focal)}mm<br><span style="color:var(--muted)">${fcat}</span>`);
+  }else hideTT();
+}).on('mouseleave',hideTT);
+
+function updateExpStats(){
+  const el=document.getElementById('exp-stats');if(!el)return;
+  if(!expBrushSel||expBrushSel.size===0){el.style.display='none';return;}
+  const sel=EXP_RAW.filter((_,i)=>expBrushSel.has(i));
+  const n=sel.length;
+  const med=arr=>{const s=[...arr].sort((a,b)=>a-b);return s[Math.floor(s.length/2)];};
+  const mISO=med(sel.map(d=>d.iso));
+  const mAp=med(sel.map(d=>d.aperture));
+  const mSh=med(sel.map(d=>d.shutter));
+  const mFo=Math.round(med(sel.map(d=>d.focal)));
+  const sstr=mSh>=1?mSh.toFixed(1)+'s':'1/'+Math.round(1/mSh)+'s';
+  const camCounts={};sel.forEach(d=>{camCounts[d.cam]=(camCounts[d.cam]||0)+1;});
+  const camStr=Object.entries(camCounts).sort((a,b)=>b[1]-a[1])
+    .map(([c,cnt])=>{const col=EXP_COLOR_MAPS.camera.items.find(it=>it.label===c)?.color||P.muted;return `<span style="color:${col};font-weight:500">${c}</span> ${Math.round(cnt/n*100)}%`;}).join(' &nbsp;·&nbsp; ');
+  const yrCounts={};sel.forEach(d=>{yrCounts[d.yr]=(yrCounts[d.yr]||0)+1;});
+  const yrStr=Object.entries(yrCounts).sort((a,b)=>+a[0]-+b[0])
+    .map(([y,cnt])=>`<span style="color:${YR_COLS[y]||P.muted};font-weight:500">${y}</span> ${Math.round(cnt/n*100)}%`).join(' &nbsp;·&nbsp; ');
+  el.style.display='block';
+  el.innerHTML=`<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:baseline">
+    <span style="font-size:20px;font-weight:600;color:var(--accent);line-height:1">${n}</span><span style="font-size:11px;color:var(--muted)">photos selected</span>
+    <span style="color:var(--muted);font-size:12px">ISO <strong style="color:var(--text)">${mISO.toLocaleString()}</strong></span>
+    <span style="color:var(--muted);font-size:12px">f/<strong style="color:var(--text)">${mAp.toFixed(1)}</strong></span>
+    <span style="color:var(--muted);font-size:12px">shutter <strong style="color:var(--text)">${sstr}</strong></span>
+    <span style="color:var(--muted);font-size:12px">focal <strong style="color:var(--text)">${mFo}mm</strong></span>
+    <button onclick="expClearBrush()" style="margin-left:auto;font-size:11px;color:var(--muted);background:none;border:1px solid var(--dim);cursor:pointer;padding:2px 8px;border-radius:4px;font-family:inherit">× clear</button>
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-top:6px">${camStr} &nbsp;&nbsp; ${yrStr}</div>`;
+}
+
+function expClearBrush(){
+  expBrushSel=null;
+  drawExpFrame();
+  updateExpStats();
+  if(expD3Brush) expSVG.select('.exp-brush').call(expD3Brush.move,null);
+}
 
 function updateExpAxesSVG(){
   const xKey=document.getElementById('x-axis').value;
@@ -598,6 +642,29 @@ function updateExpAxesSVG(){
       .attr('font-family','DM Sans,sans-serif').attr('font-size',9).attr('fill',P.accent).attr('opacity',0.7)
       .text('median');
   }
+
+  // D3 brush — added last so it sits on top (pointer-events layer)
+  expBrushSel=null;
+  updateExpStats();
+  expD3Brush=d3.brush()
+    .extent([[PL,PT],[PL+PW,PT+PH]])
+    .on('start',()=>{hideTT();})
+    .on('brush',({selection})=>{
+      if(!selection)return;
+      const [[x0,y0],[x1,y1]]=selection;
+      expBrushSel=new Set();
+      EXP_RAW.forEach((_,i)=>{const s=expSprings[i];if(s.cx>=x0&&s.cx<=x1&&s.cy>=y0&&s.cy<=y1)expBrushSel.add(i);});
+      if(expBrushSel.size===0)expBrushSel=null;
+      drawExpFrame();updateExpStats();
+    })
+    .on('end',({selection})=>{
+      if(!selection){expBrushSel=null;drawExpFrame();updateExpStats();}
+    });
+  const brushG=g.append('g').attr('class','exp-brush').call(expD3Brush);
+  brushG.select('.selection')
+    .attr('fill','rgba(249,115,22,0.06)')
+    .attr('stroke',P.accent).attr('stroke-width',1.5).attr('stroke-dasharray','4,2');
+  brushG.select('.overlay').attr('cursor','crosshair');
 }
 
 // ═══════════════════════════════════════════════
