@@ -1065,7 +1065,7 @@ function paMonthCol(i){
 // season-tinted colour for monthly bar chart — tones match the heatmap palette
 function paSeasonCol(monthIdx){
   if(monthIdx<=2) return '#3B82F6'; // Winter  — same blue as heatmap mid-tone
-  if(monthIdx<=5) return '#34D399'; // Spring  — emerald
+  if(monthIdx<=5) return P.g3;      // Spring  — same teal as yearly chart (e.g. 2023 bar)
   if(monthIdx<=8) return '#F97316'; // Summer  — exact heatmap accent orange
   return '#8B5CF6';                  // Autumn  — exact heatmap purple end
 }
