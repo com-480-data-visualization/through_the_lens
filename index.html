@@ -199,7 +199,7 @@ canvas{display:block}
 <section id="s-exposure">
   <div class="viz-card">
     <div class="viz-card-title">Exposure Explorer</div>
-    <div class="viz-card-sub">Each dot is one photo. Choose what to put on each axis — then find your own story.</div>
+    <div class="viz-card-sub">Each dot is one photo. Choose axes, then <strong>drag on the chart</strong> to select a region and see statistics for those shots.</div>
     <div class="ctrl-row">
       <span class="ctrl-label">X axis</span>
       <select class="ctrl-select" id="x-axis" onchange="redrawExposure()" style="border-color:var(--g1)">
@@ -220,7 +220,7 @@ canvas{display:block}
       <select class="ctrl-select" id="color-by" onchange="redrawExposure()" style="border-color:var(--g4)">
         <option value="year">Year</option>
         <option value="camera">Camera</option>
-        <option value="scene">Scene type</option>
+        <option value="focal_cat">Focal range</option>
       </select>
     </div>
     <div id="exp-insight" style="margin-top:14px;padding:14px 18px;background:var(--card2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;display:flex;gap:16px;align-items:flex-start;margin-bottom:14px">
@@ -230,7 +230,11 @@ canvas{display:block}
         <div id="exp-insight-body" style="font-size:12px;color:var(--muted);line-height:1.75"></div>
       </div>
     </div>
-    <canvas id="exp-canvas" height="500"></canvas>
+    <div id="exp-wrap" style="position:relative;width:100%">
+      <canvas id="exp-canvas" height="500" style="display:block"></canvas>
+      <svg id="exp-svg" style="position:absolute;top:0;left:0;overflow:visible"></svg>
+    </div>
+    <div id="exp-stats" style="display:none;margin-top:10px;padding:12px 18px;background:var(--card2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;font-size:13px"></div>
     <div class="legend" id="exp-legend"></div>
   </div>
 </section>
@@ -279,7 +283,6 @@ canvas{display:block}
     <div id="sk-canvas-wrap">
       <canvas id="sankey-canvas" height="360"></canvas>
     </div>
-
     <div class="legend" id="sankey-legend"></div>
   </div>
 </section>
@@ -378,25 +381,25 @@ const EXP_C=document.getElementById('exp-canvas');
 const expCtx=EXP_C.getContext('2d');
 
 const AXES={
-  iso:     {label:'ISO sensitivity',ticks:[100,400,1600,6400,25600],tickFmt:v=>v>=1000?(v/1000)+'k':String(v),xform:v=>Math.log2(v/100)/Math.log2(256)},
-  aperture:{label:'Aperture (f/)',  ticks:[1.4,2,2.8,4,5.6,8,11],  tickFmt:v=>'f/'+v,                        xform:v=>(v-1.4)/(11-1.4)},
-  shutter: {label:'Shutter speed', ticks:[1/2000,1/500,1/125,1/30],tickFmt:v=>'1/'+Math.round(1/v)+'s',      xform:v=>clamp(Math.log2(v/0.0005)/Math.log2(0.0333/0.0005),0,1)},
-  focal:   {label:'Focal length',  ticks:[14,24,35,50,70,100,200], tickFmt:v=>v+'mm',                         xform:v=>Math.log2(v/14)/Math.log2(200/14)},
+  iso:     {label:'ISO sensitivity',ticks:[100,200,400,800,1600,3200,6400,25600],tickFmt:v=>v>=1000?(v/1000)+'k':String(v),xform:v=>Math.log2(v/100)/Math.log2(256)},
+  aperture:{label:'Aperture (f/)',  ticks:[1.4,2,2.8,4,5.6,8,11,16],           tickFmt:v=>'f/'+v,             xform:v=>Math.log2(Math.max(v,1))/Math.log2(22)},
+  shutter: {label:'Shutter speed', ticks:[1/4000,1/1000,1/250,1/60,1/15,1,2], tickFmt:v=>v>=1?v+'s':'1/'+Math.round(1/v)+'s', xform:v=>Math.log(Math.max(v,1/4000)*4000)/Math.log(8000)},
+  focal:   {label:'Focal length',  ticks:[14,24,35,50,70,100,200],             tickFmt:v=>v+'mm',             xform:v=>Math.log2(Math.max(v,14)/14)/Math.log2(200/14)},
 };
 
 const EXP_COLOR_MAPS={
-  year:  {fn:d=>YR_COLS[d.yr],items:YEARS.map(y=>({label:String(y),color:YR_COLS[y]}))},
-  camera:{fn:d=>d.cam==='Sony'?P.g1:d.cam==='Fuji'?P.g2:P.g4,items:[{label:'Sony',color:P.g1},{label:'Fuji X100VI',color:P.g2},{label:'Other',color:P.g4}]},
-  scene: {fn:d=>d.scene==='outdoor'?P.g4:d.scene==='indoor'?P.g5:P.g7,items:[{label:'Outdoor',color:P.g4},{label:'Indoor',color:P.g5},{label:'Event / night',color:P.g7}]},
+  year:      {fn:d=>YR_COLS[d.yr],items:YEARS.map(y=>({label:String(y),color:YR_COLS[y]}))},
+  camera:    {fn:d=>d.cam==='Sony'?P.g1:d.cam==='Fuji'?P.g2:d.cam==='Panasonic'?P.g3:d.cam==='iPhone'?P.g5:P.g7,
+               items:[{label:'Sony',color:P.g1},{label:'Fuji',color:P.g2},{label:'Panasonic',color:P.g3},{label:'iPhone',color:P.g5},{label:'Other',color:P.g7}]},
+  focal_cat: {fn:d=>d.focal<35?P.g8:d.focal<85?P.g4:P.g6,
+               items:[{label:'Wide (<35mm)',color:P.g8},{label:'Normal (35–85mm)',color:P.g4},{label:'Tele (>85mm)',color:P.g6}]},
 };
 
-// Add per-point jitter and derive scene from ISO
 const jRnd=rng(55);
 const EXP_RAW=EXP_DATA.map(d=>({
   ...d,
-  scene: d.iso<800?'outdoor':d.iso<3200?'indoor':'event',
-  jx:(jRnd()-.5)*.016,
-  jy:(jRnd()-.5)*.016,
+  jx:(jRnd()-.5)*.018,
+  jy:(jRnd()-.5)*.018,
 }));
 
 const expSpeedRnd=rng(88);
@@ -404,22 +407,22 @@ const expSprings=EXP_RAW.map(()=>({cx:0,cy:0,vx:0,vy:0,tx:0,ty:0,stiff:0.018+exp
 let expAnimAF=null;
 
 const EXP_INSIGHTS={
-  'iso|aperture':   {icon:'🌑',title:'The dark scene link',body:'Shooting in the dark forces two things simultaneously: high ISO (to amplify the sensor signal) and wide aperture (to let in more light). The bottom-left cluster is bright outdoor shots; the top-right is concerts and night events.',corr:-1,arrow:[.75,.2,.25,.8]},
-  'aperture|iso':   {icon:'🌑',title:'The dark scene link',body:'Shooting in the dark forces two things simultaneously: high ISO (to amplify the sensor signal) and wide aperture (to let in more light). The bottom-left cluster is bright outdoor shots; the top-right is concerts and night events.',corr:-1,arrow:[.25,.8,.75,.2]},
-  'iso|shutter':    {icon:'⚡',title:'Low light = slow + high ISO',body:'When light is scarce, both ISO and shutter speed suffer. Night events cluster top-right (high ISO, slow shutter). Bright outdoor moments cluster bottom-left.',corr:1,arrow:[.2,.75,.8,.25]},
-  'shutter|iso':    {icon:'⚡',title:'Low light = slow + high ISO',body:'When light is scarce, both ISO and shutter speed suffer. Night events cluster top-right (high ISO, slow shutter). Bright outdoor moments cluster bottom-left.',corr:1,arrow:[.8,.25,.2,.75]},
-  'aperture|shutter':{icon:'⚖️',title:'The exposure tradeoff',body:'A wider aperture lets in more light, which means you can use a faster shutter for the same brightness. Classic creative tradeoff: freeze motion (fast shutter) vs blur background (wide aperture).',corr:-0.6,arrow:[.7,.25,.3,.75]},
-  'shutter|aperture':{icon:'⚖️',title:'The exposure tradeoff',body:'A wider aperture lets in more light, which means you can use a faster shutter for the same brightness. Classic creative tradeoff: freeze motion (fast shutter) vs blur background (wide aperture).',corr:-0.6,arrow:[.3,.75,.7,.25]},
-  'focal|aperture': {icon:'🔭',title:'Telephoto lenses are slower',body:'Wide-angle lenses (14–35mm) are typically faster (f/1.4–f/2.8), while telephoto lenses (100–200mm) tend to be slower (f/4–f/5.6). Prime lenses at 50mm are often the fastest of all.',corr:0.4,arrow:[.2,.7,.8,.3]},
-  'aperture|focal': {icon:'🔭',title:'Telephoto lenses are slower',body:'Wide-angle lenses (14–35mm) are typically faster (f/1.4–f/2.8), while telephoto lenses (100–200mm) tend to be slower (f/4–f/5.6). Prime lenses at 50mm are often the fastest of all.',corr:0.4,arrow:[.7,.3,.2,.8]},
-  'focal|shutter':  {icon:'📐',title:'The 1/focal length rule',body:'To avoid camera shake blur, photographers intuitively use faster shutters with longer lenses. Shooting at 200mm typically means 1/250s or faster; at 14mm you can get away with 1/30s.',corr:0.5,arrow:[.2,.7,.8,.3]},
-  'shutter|focal':  {icon:'📐',title:'The 1/focal length rule',body:'To avoid camera shake blur, photographers intuitively use faster shutters with longer lenses. Shooting at 200mm typically means 1/250s or faster; at 14mm you can get away with 1/30s.',corr:0.5,arrow:[.7,.3,.2,.8]},
-  'iso|focal':      {icon:'🎭',title:'Telephoto shots tend to be darker',body:'Telephoto focal lengths (100–200mm) are often used for events and indoor performances, which require higher ISO. Wide-angle shots tend to be outdoor scenes with plenty of light.',corr:0.3,arrow:[.2,.6,.8,.4]},
-  'focal|iso':      {icon:'🎭',title:'Telephoto shots tend to be darker',body:'Telephoto focal lengths (100–200mm) are often used for events and indoor performances, which require higher ISO. Wide-angle shots tend to be outdoor scenes with plenty of light.',corr:0.3,arrow:[.4,.8,.6,.2]},
+  'iso|aperture':   {icon:'🌑',title:'The dark scene link',body:'Dark scenes force two things at once: high ISO (amplify the sensor) and wide aperture (low f-number, more light). As ISO rises, f-numbers fall — the orange trend line shows this downward sweep. Bright outdoor shots sit at low ISO with narrower apertures.'},
+  'aperture|iso':   {icon:'🌑',title:'The dark scene link',body:'Wide aperture (low f-number) goes hand-in-hand with high ISO: both are responses to low light. The trend line traces this: as f-numbers drop (wider lens), ISO climbs. Stop down to f/8–16 in bright sun and ISO stays low.'},
+  'iso|shutter':    {icon:'⚡',title:'Low light = slow + high ISO',body:'When light is scarce, both shutter and ISO suffer. Night events and concerts require slow shutter (motion blur risk) and high ISO simultaneously — watch the trend rise toward the top-right. Bright outdoor moments anchor bottom-left.'},
+  'shutter|iso':    {icon:'⚡',title:'Low light = slow + high ISO',body:'Fast shutters come with sunny light and low ISO; slow shutters pair with high ISO in dark scenes. The trend line shows how ISO must rise as shutter slows — both are reactions to the same lack of light.'},
+  'aperture|shutter':{icon:'⚖️',title:'The exposure tradeoff',body:'Open up the aperture (lower f-number) and you can use a faster shutter for the same brightness. This is the core creative tension: freeze motion with a fast shutter, or blur the background with a wide aperture.'},
+  'shutter|aperture':{icon:'⚖️',title:'The exposure tradeoff',body:'A faster shutter demands either more light or a wider aperture. The trend line shows how shutter speed rises as aperture opens — two sides of the same exposure equation.'},
+  'focal|aperture': {icon:'🔭',title:'Telephoto lenses are slower',body:'Wide-angle primes (14–35mm) are typically fast (f/1.4–f/2.8). Telephoto lenses (100–200mm) are usually slower (f/4–f/5.6) due to optical constraints. The trend line shows aperture narrowing as focal length grows.'},
+  'aperture|focal': {icon:'🔭',title:'Telephoto lenses are slower',body:'Wide lenses (low f-number) are usually short focal lengths; narrow lenses (high f-number) are usually telephoto. The trend line traces how focal length tends to rise as aperture narrows.'},
+  'focal|shutter':  {icon:'📐',title:'The 1/focal length rule',body:'To avoid camera shake at longer focal lengths, you need a faster shutter. At 200mm, 1/250s or faster is standard; at 14mm you can often get away with 1/30s. Watch the trend line rise as focal length grows.'},
+  'shutter|focal':  {icon:'📐',title:'The 1/focal length rule',body:'Longer focal lengths demand faster shutters to stay sharp. The trend line shows focal length climbing as shutter speed increases — reflecting the intuitive rule photographers follow to avoid shake.'},
+  'iso|focal':      {icon:'🎭',title:'Telephoto shots tend to be darker scenes',body:'Telephoto focal lengths (100–200mm) often capture events and indoor performances — high-ISO territory. Wide-angle shots are more often outdoor with plenty of light. The trend line rises slightly toward longer lenses.'},
+  'focal|iso':      {icon:'🎭',title:'Telephoto shots tend to be darker scenes',body:'As focal length grows, ISO tends to follow — telephoto is the language of concerts, sports, and indoor events where light is scarce. Wide-angle primes stay in the low-ISO zone.'},
 };
 
 function getInsight(xKey,yKey){
-  return EXP_INSIGHTS[xKey+'|'+yKey]||{icon:'🔍',title:'Explore freely',body:'This combination doesn\'t have a strong photographic rule behind it — but you might find unexpected patterns. Color by Scene to see if outdoor, indoor and event shots cluster differently.',corr:0,arrow:null};
+  return EXP_INSIGHTS[xKey+'|'+yKey]||{icon:'🔍',title:'Explore freely',body:'This combination doesn\'t have a strong photographic rule behind it — but you might find unexpected patterns. Color by Focal range or Camera to see how gear choices cluster.'};
 }
 
 function updateInsightCard(xKey,yKey){
@@ -429,29 +432,6 @@ function updateInsightCard(xKey,yKey){
   document.getElementById('exp-insight-body').textContent=ins.body;
 }
 
-function drawAnnotations(xKey,yKey,PL,PT,PW,PH){
-  const ins=getInsight(xKey,yKey);
-  if(!ins.arrow)return;
-  const [x1n,y1n,x2n,y2n]=ins.arrow;
-  const x1=PL+x1n*PW,y1=PT+y1n*PH,x2=PL+x2n*PW,y2=PT+y2n*PH;
-  expCtx.save();
-  expCtx.strokeStyle='rgba(249,115,22,0.35)';expCtx.lineWidth=1.5;expCtx.setLineDash([6,5]);
-  expCtx.beginPath();expCtx.moveTo(x1,y1);expCtx.lineTo(x2,y2);expCtx.stroke();
-  expCtx.setLineDash([]);
-  const angle=Math.atan2(y2-y1,x2-x1),AL=10,AW=5;
-  expCtx.fillStyle='rgba(249,115,22,0.5)';
-  expCtx.beginPath();expCtx.moveTo(x2,y2);
-  expCtx.lineTo(x2-AL*Math.cos(angle-AW/AL*1.2),y2-AL*Math.sin(angle-AW/AL*1.2));
-  expCtx.lineTo(x2-AL*Math.cos(angle+AW/AL*1.2),y2-AL*Math.sin(angle+AW/AL*1.2));
-  expCtx.closePath();expCtx.fill();
-  if(ins.corr!==0){
-    const lbl=ins.corr>0?'positive correlation':'negative correlation';
-    const mx=(x1+x2)/2,my=(y1+y2)/2;
-    expCtx.fillStyle='rgba(249,115,22,0.6)';expCtx.font='10px DM Sans';expCtx.textAlign='center';
-    expCtx.fillText(lbl,mx,my-8);
-  }
-  expCtx.restore();
-}
 
 function computeExpTargets(){
   const xKey=document.getElementById('x-axis').value;
@@ -476,23 +456,7 @@ function drawExpFrame(){
   const colKey=document.getElementById('color-by').value;
   const colMap=EXP_COLOR_MAPS[colKey];
 
-  // Grid
-  expCtx.strokeStyle=P.dim;expCtx.lineWidth=.8;
-  AXES[xKey].ticks.forEach(t=>{const x=PL+clamp(AXES[xKey].xform(t),0,1)*PW;expCtx.beginPath();expCtx.moveTo(x,PT);expCtx.lineTo(x,PT+PH);expCtx.stroke()});
-  AXES[yKey].ticks.forEach(t=>{const y=PT+(1-clamp(AXES[yKey].xform(t),0,1))*PH;expCtx.beginPath();expCtx.moveTo(PL,y);expCtx.lineTo(PL+PW,y);expCtx.stroke()});
-
-  // Tick labels
-  expCtx.fillStyle=P.muted;expCtx.font='10px DM Sans';expCtx.textAlign='center';
-  AXES[xKey].ticks.forEach(t=>expCtx.fillText(AXES[xKey].tickFmt(t),PL+clamp(AXES[xKey].xform(t),0,1)*PW,PT+PH+14));
-  expCtx.textAlign='right';
-  AXES[yKey].ticks.forEach(t=>expCtx.fillText(AXES[yKey].tickFmt(t),PL-5,PT+(1-clamp(AXES[yKey].xform(t),0,1))*PH+4));
-
-  // Axis labels
-  expCtx.fillStyle=P.muted;expCtx.font='12px DM Sans';expCtx.textAlign='center';
-  expCtx.fillText(AXES[xKey].label,PL+PW/2,PT+PH+34);
-  expCtx.save();expCtx.translate(14,PT+PH/2);expCtx.rotate(-Math.PI/2);expCtx.fillText(AXES[yKey].label,0,0);expCtx.restore();
-
-  // Border
+  // Border (grid lines + tick labels handled by D3 SVG overlay)
   expCtx.strokeStyle=P.dim;expCtx.lineWidth=1;
   expCtx.beginPath();expCtx.moveTo(PL,PT);expCtx.lineTo(PL,PT+PH);expCtx.lineTo(PL+PW,PT+PH);expCtx.stroke();
 
@@ -500,11 +464,14 @@ function drawExpFrame(){
   const DOT_PAD=20;
   expCtx.save();
   expCtx.beginPath();expCtx.rect(PL+DOT_PAD-6,PT+DOT_PAD-6,PW-2*(DOT_PAD-6),PH-2*(DOT_PAD-6));expCtx.clip();
+  const hasSel=expBrushSel!==null&&expBrushSel.size>0;
   EXP_RAW.forEach((d,i)=>{
     const s=expSprings[i],col=colMap.fn(d);
-    expCtx.beginPath();expCtx.arc(s.cx,s.cy,4.5,0,Math.PI*2);
-    expCtx.globalAlpha=0.72;expCtx.fillStyle=col;expCtx.fill();
-    expCtx.globalAlpha=1;expCtx.strokeStyle='rgba(255,255,255,0.6)';expCtx.lineWidth=0.8;expCtx.stroke();
+    const inSel=!hasSel||expBrushSel.has(i);
+    expCtx.beginPath();expCtx.arc(s.cx,s.cy,inSel?3.5:2,0,Math.PI*2);
+    expCtx.globalAlpha=inSel?(hasSel?0.82:0.45):0.07;
+    expCtx.fillStyle=inSel?col:P.muted;
+    expCtx.fill();
     expCtx.globalAlpha=1;
   });
   expCtx.restore();
@@ -512,7 +479,6 @@ function drawExpFrame(){
   // Legend
   const lg=document.getElementById('exp-legend');lg.innerHTML='';
   colMap.items.forEach(it=>{lg.innerHTML+=`<div class="li"><div class="li-dot" style="background:${it.color}"></div>${it.label}</div>`});
-  drawAnnotations(xKey,yKey,PL,PT,PW,PH);
   EXP_C._meta={PL,PT,PW,PH};
 }
 
@@ -529,9 +495,10 @@ function runExpSprings(){
 }
 
 function redrawExposure(){
+  expBrushSel=null;updateExpStats();
   const xKey=document.getElementById('x-axis').value;
   const yKey=document.getElementById('y-axis').value;
-  updateInsightCard(xKey,yKey);computeExpTargets();
+  updateInsightCard(xKey,yKey);computeExpTargets();updateExpAxesSVG();
   if(expAnimAF)cancelAnimationFrame(expAnimAF);
   expAnimAF=requestAnimationFrame(runExpSprings);
 }
@@ -539,7 +506,7 @@ function redrawExposure(){
 function drawExposure(){
   const xKey=document.getElementById('x-axis').value;
   const yKey=document.getElementById('y-axis').value;
-  updateInsightCard(xKey,yKey);
+  updateInsightCard(xKey,yKey);updateExpAxesSVG();
   const W=EXP_C.width,H=EXP_C.height;
   const PL=64,PR=20,PT=22,PB=50,PW=W-PL-PR,PH=H-PT-PB;
   const r2=rng(77);
@@ -549,18 +516,156 @@ function drawExposure(){
   expAnimAF=requestAnimationFrame(runExpSprings);
 }
 
-EXP_C.addEventListener('mousemove',e=>{
-  const m=EXP_C._meta;if(!m)return;
-  const rect=EXP_C.getBoundingClientRect();
-  const mx=(e.clientX-rect.left)*(EXP_C.width/rect.width),my=(e.clientY-rect.top)*(EXP_C.height/rect.height);
-  let cl=null,md=22;
-  EXP_RAW.forEach((d,i)=>{const s=expSprings[i],ds=Math.hypot(s.cx-mx,s.cy-my);if(ds<md){md=ds;cl=d}});
-  if(cl)showTT(e,`${cl.cam} · ${cl.yr}`,`ISO ${Math.round(cl.iso).toLocaleString()}<br>f/${cl.aperture.toFixed(1)}<br>1/${Math.round(1/cl.shutter)}s<br>${Math.round(cl.focal)}mm<br><span style="color:var(--muted)">${cl.scene}</span>`);
-  else hideTT();
-});
-EXP_C.addEventListener('mouseleave',hideTT);
+let expBrushSel=null;
+let expD3Brush=null;
 function cardInnerWidth(el){const cs=getComputedStyle(el.parentElement);return el.parentElement.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);}
 function resizeExp(){EXP_C.width=cardInnerWidth(EXP_C);redrawExposure()}
+
+// ─── D3 SVG axes overlay + brush for Exposure Explorer ───────────────────────
+const expSVG=d3.select('#exp-svg');
+
+// Tooltip via SVG (SVG intercepts mouse events; canvas tooltip moved here)
+expSVG.on('mousemove',function(event){
+  if(expBrushSel!==null){hideTT();return;}
+  const [mx,my]=d3.pointer(event,this);
+  let cl=null,md=22;
+  EXP_RAW.forEach((d,i)=>{const s=expSprings[i],ds=Math.hypot(s.cx-mx,s.cy-my);if(ds<md){md=ds;cl=d;}});
+  if(cl){
+    const sstr=cl.shutter>=1?cl.shutter.toFixed(1)+'s':'1/'+Math.round(1/cl.shutter)+'s';
+    const fcat=cl.focal<35?'Wide angle':cl.focal<85?'Normal':'Telephoto';
+    showTT(event,`${cl.cam} · ${cl.yr}`,`ISO ${Math.round(cl.iso).toLocaleString()}<br>f/${cl.aperture.toFixed(1)}<br>${sstr}<br>${Math.round(cl.focal)}mm<br><span style="color:var(--muted)">${fcat}</span>`);
+  }else hideTT();
+}).on('mouseleave',hideTT);
+
+function updateExpStats(){
+  const el=document.getElementById('exp-stats');if(!el)return;
+  if(!expBrushSel||expBrushSel.size===0){el.style.display='none';return;}
+  const sel=EXP_RAW.filter((_,i)=>expBrushSel.has(i));
+  const n=sel.length;
+  const med=arr=>{const s=[...arr].sort((a,b)=>a-b);return s[Math.floor(s.length/2)];};
+  const mISO=med(sel.map(d=>d.iso));
+  const mAp=med(sel.map(d=>d.aperture));
+  const mSh=med(sel.map(d=>d.shutter));
+  const mFo=Math.round(med(sel.map(d=>d.focal)));
+  const sstr=mSh>=1?mSh.toFixed(1)+'s':'1/'+Math.round(1/mSh)+'s';
+  const camCounts={};sel.forEach(d=>{camCounts[d.cam]=(camCounts[d.cam]||0)+1;});
+  const camStr=Object.entries(camCounts).sort((a,b)=>b[1]-a[1])
+    .map(([c,cnt])=>{const col=EXP_COLOR_MAPS.camera.items.find(it=>it.label===c)?.color||P.muted;return `<span style="color:${col};font-weight:500">${c}</span> ${Math.round(cnt/n*100)}%`;}).join(' &nbsp;·&nbsp; ');
+  const yrCounts={};sel.forEach(d=>{yrCounts[d.yr]=(yrCounts[d.yr]||0)+1;});
+  const yrStr=Object.entries(yrCounts).sort((a,b)=>+a[0]-+b[0])
+    .map(([y,cnt])=>`<span style="color:${YR_COLS[y]||P.muted};font-weight:500">${y}</span> ${Math.round(cnt/n*100)}%`).join(' &nbsp;·&nbsp; ');
+  el.style.display='block';
+  el.innerHTML=`<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:baseline">
+    <span style="font-size:20px;font-weight:600;color:var(--accent);line-height:1">${n}</span><span style="font-size:11px;color:var(--muted)">photos selected</span>
+    <span style="color:var(--muted);font-size:12px">ISO <strong style="color:var(--text)">${mISO.toLocaleString()}</strong></span>
+    <span style="color:var(--muted);font-size:12px">f/<strong style="color:var(--text)">${mAp.toFixed(1)}</strong></span>
+    <span style="color:var(--muted);font-size:12px">shutter <strong style="color:var(--text)">${sstr}</strong></span>
+    <span style="color:var(--muted);font-size:12px">focal <strong style="color:var(--text)">${mFo}mm</strong></span>
+    <button onclick="expClearBrush()" style="margin-left:auto;font-size:11px;color:var(--muted);background:none;border:1px solid var(--dim);cursor:pointer;padding:2px 8px;border-radius:4px;font-family:inherit">× clear</button>
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-top:6px">${camStr} &nbsp;&nbsp; ${yrStr}</div>`;
+}
+
+function expClearBrush(){
+  expBrushSel=null;
+  drawExpFrame();
+  updateExpStats();
+  if(expD3Brush) expSVG.select('.exp-brush').call(expD3Brush.move,null);
+}
+
+function updateExpAxesSVG(){
+  const xKey=document.getElementById('x-axis').value;
+  const yKey=document.getElementById('y-axis').value;
+  const W=EXP_C.width,H=EXP_C.height;
+  const PL=64,PR=20,PT=22,PB=50,PW=W-PL-PR,PH=H-PT-PB;
+  const PAD=20;
+
+  expSVG.attr('width',W).attr('height',H)
+    .style('width',W+'px').style('height',H+'px')
+    .selectAll('*').remove();
+
+  if(typeof d3==='undefined')return;
+
+  const axX=AXES[xKey], axY=AXES[yKey];
+  const xScale=d3.scaleLinear().domain([0,1]).range([PL,PL+PW]);
+  const yScale=d3.scaleLinear().domain([0,1]).range([PT+PH,PT]);
+  const g=expSVG.append('g');
+
+  // X axis with grid lines
+  const xTickVals=axX.ticks.map(t=>clamp(axX.xform(t),0,1));
+  g.append('g').attr('transform',`translate(0,${PT+PH})`)
+    .call(d3.axisBottom(xScale).tickValues(xTickVals).tickFormat((_,i)=>axX.tickFmt(axX.ticks[i])).tickSize(-PH))
+    .call(ax=>{
+      ax.select('.domain').remove();
+      ax.selectAll('.tick line').attr('stroke',P.dim).attr('stroke-dasharray','3,3');
+      ax.selectAll('.tick text').attr('fill',P.muted).attr('font-family','DM Sans,sans-serif').attr('font-size',10).attr('dy',14);
+    });
+
+  // Y axis with grid lines
+  const yTickVals=axY.ticks.map(t=>clamp(axY.xform(t),0,1));
+  g.append('g').attr('transform',`translate(${PL},0)`)
+    .call(d3.axisLeft(yScale).tickValues(yTickVals).tickFormat((_,i)=>axY.tickFmt(axY.ticks[i])).tickSize(-PW))
+    .call(ax=>{
+      ax.select('.domain').remove();
+      ax.selectAll('.tick line').attr('stroke',P.dim).attr('stroke-dasharray','3,3');
+      ax.selectAll('.tick text').attr('fill',P.muted).attr('font-family','DM Sans,sans-serif').attr('font-size',10).attr('dx',-6).attr('dy','0.32em');
+    });
+
+  // Axis labels
+  g.append('text').attr('x',PL+PW/2).attr('y',PT+PH+42)
+    .attr('text-anchor','middle').attr('font-family','DM Sans,sans-serif').attr('font-size',12).attr('fill',P.muted)
+    .text(axX.label);
+  g.append('text').attr('transform',`translate(14,${PT+PH/2}) rotate(-90)`)
+    .attr('text-anchor','middle').attr('font-family','DM Sans,sans-serif').attr('font-size',12).attr('fill',P.muted)
+    .text(axY.label);
+
+  // Trend line: binned medians across the x axis (shows actual data pattern)
+  const numBins=12;
+  const trendPts=[];
+  for(let i=0;i<numBins;i++){
+    const xlo=i/numBins, xhi=(i+1)/numBins;
+    const ys=EXP_RAW
+      .filter(d=>{const xn=clamp(axX.xform(d[xKey]),0,1);return xn>=xlo&&xn<xhi;})
+      .map(d=>clamp(axY.xform(d[yKey]),0,1))
+      .sort((a,b)=>a-b);
+    if(ys.length<8)continue;
+    const med=ys[Math.floor(ys.length/2)];
+    trendPts.push({x:PL+PAD+(i+0.5)/numBins*(PW-2*PAD), y:PT+PAD+(1-med)*(PH-2*PAD)});
+  }
+  if(trendPts.length>=3){
+    g.append('path').datum(trendPts)
+      .attr('d',d3.line().x(d=>d.x).y(d=>d.y).curve(d3.curveCatmullRom.alpha(0.5)))
+      .attr('fill','none').attr('stroke',P.accent).attr('stroke-width',2)
+      .attr('stroke-opacity',0.55).attr('stroke-linecap','round');
+    const last=trendPts[trendPts.length-1];
+    g.append('text').attr('x',last.x+6).attr('y',last.y+3)
+      .attr('font-family','DM Sans,sans-serif').attr('font-size',9).attr('fill',P.accent).attr('opacity',0.7)
+      .text('median');
+  }
+
+  // D3 brush — added last so it sits on top (pointer-events layer)
+  expBrushSel=null;
+  updateExpStats();
+  expD3Brush=d3.brush()
+    .extent([[PL,PT],[PL+PW,PT+PH]])
+    .on('start',()=>{hideTT();})
+    .on('brush',({selection})=>{
+      if(!selection)return;
+      const [[x0,y0],[x1,y1]]=selection;
+      expBrushSel=new Set();
+      EXP_RAW.forEach((_,i)=>{const s=expSprings[i];if(s.cx>=x0&&s.cx<=x1&&s.cy>=y0&&s.cy<=y1)expBrushSel.add(i);});
+      if(expBrushSel.size===0)expBrushSel=null;
+      drawExpFrame();updateExpStats();
+    })
+    .on('end',({selection})=>{
+      if(!selection){expBrushSel=null;drawExpFrame();updateExpStats();}
+    });
+  const brushG=g.append('g').attr('class','exp-brush').call(expD3Brush);
+  brushG.select('.selection')
+    .attr('fill','rgba(249,115,22,0.06)')
+    .attr('stroke',P.accent).attr('stroke-width',1.5).attr('stroke-dasharray','4,2');
+  brushG.select('.overlay').attr('cursor','crosshair');
+}
 
 // ═══════════════════════════════════════════════
 // 2. GEAR RACE
@@ -956,20 +1061,14 @@ function sankeyGeom(){
   const maxCol=graph.nodes.length?Math.max(...graph.nodes.map(n=>n.col)):0;
   const numC=Math.max(1,maxCol+1);
 
-  // Which columns were already fully rendered before this click.
-  // skPrevFocus is the focus that was STABLE (animation done) before the current click.
   const prevDepth=SK_STAGE_ORDER.indexOf(skPrevFocus);
-  // prevNumC = number of columns that already existed: depth 0 → col 0 only, depth 1 → cols 0+1, etc.
   const prevNumC=prevDepth<0 ? 0 : prevDepth+1;
 
-  // For each column index, return an opacity 0→1.
-  // Columns below prevNumC are already visible → snap to 1 immediately.
-  // New columns sweep in left-to-right.
-  const newCols=numC-prevNumC; // how many columns are being newly revealed
+  const newCols=numC-prevNumC;
   const colAlpha=col=>{
     if(col<prevNumC) return 1;
-    const slot=col-prevNumC;           // 0-based index among new columns
-    const wave=skAnimT*(newCols+0.5);  // wave sweeps across new columns only
+    const slot=col-prevNumC;
+    const wave=skAnimT*(newCols+0.5);
     return ease(clamp(wave-slot,0,1));
   };
 
@@ -1006,7 +1105,6 @@ function sankeyGeom(){
     const tTh=Math.max(2,l.value*nodeScale[t.id]);
     outCursor[s.id]+=l.value;
     inCursor[t.id]+=l.value;
-    // A link between col A and col B is "new" if its rightmost column is new
     const linkCol=Math.max(s.col,t.col);
     const flowA=colAlpha(linkCol);
     return {
