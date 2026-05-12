@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Through the Lens — Data Visualizations</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Playfair+Display:ital,wght@0,500;1,400&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
 <style>
 :root{
   --bg:#F8FAFC; --card:#FFFFFF; --card2:#F8FAFC;
@@ -80,10 +81,32 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
 /* TOOLTIP */
 #tt{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 15px;font-size:12px;pointer-events:none;z-index:500;display:none;max-width:220px;box-shadow:0 4px 16px rgba(15,23,42,.1)}
+#tt.tt-with-preview{max-width:min(200px,calc(100vw - 40px))}
 #tt-head{color:var(--g1);font-size:13px;font-weight:500;margin-bottom:5px}
 #tt-body{color:var(--muted);line-height:1.85}
+#tt .tt-preview-wrap{margin-top:10px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--card2);aspect-ratio:16/10}
+#tt .tt-preview-img{display:block;width:100%;height:100%;object-fit:cover;vertical-align:top}
 
 canvas{display:block}
+
+/* Workflow funnel */
+#s-sankey .viz-card-title{font-family:'Playfair Display',serif;font-style:italic;font-weight:500}
+#sk-story{display:flex;flex-wrap:wrap;gap:14px 28px;margin:18px 0 14px;padding:14px 18px;background:var(--card2);border:1px solid var(--border);border-radius:10px}
+#sk-story .sk-metric{min-width:120px}
+#sk-story .sk-metric-l{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+#sk-story .sk-metric-v{font-family:'Playfair Display',serif;font-style:italic;font-size:22px;color:var(--text);text-rendering:geometricPrecision;-webkit-font-smoothing:antialiased}
+#sk-story .sk-metric-v.accent{color:var(--accent)}
+#sk-story .sk-metric-v.small{font-size:14px}
+
+/* Stage strip — horizontal, full width above canvas */
+#sk-stage-wrap{margin-bottom:14px}
+#sk-stage-bar{display:flex;align-items:center;gap:0;width:100%;position:relative}
+#sk-stage-bar svg{display:block;width:100%;height:auto}
+#sk-stage-bar .sk-pill{cursor:pointer;transition:opacity .25s,filter .25s}
+#sk-stage-bar .sk-pill:hover{filter:brightness(1.08)}
+#sk-stage-bar .sk-pill.dim{opacity:.32}
+#sk-stage-bar .sk-pill.on rect{filter:drop-shadow(0 0 4px rgba(249,115,22,.55))}
+#sk-canvas-wrap{position:relative}
 @media(max-width:700px){section{padding:60px 16px}.ctrl-row{gap:8px}.hero-stats{gap:28px}}
 </style>
 </head>
@@ -130,9 +153,31 @@ canvas{display:block}
 <!-- ═══ PHOTO ACTIVITY ═══ -->
 <section id="s-activity">
   <div class="viz-card">
+    <!-- Story banner -->
+    <div id="pa-story" style="display:flex;margin-bottom:20px;border-radius:10px;border:1px solid var(--border);overflow:hidden">
+      <div style="flex:1;min-width:120px;padding:14px 18px;border-right:1px solid var(--border)">
+        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Peak month</div>
+        <div id="pa-story-peak-month" style="font-family:'Playfair Display',serif;font-style:italic;font-size:15px;color:var(--text)">—</div>
+        <div id="pa-story-peak-count" style="font-size:12px;color:var(--accent);margin-top:3px">—</div>
+      </div>
+      <div style="flex:1;min-width:120px;padding:14px 18px;border-right:1px solid var(--border)">
+        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Longest streak</div>
+        <div id="pa-story-streak" style="font-family:'Playfair Display',serif;font-style:italic;font-size:15px;color:var(--text)">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">consecutive days</div>
+      </div>
+      <div style="flex:1;min-width:120px;padding:14px 18px">
+        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Best single day</div>
+        <div id="pa-story-max-day" style="font-family:'Playfair Display',serif;font-style:italic;font-size:15px;color:var(--text)">—</div>
+        <div id="pa-story-max-date" style="font-size:11px;color:var(--muted);margin-top:3px">—</div>
+      </div>
+    </div>
     <div class="viz-card-title">Photo Activity</div>
-    <div class="viz-card-sub" id="pa-sub">Annual photo counts — click a bar to explore that year day by day.</div>
+    <div id="pa-breadcrumb" style="font-size:12px;color:var(--muted);margin-bottom:4px;min-height:18px"></div>
+    <div class="viz-card-sub" id="pa-sub"></div>
     <canvas id="pa-canvas" height="380"></canvas>
+    <!-- D3 sessions timeline (shown in heatmap view) -->
+    <div id="pa-sessions-timeline" style="display:none;margin-top:12px;overflow:visible"></div>
+    <!-- Day detail panel -->
     <div id="pa-panel" style="display:none;margin-top:16px;padding:16px 20px;background:var(--card2);border:1px solid var(--border);border-radius:10px;max-width:460px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
@@ -225,14 +270,22 @@ canvas{display:block}
 <section id="s-sankey">
   <div class="viz-card">
     <div class="viz-card-title">Workflow Funnel</div>
-    <div class="viz-card-sub">Estimated flow from captured frames to published photos, including losses at each stage. Hover links to inspect counts and conversion/drop-off rates.</div>
-    <div id="sankey-container" style="width:100%;min-height:360px"></div>
+    <div class="viz-card-sub">From every frame you capture to the few you publish — estimated counts after culling, editing, and export. <strong style="font-weight:500">Click a stage</strong> left to right to flow through the funnel. Hover links for detail.</div>
+    <div id="sk-story"></div>
+
+    <!-- Horizontal stage strip (replaces the vertical side panel) -->
+    <div id="sk-stage-wrap">
+      <div id="sk-stage-bar"></div>
+      <div id="sk-focus-hint" style="margin-top:8px;font-size:11px;color:var(--muted);line-height:1.5">Click the same stage again to reset.</div>
+    </div>
+
+    <div id="sk-canvas-wrap">
+      <canvas id="sankey-canvas" height="360"></canvas>
+    </div>
     <div class="legend" id="sankey-legend"></div>
   </div>
 </section>
 
-<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
 <script src="viz_data.js"></script>
 <script>
 // ═══════════════════════════════════════════════
@@ -246,9 +299,15 @@ function goto(id){document.getElementById(id).scrollIntoView({behavior:'smooth'}
 
 // Tooltip
 const TT=document.getElementById('tt');
-function showTT(e,head,body){document.getElementById('tt-head').textContent=head;document.getElementById('tt-body').innerHTML=body;TT.style.display='block'}
+function showTT(e,head,body,opts){
+  opts=opts||{};
+  document.getElementById('tt-head').innerHTML=head;
+  document.getElementById('tt-body').innerHTML=body;
+  TT.classList.toggle('tt-with-preview',!!opts.preview);
+  TT.style.display='block';
+}
 function moveTT(e){TT.style.left=(e.clientX+16)+'px';TT.style.top=(e.clientY-12)+'px'}
-function hideTT(){TT.style.display='none'}
+function hideTT(){TT.classList.remove('tt-with-preview');TT.style.display='none'}
 document.addEventListener('mousemove',moveTT);
 
 // Nav scroll highlight
@@ -282,7 +341,7 @@ const io=new IntersectionObserver(entries=>{entries.forEach(e=>{
   if(id==='s-gear'){resizeGear()}
   if(id==='s-lens'){resizeLens();lrInit()}
   if(id==='s-sankey'){resizeSankey();sankeyStart()}
-  if(id==='s-activity'){paResize();drawYears()}
+  if(id==='s-activity'){paEnterYears()}
   io.unobserve(e.target);
 })},{threshold:.25});
 ['s-hero','s-activity','s-exposure','s-gear','s-lens','s-sankey'].forEach(id=>io.observe(document.getElementById(id)));
@@ -788,14 +847,82 @@ function lrInit(){
 function resizeLens(){LR_C.width=cardInnerWidth(LR_C);if(lrInited)lrDrawFrame()}
 
 // ═══════════════════════════════════════════════
-// 4. WORKFLOW SANKEY — D3
+// 4. WORKFLOW SANKEY (palette + D3 focus strip)
 // ═══════════════════════════════════════════════
-const SK_NODE_COLS={shots:P.g1,selection:P.g2,edition:P.g3,published:P.g6};
+const SK_C=document.getElementById('sankey-canvas');
+const skCtx=SK_C.getContext('2d');
+const SK_CSS_H=360;
+function skLogicalW(){return Math.max(220,cardInnerWidth(SK_C));}
+let skCanvasCssW=-1,skCanvasDpr=-1;
+function skApplyCanvasSize(){
+  const cssW=skLogicalW(),cssH=SK_CSS_H;
+  const dpr=Math.min(window.devicePixelRatio||1,2.5);
+  if(cssW===skCanvasCssW&&dpr===skCanvasDpr)return;
+  skCanvasCssW=cssW;skCanvasDpr=dpr;
+  SK_C.width=Math.max(1,Math.floor(cssW*dpr));
+  SK_C.height=Math.max(1,Math.floor(cssH*dpr));
+  SK_C.style.width=cssW+'px';
+  SK_C.style.height=cssH+'px';
+  skCtx.setTransform(dpr,0,0,dpr,0,0);
+}
+// Sequential blue → purple (teacher palette); orange accent on Published node only
+const SK_FUNNEL={shots:'#2563EB',selection:'#4338CA',edition:'#5B21B6',published:'#8B5CF6'};
+const SK_LOSS_NODE='#94A3B8';
+const SK_LOSS_LINK_A='#CBD5E1';
+const SK_LOSS_LINK_B='#94A3B8';
+let skHover=null;
+let skFocus=null;
+let skPrevFocus=null;
+let skAnimT=0;
+let skAnimAF=null;
+let skInited=false;
+const SK_STAGE_ORDER=['shots','selection','edition','published'];
 
 function sankeyDataSafe(){
   const d=typeof SANKEY_DATA!=='undefined'?SANKEY_DATA:null;
   if(!d||!d.nodes||!d.links||!d.totals)return null;
   return d;
+}
+
+function skPopulateStory(){
+  const d=sankeyDataSafe();
+  const el=document.getElementById('sk-story');
+  if(!d||!el)return;
+  const t=d.totals||{};
+  const shots=Math.max(0,+t.shots||0);
+  const sel=Math.max(0,+t.selection||0);
+  const ed=Math.max(0,+t.edition||0);
+  const pub=Math.max(0,+t.published||0);
+  const lSel=Math.max(0,shots-sel);
+  const lEd=Math.max(0,sel-ed);
+  const lPub=Math.max(0,ed-pub);
+  const f=skFocus;
+  const row=(a,b,accent)=>`<div class="sk-metric"><div class="sk-metric-l">${a}</div><div class="sk-metric-v${accent?' accent':''}">${b}</div></div>`;
+  let html='';
+  if(!f){
+    const rowS=(a,b,accent)=>`<div class="sk-metric"><div class="sk-metric-l">${a}</div><div class="sk-metric-v small${accent?' accent':''}">${b}</div></div>`;
+    html=rowS('Diagram','Hidden until you pick a stage',false)
+      +rowS('Begin with','Shots',true)
+      +rowS('Then','Select → Edit → Publish',false);
+  }else if(f==='shots'){
+    html=row('Incoming frames',Math.round(shots).toLocaleString(),false)
+      +row('Into selection',shots?(sel/shots*100).toFixed(1)+'%':'0%',false)
+      +row('Lost after selection',lSel.toLocaleString(),false);
+  }else if(f==='selection'){
+    html=row('Keepers (selected)',sel.toLocaleString(),false)
+      +row('Share of captures',shots?(sel/shots*100).toFixed(1)+'%':'0%',true)
+      +row('Not edited onward',lEd.toLocaleString(),false);
+  }else if(f==='edition'){
+    const yp=ed?(pub/ed*100).toFixed(1):'0';
+    html=row('In editing pool',ed.toLocaleString(),false)
+      +row('Reach publish',yp+'%',true)
+      +row('Not published',lPub.toLocaleString(),false);
+  }else if(f==='published'){
+    html=row('Published',pub.toLocaleString(),true)
+      +row('Of all captures',shots?(pub/shots*100).toFixed(1)+'%':'0%',false)
+      +row('Of edited pool',ed?(pub/ed*100).toFixed(1)+'%':'0%',false);
+  }
+  el.innerHTML=html;
 }
 
 function skLabel(id){
@@ -809,6 +936,22 @@ function skLabel(id){
     lost_published:'Not published',
   };
   return map[id]||id;
+}
+
+function skFilterSankeyByStage(fullGraph,focusId){
+  const depth=SK_STAGE_ORDER.indexOf(focusId);
+  if(depth<0)return{nodes:[],links:[]};
+  const{nodes,links}=fullGraph;
+  if(depth===0)return{nodes:nodes.filter(n=>n.id==='shots'),links:[]};
+  if(depth===1)return{
+    nodes:nodes.filter(n=>['shots','selection','lost_selection'].includes(n.id)),
+    links:links.filter(l=>l.source==='shots')
+  };
+  if(depth===2)return{
+    nodes:nodes.filter(n=>['shots','selection','lost_selection','edition','lost_edition'].includes(n.id)),
+    links:links.filter(l=>l.source==='shots'||l.source==='selection')
+  };
+  return fullGraph;
 }
 
 function buildSankeyGraph(data){
@@ -841,305 +984,905 @@ function buildSankeyGraph(data){
   };
 }
 
-function buildD3Sankey(){
-  const container=document.getElementById('sankey-container');
-  if(!container)return;
+function sankeyGeom(){
   const data=sankeyDataSafe();
-  if(!data)return;
-
-  container.innerHTML='';
-  const W=container.clientWidth||800;
-  const H=400;
-
-  const svg=d3.select('#sankey-container')
-    .append('svg').attr('width',W).attr('height',H);
-
-  const graph=buildSankeyGraph(data);
-
-  // Manual layout matching original visual: main nodes top row, loss nodes below
-  const PL=52,PR=56,PT=24,PB=60;
+  if(!data||!skFocus)return null;
+  const full=buildSankeyGraph(data);
+  const graph=skFilterSankeyByStage(full,skFocus);
+  const W=skLogicalW(),H=SK_CSS_H;
+  const PL=52,PR=56,PT=24,PB=54;
   const PW=W-PL-PR,PH=H-PT-PB;
   const nodeW=12;
   const xStep=PW/3;
   const mainY=PT+PH*0.18;
   const lossY=PT+PH*0.66;
   const maxV=Math.max(...graph.nodes.map(n=>n.value),1);
+  const maxCol=graph.nodes.length?Math.max(...graph.nodes.map(n=>n.col)):0;
+  const numC=Math.max(1,maxCol+1);
 
-  const pos={};
-  graph.nodes.forEach(n=>{
+  const prevDepth=SK_STAGE_ORDER.indexOf(skPrevFocus);
+  const prevNumC=prevDepth<0 ? 0 : prevDepth+1;
+
+  const newCols=numC-prevNumC;
+  const colAlpha=col=>{
+    if(col<prevNumC) return 1;
+    const slot=col-prevNumC;
+    const wave=skAnimT*(newCols+0.5);
+    return ease(clamp(wave-slot,0,1));
+  };
+
+  const nodes=graph.nodes.map(n=>{
     const x=PL+n.col*xStep;
     const y=n.row==='main'?mainY:lossY;
-    const h=Math.max(10,Math.min(90,10+Math.sqrt((n.value||0)/maxV)*76));
-    pos[n.id]={x,y,w:nodeW,h,value:n.value,row:n.row};
+    const alpha=colAlpha(n.col);
+    const hFull=Math.max(10,Math.min(90,10+Math.sqrt((n.value||0)/maxV)*76));
+    return {id:n.id,x,y,w:nodeW,h:hFull,alpha,value:n.value,row:n.row,col:n.col,inSum:0,outSum:0};
   });
 
-  // Per-node scale: pixels per unit of value
-  const ns={};
-  graph.nodes.forEach(n=>{
-    const totalOut=graph.links.filter(l=>l.source===n.id).reduce((s,l)=>s+l.value,0);
-    const totalIn =graph.links.filter(l=>l.target===n.id).reduce((s,l)=>s+l.value,0);
-    ns[n.id]=pos[n.id].h/Math.max(totalOut,totalIn,1);
-  });
-
-  const outC={},inC={};
-  graph.nodes.forEach(n=>{outC[n.id]=0;inC[n.id]=0;});
-
+  const byId=Object.fromEntries(nodes.map(n=>[n.id,n]));
   const activeLinks=graph.links.filter(l=>l.value>0);
-  const geoms=activeLinks.map((l,i)=>{
-    const s=pos[l.source],t=pos[l.target];
-    const sy0=s.y+outC[l.source]*ns[l.source];
-    const ty0=t.y+inC[l.target]*ns[l.target];
-    const sTh=Math.max(2,l.value*ns[l.source]);
-    const tTh=Math.max(2,l.value*ns[l.target]);
-    outC[l.source]+=l.value; inC[l.target]+=l.value;
-    return{...l,i,s,t,sy0,sy1:sy0+sTh,ty0,ty1:ty0+tTh};
+  activeLinks.forEach(l=>{
+    const s=byId[l.source],t=byId[l.target];
+    if(s)s.outSum+=l.value;
+    if(t)t.inSum+=l.value;
   });
 
-  // Gradient defs — one per link, matching original colour scheme
-  const defs=svg.append('defs');
-  geoms.forEach((l,i)=>{
-    const g=defs.append('linearGradient').attr('id',`skG${i}`)
-      .attr('x1','0%').attr('x2','100%').attr('y1','0%').attr('y2','0%');
-    if(l.kind==='loss'){
-      g.append('stop').attr('offset','0%').attr('stop-color',P.g7).attr('stop-opacity',0.15);
-      g.append('stop').attr('offset','100%').attr('stop-color',P.g7).attr('stop-opacity',0.27);
+  const nodeScale={};
+  nodes.forEach(n=>{
+    const den=Math.max(n.inSum,n.outSum,1);
+    nodeScale[n.id]=n.h/den;
+  });
+
+  const outCursor={},inCursor={};
+  nodes.forEach(n=>{outCursor[n.id]=0;inCursor[n.id]=0;});
+
+  const links=activeLinks.map((l,idx)=>{
+    const s=byId[l.source],t=byId[l.target];
+    const sy=s.y+outCursor[s.id]*nodeScale[s.id];
+    const ty=t.y+inCursor[t.id]*nodeScale[t.id];
+    const sTh=Math.max(2,l.value*nodeScale[s.id]);
+    const tTh=Math.max(2,l.value*nodeScale[t.id]);
+    outCursor[s.id]+=l.value;
+    inCursor[t.id]+=l.value;
+    const linkCol=Math.max(s.col,t.col);
+    const flowA=colAlpha(linkCol);
+    return {
+      ...l,idx,s,t,srcValue:s.value,flowA,
+      sy0:sy,sy1:sy+sTh,
+      ty0:ty,ty1:ty+tTh,
+      thMid:(sTh+tTh)/2
+    };
+  });
+  return {W,H,PL,PT,PW,PH,nodes,links,maxV,graph};
+}
+
+function drawLink(link,hovered){
+  const {s,t,sy0,sy1,ty0,ty1}=link;
+  const x1=s.x+s.w,x2=t.x;
+  const c1=x1+(x2-x1)*0.45,c2=x1+(x2-x1)*0.55;
+  skCtx.beginPath();
+  skCtx.moveTo(x1,sy0);
+  skCtx.bezierCurveTo(c1,sy0,c2,ty0,x2,ty0);
+  skCtx.lineTo(x2,ty1);
+  skCtx.bezierCurveTo(c2,ty1,c1,sy1,x1,sy1);
+  skCtx.closePath();
+  const grad=skCtx.createLinearGradient(x1,0,x2,0);
+  if(link.kind==='loss'){
+    grad.addColorStop(0,SK_LOSS_LINK_A+'55');
+    grad.addColorStop(1,SK_LOSS_LINK_B+'70');
+  }else{
+    const c0=SK_FUNNEL[link.source]||'#2563EB';
+    const c1b=SK_FUNNEL[link.target]||'#6366F1';
+    grad.addColorStop(0,c0+'44');
+    grad.addColorStop(1,c1b+'55');
+  }
+  skCtx.fillStyle=grad;
+  const fa=typeof link.flowA==='number'?link.flowA:1;
+  let a=(link.kind==='loss'?0.62:0.82)*fa;
+  if(hovered)a=Math.min(1,a+(link.kind==='loss'?0.25:0.18));
+  skCtx.globalAlpha=a;
+  skCtx.fill();
+  skCtx.globalAlpha=1;
+}
+
+function drawSankey(){
+  skApplyCanvasSize();
+  const W=skLogicalW(),H=SK_CSS_H;
+  skCtx.clearRect(0,0,W,H);
+  skCtx.imageSmoothingEnabled=true;
+  if(!skFocus){
+    skCtx.fillStyle=P.muted;
+    skCtx.font='500 13px DM Sans';
+    skCtx.textAlign='center';
+    skCtx.fillText('Select a stage above — start with Shots.',Math.round(W/2),Math.round(H*0.44));
+    skCtx.font='400 12px DM Sans';
+    skCtx.fillStyle='#94A3B8';
+    skCtx.fillText('The funnel flows left → right as you step through.',Math.round(W/2),Math.round(H*0.44+22));
+    SK_C._meta={nodes:[],links:[]};
+    return;
+  }
+  const g=sankeyGeom();if(!g)return;
+  const {nodes,links}=g;
+
+  links.forEach(l=>drawLink(l,skHover&&skHover.type==='link'&&skHover.idx===l.idx));
+
+  nodes.forEach(n=>{
+    const a=n.alpha??1;
+    if(n.row==='loss'){
+      skCtx.fillStyle=SK_LOSS_NODE;
+      skCtx.globalAlpha=0.55*a;
     }else{
-      g.append('stop').attr('offset','0%').attr('stop-color',SK_NODE_COLS[l.source]||P.g1).attr('stop-opacity',0.19);
-      g.append('stop').attr('offset','100%').attr('stop-color',SK_NODE_COLS[l.target]||P.g2).attr('stop-opacity',0.26);
+      skCtx.fillStyle=SK_FUNNEL[n.id]||'#2563EB';
+      skCtx.globalAlpha=0.92*a;
+    }
+    skCtx.fillRect(n.x,n.y,n.w,n.h);
+    skCtx.globalAlpha=1;
+    if(n.id==='published'&&skFocus==='published'){
+      skCtx.strokeStyle=P.accent;
+      skCtx.lineWidth=2;
+      skCtx.globalAlpha=a;
+      skCtx.strokeRect(n.x-1.5,n.y-1.5,n.w+3,n.h+3);
+      skCtx.globalAlpha=1;
     }
   });
 
-  // Same cubic bezier path as original canvas drawLink
-  const linkPath=l=>{
-    const x1=l.s.x+l.s.w,x2=l.t.x;
-    const c1=x1+(x2-x1)*0.45,c2=x1+(x2-x1)*0.55;
-    return `M${x1},${l.sy0} C${c1},${l.sy0} ${c2},${l.ty0} ${x2},${l.ty0} L${x2},${l.ty1} C${c2},${l.ty1} ${c1},${l.sy1} ${x1},${l.sy1} Z`;
-  };
+  skCtx.textAlign='center';
+  nodes.forEach(n=>{
+    const a=n.alpha??1;
+    if(a<0.06)return;
+    skCtx.globalAlpha=a;
+    skCtx.fillStyle=P.text;
+    skCtx.font='500 12px DM Sans';
+    const tx=Math.round(n.x+n.w/2),ty=Math.round(n.y+n.h+22);
+    skCtx.fillText(skLabel(n.id),tx,ty);
+    skCtx.fillStyle=P.muted;
+    skCtx.font='400 11px DM Sans';
+    skCtx.fillText((n.value||0).toLocaleString(),Math.round(n.x+n.w/2),Math.round(n.y+n.h+38));
+    skCtx.globalAlpha=1;
+  });
 
-  // Links
-  svg.append('g').selectAll('path').data(geoms).join('path')
-    .attr('d',linkPath)
-    .attr('fill',(_,i)=>`url(#skG${i})`)
-    .attr('opacity',0)
-    .on('mousemove',(event,d)=>{
-      const pct=(d.value/(pos[d.source].value||1)*100).toFixed(1);
-      showTT(event,`${skLabel(d.source)} → ${skLabel(d.target)}`,
-        `${d.value.toLocaleString()} photos<br>${pct}% ${d.kind==='loss'?'drop-off':'conversion'}`);
-    })
-    .on('mouseleave',hideTT)
-    .transition().duration(900).ease(d3.easeCubicOut).attr('opacity',1);
-
-  // Nodes
-  const activeNodes=graph.nodes.filter(n=>n.value>0);
-  svg.append('g').selectAll('rect').data(activeNodes).join('rect')
-    .attr('x',d=>pos[d.id].x).attr('y',d=>pos[d.id].y)
-    .attr('width',d=>pos[d.id].w).attr('height',d=>pos[d.id].h)
-    .attr('fill',d=>d.row==='loss'?P.g7:(SK_NODE_COLS[d.id]||P.g1))
-    .attr('rx',3).attr('opacity',0)
-    .on('mousemove',(event,d)=>showTT(event,skLabel(d.id),`${(d.value||0).toLocaleString()} photos`))
-    .on('mouseleave',hideTT)
-    .transition().duration(800).ease(d3.easeCubicOut).attr('opacity',0.95);
-
-  // Labels below each node (same positions as original canvas)
-  svg.append('g').attr('font-family','DM Sans,sans-serif').attr('font-size',13)
-    .attr('font-weight',600).attr('fill',P.text).attr('text-anchor','center')
-    .selectAll('text').data(activeNodes).join('text')
-    .attr('x',d=>pos[d.id].x+pos[d.id].w/2).attr('y',d=>pos[d.id].y+pos[d.id].h+24)
-    .attr('text-anchor','middle').text(d=>skLabel(d.id));
-
-  svg.append('g').attr('font-family','DM Sans,sans-serif').attr('font-size',11)
-    .attr('fill',P.muted)
-    .selectAll('text').data(activeNodes).join('text')
-    .attr('x',d=>pos[d.id].x+pos[d.id].w/2).attr('y',d=>pos[d.id].y+pos[d.id].h+40)
-    .attr('text-anchor','middle').text(d=>(d.value||0).toLocaleString());
-
-  // Legend
-  const lg=document.getElementById('sankey-legend');
-  if(lg)lg.innerHTML=[
-    `<div class="li"><div class="li-dot" style="background:${SK_NODE_COLS.shots}"></div>Picture shots</div>`,
-    `<div class="li"><div class="li-line" style="background:${P.g2}"></div>Kept flow</div>`,
-    `<div class="li"><div class="li-line" style="background:${P.g7}"></div>Loss flow</div>`,
-    `<div class="li"><div class="li-dot" style="background:${SK_NODE_COLS.published}"></div>Published</div>`,
-  ].join('');
+  SK_C._meta={nodes,links};
 }
 
-function sankeyStart(){buildD3Sankey()}
-function resizeSankey(){buildD3Sankey()}
+function skDrawStageBar(){
+  if(typeof d3==='undefined')return;
+  const bar=document.getElementById('sk-stage-bar');
+  if(!bar)return;
+  const stages=[
+    {id:'shots',    title:'Shots',   sub:'All captures'},
+    {id:'selection',title:'Select',  sub:'Keepers'},
+    {id:'edition',  title:'Edit',    sub:'Lightroom'},
+    {id:'published',title:'Publish', sub:'Out the door'},
+  ];
+
+  // Measure container width
+  const containerW=bar.closest('.viz-card')?.clientWidth||800;
+  const availW=Math.max(400,containerW-64); // 32px card padding each side
+  const pillW=Math.floor((availW - 3*32) / 4); // 3 arrows of 32px each
+  const pillH=56;
+  const arrowW=32;
+  const totalW=4*pillW+3*arrowW;
+  const H=pillH;
+
+  const svg=d3.select(bar).html('').append('svg')
+    .attr('width',totalW).attr('height',H)
+    .attr('viewBox',`0 0 ${totalW} ${H}`)
+    .style('overflow','visible')
+    .style('font-family','DM Sans, sans-serif');
+
+  stages.forEach((s,i)=>{
+    const x=i*(pillW+arrowW);
+
+    // Arrow connector between pills (not after last)
+    if(i>0){
+      const ax=x-arrowW;
+      const mid=ax+arrowW/2;
+      // thin line
+      svg.append('line')
+        .attr('x1',ax+4).attr('y1',H/2)
+        .attr('x2',ax+arrowW-8).attr('y2',H/2)
+        .attr('stroke','var(--dim)').attr('stroke-width',1.5);
+      // arrowhead
+      svg.append('polygon')
+        .attr('points',`${ax+arrowW-12},${H/2-4} ${ax+arrowW-6},${H/2} ${ax+arrowW-12},${H/2+4}`)
+        .attr('fill','var(--dim)');
+    }
+
+    const g=svg.append('g').attr('class','sk-pill')
+      .attr('transform',`translate(${x},0)`);
+
+    // Pill background
+    g.append('rect')
+      .attr('width',pillW).attr('height',pillH).attr('rx',10)
+      .attr('fill',SK_FUNNEL[s.id])
+      .attr('stroke','rgba(15,23,42,0.08)').attr('stroke-width',1);
+
+    // Stage title — Playfair Display italic
+    g.append('text')
+      .attr('x',16).attr('y',23)
+      .attr('fill','#fff')
+      .attr('font-family','Playfair Display, serif')
+      .attr('font-style','italic')
+      .attr('font-size','14px')
+      .attr('font-weight','500')
+      .text(s.title);
+
+    // Sub label — DM Sans light
+    g.append('text')
+      .attr('x',16).attr('y',40)
+      .attr('fill','rgba(255,255,255,0.78)')
+      .attr('font-family','DM Sans, sans-serif')
+      .attr('font-size','10px')
+      .attr('font-weight','300')
+      .attr('letter-spacing','0.08em')
+      .text(s.sub.toUpperCase());
+
+    g.on('click',function(){
+      const wasActive=skFocus===s.id;
+      skPrevFocus=wasActive?null:skFocus; // snapshot stable state BEFORE the switch
+      skFocus=wasActive?null:s.id;
+      skPopulateStory();
+      skRunSankeyAnim();
+      svg.selectAll('g.sk-pill').each(function(p,j){
+        const pid=stages[j].id;
+        const on=skFocus===pid, dim=!!skFocus&&!on;
+        d3.select(this).select('rect')
+          .attr('opacity',dim?0.32:1)
+          .attr('stroke',on?P.accent:'rgba(15,23,42,0.08)')
+          .attr('stroke-width',on?2.5:1);
+      });
+    });
+  });
+
+  // Restore active states after redraw
+  svg.selectAll('g.sk-pill').each(function(p,j){
+    const pid=stages[j].id;
+    const on=skFocus===pid, dim=!!skFocus&&!on;
+    d3.select(this).select('rect')
+      .attr('opacity',dim?0.32:1)
+      .attr('stroke',on?P.accent:'rgba(15,23,42,0.08)')
+      .attr('stroke-width',on?2.5:1);
+  });
+}
+
+function skRunSankeyAnim(){
+  if(skAnimAF)cancelAnimationFrame(skAnimAF);
+  skAnimT=0;
+  const start=performance.now();
+  const dur=skFocus?3000:180;
+  const tick=(ts)=>{
+    skAnimT=clamp((ts-start)/dur,0,1);
+    drawSankey();
+    if(skAnimT<1) skAnimAF=requestAnimationFrame(tick);
+    else skAnimAF=null;
+  };
+  skAnimAF=requestAnimationFrame(tick);
+}
+
+function sankeyStart(){
+  skFocus=null;
+  skPopulateStory();
+  skRunSankeyAnim();
+  if(!skInited){
+    skInited=true;
+    const lg=document.getElementById('sankey-legend');
+    lg.innerHTML=[
+      `<div class="li"><div class="li-dot" style="background:${SK_FUNNEL.shots}"></div><span style="font-weight:500">Progressive reveal</span> — use the focus path; the full funnel appears on <strong>Publish</strong>.</div>`,
+      `<div class="li"><div class="li-dot" style="background:${SK_LOSS_NODE}"></div>Side exits (not taken forward)</div>`,
+      `<div class="li"><div class="li-line" style="background:${P.accent};height:3px"></div>Orange ring = final publish step (when that stage is visible)</div>`,
+    ].join('');
+  }
+  skDrawStageBar();
+}
+
+SK_C.addEventListener('click',e=>{
+  const m=SK_C._meta;if(!m)return;
+  const rect=SK_C.getBoundingClientRect();
+  const lw=skLogicalW(),lh=SK_CSS_H;
+  const mx=(e.clientX-rect.left)*(lw/rect.width),my=(e.clientY-rect.top)*(lh/rect.height);
+  for(const n of m.nodes){
+    if(mx>=n.x&&mx<=n.x+n.w&&my>=n.y&&my<=n.y+n.h)return;
+  }
+  for(const l of m.links){
+    const x1=l.s.x+l.s.w,x2=l.t.x;
+    if(mx<x1||mx>x2)continue;
+    const t=(mx-x1)/(x2-x1);
+    const top=(1-t)*(1-t)*(1-t)*l.sy0 + 3*(1-t)*(1-t)*t*l.sy0 + 3*(1-t)*t*t*l.ty0 + t*t*t*l.ty0;
+    const bot=(1-t)*(1-t)*(1-t)*l.sy1 + 3*(1-t)*(1-t)*t*l.sy1 + 3*(1-t)*t*t*l.ty1 + t*t*t*l.ty1;
+    if(my>=Math.min(top,bot)-3 && my<=Math.max(top,bot)+3)return;
+  }
+  if(skFocus){skFocus=null;skPrevFocus=null;skPopulateStory();skRunSankeyAnim();skDrawStageBar();}
+});
+
+SK_C.addEventListener('mousemove',e=>{
+  const m=SK_C._meta;if(!m)return;
+  const rect=SK_C.getBoundingClientRect();
+  const lw=skLogicalW(),lh=SK_CSS_H;
+  const mx=(e.clientX-rect.left)*(lw/rect.width),my=(e.clientY-rect.top)*(lh/rect.height);
+  skHover=null;
+
+  for(const n of m.nodes){
+    if(mx>=n.x&&mx<=n.x+n.w&&my>=n.y&&my<=n.y+n.h){
+      skHover={type:'node',id:n.id};
+      const title=skLabel(n.id);
+      const shots=(sankeyDataSafe()?.totals?.shots)||1;
+      const pct=n.value?((n.value/shots)*100).toFixed(1):'0';
+      showTT(e,title,`${n.value.toLocaleString()} photos<br><span style="color:var(--muted)">${pct}% of all captures</span>`);
+      drawSankey();
+      return;
+    }
+  }
+
+  for(const l of m.links){
+    const x1=l.s.x+l.s.w,x2=l.t.x;
+    if(mx<x1||mx>x2)continue;
+    const t=(mx-x1)/(x2-x1);
+    const top=(1-t)*(1-t)*(1-t)*l.sy0 + 3*(1-t)*(1-t)*t*l.sy0 + 3*(1-t)*t*t*l.ty0 + t*t*t*l.ty0;
+    const bot=(1-t)*(1-t)*(1-t)*l.sy1 + 3*(1-t)*(1-t)*t*l.sy1 + 3*(1-t)*t*t*l.ty1 + t*t*t*l.ty1;
+    if(my>=Math.min(top,bot)-2 && my<=Math.max(top,bot)+2){
+      skHover={type:'link',idx:l.idx};
+      const shots=(sankeyDataSafe()?.totals?.shots)||1;
+      const pctSrc=l.srcValue?((l.value/l.srcValue)*100):0;
+      const pctAll=shots?((l.value/shots)*100):0;
+      const metric=l.kind==='loss'?'leaving the funnel':'moving forward';
+      showTT(e,`${skLabel(l.source)} → ${skLabel(l.target)}`,`${l.value.toLocaleString()} photos<br><span style="color:var(--muted)">${pctSrc.toFixed(1)}% of ${skLabel(l.source)} · ${pctAll.toFixed(1)}% of all captures</span><br><span style="color:var(--dim);font-size:11px">${metric}</span>`);
+      drawSankey();
+      return;
+    }
+  }
+  hideTT();
+  drawSankey();
+});
+SK_C.addEventListener('mouseleave',()=>{skHover=null;hideTT();drawSankey()});
+function resizeSankey(){
+  skPopulateStory();
+  skDrawStageBar();
+  if(skInited)drawSankey();
+}
 
 // ═══════════════════════════════════════════════
-// 5. PHOTO ACTIVITY
+// 5. PHOTO ACTIVITY  (enhanced — 3-level drill-down with rotation morph)
 // ═══════════════════════════════════════════════
 const PA_C = document.getElementById('pa-canvas');
 const paCtx = PA_C.getContext('2d');
+
+// ── lookup maps ──────────────────────────────────
 const dailyMap = {};
 DAILY_DATA.forEach(d => { dailyMap[d.date] = d.count; });
-const YR_BAR_COLS = {2021:P.g1,2022:P.g2,2023:P.g3,2024:P.g6,2025:P.g8,2026:P.g1};
-const PA_PEAK = YEAR_DATA.reduce((a,b)=>b.count>a.count?b:a).year;
-let paView='years', paYear=null, paHits=[];
+const monthlyTotals = {};
+DAILY_DATA.forEach(d => {
+  const m = d.date.slice(0, 7);
+  monthlyTotals[m] = (monthlyTotals[m] || 0) + d.count;
+});
 
-function paColorForCount(c,mx){
-  if(!c)return'#F1F5F9';
-  const r=c/mx;
-  if(r<0.15)return'#DBEAFE';
-  if(r<0.40)return'#60A5FA';
-  if(r<0.70)return'#2563EB';
-  return'#1E3A8A';
+// ── story stats ──────────────────────────────────
+let PA_GLOBAL_STATS = null;
+(function() {
+  const peakE = Object.entries(monthlyTotals).sort((a,b)=>b[1]-a[1])[0];
+  const [pmY,pmM] = peakE[0].split('-').map(Number);
+  const pmLabel = new Date(pmY,pmM-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const sorted = DAILY_DATA.map(d=>d.date).sort();
+  let maxS=1,curS=1;
+  for(let i=1;i<sorted.length;i++){
+    const diff=(new Date(sorted[i])-new Date(sorted[i-1]))/86400000;
+    curS=diff===1?curS+1:1; maxS=Math.max(maxS,curS);
+  }
+  const maxDay = DAILY_DATA.reduce((a,b)=>b.count>a.count?b:a);
+  const maxDayLbl = new Date(maxDay.date+'T12:00:00')
+    .toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  PA_GLOBAL_STATS={peakMonth:pmLabel,peakCount:peakE[1].toLocaleString()+' photos',streak:maxS,maxDay:maxDay.count.toLocaleString()+' photos',maxDate:maxDayLbl};
+  paSetStoryCards(PA_GLOBAL_STATS);
+})();
+function paSetStoryCards(s){
+  document.getElementById('pa-story-peak-month').textContent=s.peakMonth;
+  document.getElementById('pa-story-peak-count').textContent=s.peakCount;
+  document.getElementById('pa-story-streak').textContent=s.streak;
+  document.getElementById('pa-story-max-day').textContent=s.maxDay;
+  document.getElementById('pa-story-max-date').textContent=s.maxDate;
+}
+function paUpdateStoryCards(year){
+  const mE=Object.entries(monthlyTotals).filter(([k])=>k.startsWith(String(year))).sort((a,b)=>b[1]-a[1]);
+  const peakMonth=mE.length?new Date(...mE[0][0].split('-').map((v,i)=>i===1?Number(v)-1:Number(v)),1).toLocaleDateString('en-US',{month:'long',year:'numeric'}):'—';
+  const peakCount=mE.length?mE[0][1].toLocaleString()+' photos':'—';
+  const yDates=DAILY_DATA.filter(d=>d.date.startsWith(String(year))).map(d=>d.date).sort();
+  let maxS=yDates.length?1:0,curS=1;
+  for(let i=1;i<yDates.length;i++){const diff=(new Date(yDates[i])-new Date(yDates[i-1]))/86400000;curS=diff===1?curS+1:1;maxS=Math.max(maxS,curS);}
+  const yData=DAILY_DATA.filter(d=>d.date.startsWith(String(year)));
+  const maxDay=yData.length?yData.reduce((a,b)=>b.count>a.count?b:a):null;
+  const maxDayLbl=maxDay?new Date(maxDay.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
+  paSetStoryCards({peakMonth,peakCount,streak:maxS||'—',maxDay:maxDay?maxDay.count.toLocaleString()+' photos':'—',maxDate:maxDayLbl});
 }
 
-function drawYears(){
+// ── palette helpers ──────────────────────────────
+// sequential blue→purple for heatmap cells
+function paColorForCount(c,mx){
+  if(!c) return '#F1F5F9';
+  const r=c/mx;
+  if(r<0.12) return '#DBEAFE';
+  if(r<0.30) return '#93C5FD';
+  if(r<0.55) return '#3B82F6';
+  if(r<0.80) return '#2563EB';
+  return '#7C3AED';
+}
+// Blue shared by all-years bars (2021/2022/2026) and Winter months after drill-down
+const PA_BAR_BLUE = '#3B82F6';
+// sequential blue→purple per month index 0..11 (used for sessions chart)
+function paMonthCol(i){
+  const t=i/11;
+  return `rgb(${Math.round(lerp(0x25,0x8B,t))},${Math.round(lerp(0x63,0x5C,t))},${Math.round(lerp(0xEB,0xF6,t))})`;
+}
+// season-tinted colour for monthly bar chart — tones match the heatmap palette
+function paSeasonCol(monthIdx){
+  if(monthIdx<=2) return PA_BAR_BLUE; // Winter — same blue as yearly bar chart
+  if(monthIdx<=5) return P.g3;      // Spring  — same teal as yearly chart (e.g. 2023 bar)
+  if(monthIdx<=8) return '#F97316'; // Summer  — exact heatmap accent orange
+  return '#8B5CF6';                  // Autumn  — exact heatmap purple end
+}
+
+const YR_BAR_COLS = {2021:PA_BAR_BLUE,2022:PA_BAR_BLUE,2023:P.g3,2024:P.g6,2025:P.g8,2026:PA_BAR_BLUE};
+const PA_PEAK = YEAR_DATA.reduce((a,b)=>b.count>a.count?b:a).year;
+const PA_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// Previews on heatmap hover: PA_YEAR_THUMB = one image per year (data/pa-previews/2024.jpg).
+// PA_DAY_THUMB overrides specific dates (e.g. data/pa-previews/day-2024-05-03.jpg).
+const PA_YEAR_THUMB={
+};
+const PA_DAY_THUMB={
+  '2022-07-23':'data/pa-previews/day-2022-07-23.jpg',
+  '2023-01-17':'data/pa-previews/day-2023-01-17.jpg',
+  '2024-05-03':'data/pa-previews/day-2024-05-03.jpg',
+  '2025-10-14':'data/pa-previews/day-2025-10-14.jpg',
+};
+function paYearPlaceholderSvgUri(year){
+  const hue=210+(year%6)*22;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200"><rect fill="hsl(${hue},28%,94%)" width="320" height="200"/><text x="160" y="104" text-anchor="middle" fill="#94a3b8" font-family="DM Sans,sans-serif" font-size="14" font-weight="500">${year}</text><text x="160" y="128" text-anchor="middle" fill="#cbd5e1" font-family="DM Sans,sans-serif" font-size="10">Drop preview in data/pa-previews/</text></svg>`;
+  return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+}
+function paThumbSrc(isoDate){
+  if(PA_DAY_THUMB[isoDate]) return PA_DAY_THUMB[isoDate];
+  const y=+isoDate.slice(0,4);
+  return PA_YEAR_THUMB[y]||paYearPlaceholderSvgUri(y);
+}
+function paThumbTooltipHtml(isoDate){
+  const src=paThumbSrc(isoDate);
+  return `<div class="tt-preview-wrap"><img class="tt-preview-img" src="${src}" alt="" loading="lazy" decoding="async" onerror="this.closest('.tt-preview-wrap').style.display='none'"/></div>`;
+}
+
+// ── state ────────────────────────────────────────
+// paView: 'years' | 'months' | 'heatmap' | 'morphing'
+let paView='years', paYear=null, paHits=[], paAnimAF=null;
+
+// ── canvas sizing helpers ────────────────────────
+function paDPR(){ return window.devicePixelRatio||1; }
+function paSetSize(cssW,cssH){
+  const dpr=paDPR();
+  PA_C.width=cssW*dpr; PA_C.height=cssH*dpr;
+  PA_C.style.width=cssW+'px'; PA_C.style.height=cssH+'px';
+  paCtx.setTransform(dpr,0,0,dpr,0,0);
+}
+function paCSSW(){ return cardInnerWidth(PA_C); }
+
+// ════════════════════════════════════════════════
+// VIEW 1 — YEAR BARS (animated entry)
+// ════════════════════════════════════════════════
+function drawYears(animT=1){
   paHits=[];
-  const dpr = window.devicePixelRatio || 1;
-  const cssW = cardInnerWidth(PA_C);
-  const cssH = 380;
-  PA_C.width = cssW * dpr;
-  PA_C.height = cssH * dpr;
-  PA_C.style.width = cssW + 'px';
-  PA_C.style.height = cssH + 'px';
-  paCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const W = cssW, H = cssH;
-  paCtx.clearRect(0,0,W,H);
-  const PL=56,PR=16,PT=20,PB=44,PW=W-PL-PR,PH=H-PT-PB;
-  const n=YEAR_DATA.length,gap=PW/n;
-  const barW=Math.min(Math.floor(gap*0.55),90);
+  const cssW=paCSSW(), cssH=380;
+  paSetSize(cssW,cssH);
+  paCtx.clearRect(0,0,cssW,cssH);
+  const PL=56,PR=16,PT=30,PB=50,PW=cssW-PL-PR,PH=cssH-PT-PB;
+  const n=YEAR_DATA.length, gap=PW/n, barW=Math.min(Math.floor(gap*0.55),90);
   const mx=Math.max(...YEAR_DATA.map(d=>d.count));
 
-  // Gridlines + y-labels
+  // gridlines
   [4000,8000,12000,16000].forEach(t=>{
     const y=PT+(1-t/mx)*PH;
-    paCtx.strokeStyle=P.dim;paCtx.lineWidth=.8;
+    paCtx.strokeStyle=P.dim; paCtx.lineWidth=0.8;
     paCtx.beginPath();paCtx.moveTo(PL,y);paCtx.lineTo(PL+PW,y);paCtx.stroke();
-    paCtx.fillStyle=P.muted;paCtx.font='10px DM Sans';paCtx.textAlign='right';
+    paCtx.fillStyle=P.muted; paCtx.font='10px DM Sans'; paCtx.textAlign='right';
     paCtx.fillText(t>=1000?(t/1000)+'k':t,PL-6,y+4);
   });
-  paCtx.strokeStyle=P.dim;paCtx.lineWidth=1;
+  paCtx.strokeStyle=P.dim; paCtx.lineWidth=1;
   paCtx.beginPath();paCtx.moveTo(PL,PT);paCtx.lineTo(PL,PT+PH);paCtx.lineTo(PL+PW,PT+PH);paCtx.stroke();
 
   YEAR_DATA.forEach((d,i)=>{
     const cx=PL+(i+.5)*gap;
-    const bh=(d.count/mx)*PH;
+    const fullBH=(d.count/mx)*PH;
+    const bh=fullBH*animT;
     const by=PT+PH-bh;
     const isPeak=d.year===PA_PEAK;
-    const col=isPeak?P.accent:YR_BAR_COLS[d.year]||P.g1;
-    paCtx.globalAlpha=d.partial?.35:1;
+    const col=isPeak?P.accent:(YR_BAR_COLS[d.year]||P.g1);
+    paCtx.globalAlpha=d.partial?0.35:1;
     paCtx.fillStyle=col;
     paCtx.beginPath();paCtx.roundRect(cx-barW/2,by,barW,bh,[4,4,0,0]);paCtx.fill();
     paCtx.globalAlpha=1;
-    const lbl=d.count>=1000?(d.count/1000).toFixed(1)+'k':String(d.count);
-    paCtx.fillStyle=isPeak?P.accent:P.muted;
-    paCtx.font=(isPeak?'500 ':'')+'11px DM Sans';paCtx.textAlign='center';
-    paCtx.fillText(lbl,cx,by-6);
-    paCtx.fillStyle=isPeak?P.accent:P.muted;
+    // growth badge — uses the bar's own colour
+    if(animT>0.8&&i>0&&!d.partial&&!YEAR_DATA[i-1].partial){
+      const prev=YEAR_DATA[i-1];
+      const pct=(d.count-prev.count)/prev.count*100;
+      paCtx.globalAlpha=Math.min((animT-0.8)/0.2,1);
+      paCtx.fillStyle=col;
+      paCtx.font='500 10px DM Sans'; paCtx.textAlign='center';
+      paCtx.fillText((pct>=0?'+':'')+pct.toFixed(0)+'%',cx,by-18);
+      paCtx.globalAlpha=1;
+    }
+    // count label — always muted, weight only varies for peak
+    if(animT>0.5){
+      paCtx.globalAlpha=clamp((animT-0.5)/0.3,0,1);
+      const lbl=d.count>=1000?(d.count/1000).toFixed(1)+'k':String(d.count);
+      paCtx.fillStyle=P.muted;
+      paCtx.font=(isPeak?'500 ':'')+' 11px DM Sans'; paCtx.textAlign='center';
+      paCtx.fillText(lbl,cx,by-6);
+      paCtx.globalAlpha=1;
+    }
+    paCtx.fillStyle=P.muted;
+    paCtx.font='11px DM Sans'; paCtx.textAlign='center';
     paCtx.fillText(String(d.year),cx,PT+PH+16);
-    if(!d.partial) paHits.push({x:cx-barW/2,y:by,w:barW,h:bh+PH-(bh+by-PT),year:d.year});
+    if(!d.partial) paHits.push({
+      type:'year', x:cx-barW/2, y:by, w:barW, h:PT+PH-by+20,
+      year:d.year,
+      _a:{barCX:cx,barTop:by,barW,barH:bh,PL,PW,PT,PH,W:cssW,H:380}
+    });
   });
 
-  // Legend
-  const lg=document.getElementById('pa-legend');lg.innerHTML='';
+  const lg=document.getElementById('pa-legend'); lg.innerHTML='';
   YEAR_DATA.forEach(d=>{
     const isPeak=d.year===PA_PEAK;
-    const col=isPeak?P.accent:YR_BAR_COLS[d.year]||P.g1;
-    lg.innerHTML+=`<div class="li" style="opacity:${d.partial?.45:1}"><div class="li-dot" style="background:${col}"></div>${d.year}</div>`;
+    const col=isPeak?P.accent:(YR_BAR_COLS[d.year]||P.g1);
+    lg.innerHTML+=`<div class="li" style="opacity:${d.partial?0.45:1}"><div class="li-dot" style="background:${col}"></div>${d.year}</div>`;
   });
-  document.getElementById('pa-sub').textContent='Annual photo counts — click a bar to explore that year day by day.';
+  document.getElementById('pa-sub').textContent='';
+  document.getElementById('pa-breadcrumb').innerHTML='';
 }
 
-function drawHeatmap(year){
-  paHits=[];
-  const dpr = window.devicePixelRatio || 1;
-  const cssW = cardInnerWidth(PA_C);
-  const cssH = 220;
-  PA_C.width = cssW * dpr;
-  PA_C.height = cssH * dpr;
-  PA_C.style.width = cssW + 'px';
-  PA_C.style.height = cssH + 'px';
-  paCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const W = cssW, H = cssH;
+function paEnterYears(){
+  hideTT();
+  paView='years'; paYear=null; paHits=[];
+  document.getElementById('pa-panel').style.display='none';
+  document.getElementById('pa-sessions-timeline').style.display='none';
+  if(PA_GLOBAL_STATS) paSetStoryCards(PA_GLOBAL_STATS);
+  if(paAnimAF){cancelAnimationFrame(paAnimAF);paAnimAF=null;}
+  let s=null;
+  function tick(ts){
+    if(!s) s=ts;
+    const t=Math.min((ts-s)/800,1);
+    drawYears(ease(t));
+    if(t<1) paAnimAF=requestAnimationFrame(tick); else paAnimAF=null;
+  }
+  paAnimAF=requestAnimationFrame(tick);
+}
+function paShowYears(){ paEnterYears(); }
 
-  const LPAD = 40;
-  const TOP = 32;
-  const isLeap = (year%4===0&&year%100!==0)||year%400===0;
-  const totalDays = isLeap ? 366 : 365;
-  const jan1 = new Date(year, 0, 1);
-  const startDow = jan1.getDay()===0 ? 6 : jan1.getDay()-1;
-  const numWeeks = Math.ceil((startDow + totalDays) / 7);
+// ════════════════════════════════════════════════
+// TRANSITION — YEAR BARS fade into COMBINED DETAIL
+// ════════════════════════════════════════════════
+function animateYearToDetail(year, a){
+  hideTT();
+  paView='morphing';
+  if(paAnimAF){cancelAnimationFrame(paAnimAF);paAnimAF=null;}
+  const cssW=a.W;
+  const yearMx=Math.max(...YEAR_DATA.map(d=>d.count));
+  const DUR=480; let s=null;
+  paSetSize(cssW,380);
 
-  // Compute cell size dynamically to fill available width
-  const availW = W - LPAD - 8;
-  const STEP = Math.floor(availW / numWeeks);
-  const CELL = Math.max(STEP - 2, 1);
+  function tick(ts){
+    if(!s) s=ts;
+    const t=Math.min((ts-s)/DUR,1);
+    paCtx.clearRect(0,0,cssW,380);
+    // year bars fade out (t 0 → 0.45)
+    const outA=Math.max(0,1-ease(clamp(t/0.45,0,1)));
+    if(outA>0){
+      const n=YEAR_DATA.length;
+      YEAR_DATA.forEach((d,i)=>{
+        const cx=a.PL+(i+.5)*(a.PW/n);
+        const bh=(d.count/yearMx)*a.PH, by=a.PT+a.PH-bh;
+        const bw=Math.min(Math.floor((a.PW/n)*0.55),90);
+        const col=d.year===PA_PEAK?P.accent:(YR_BAR_COLS[d.year]||P.g1);
+        paCtx.fillStyle=col; paCtx.globalAlpha=(d.partial?0.35:1)*outA;
+        paCtx.beginPath();paCtx.roundRect(cx-bw/2,by,bw,bh,[4,4,0,0]);paCtx.fill();
+        paCtx.globalAlpha=1;
+      });
+    }
+    // combined detail fades in (t 0.38 → 1.0)
+    if(t>=0.38){
+      const inA=ease(clamp((t-0.38)/0.62,0,1));
+      paCtx.globalAlpha=inA;
+      _renderDetail(year,cssW);
+      paCtx.globalAlpha=1;
+    }
+    if(t<1) paAnimAF=requestAnimationFrame(tick);
+    else drawYearDetail(year);
+  }
+  paAnimAF=requestAnimationFrame(tick);
+}
 
-  const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const yearMax = Math.max(...DAILY_DATA.filter(d=>d.date.startsWith(String(year))).map(d=>d.count), 1);
+// ════════════════════════════════════════════════
+// HELPER — draw monthly bars + heatmap into paCtx
+// (used by animation and final view)
+// Returns hit-geometry object for paHits building.
+// NOTE: avoids explicit globalAlpha so the animation
+// wrapper's alpha is respected for all elements.
+// ════════════════════════════════════════════════
+function _renderDetail(year, cssW){
+  // ── monthly bars (top section) ──
+  // PT=30 gives season labels (at y=10) enough clearance from count labels (min y=PT-5=25)
+  const PL=56,PR=16,PT=30,PW=cssW-PL-PR,PH=148,PB=28;
+  const gap=PW/12, mBarW=Math.min(Math.floor(gap*0.7),60);
+  const months=Array.from({length:12},(_,i)=>{
+    const key=`${year}-${String(i+1).padStart(2,'0')}`;
+    return {m:i+1,count:monthlyTotals[key]||0};
+  });
+  const mMax=Math.max(...months.map(d=>d.count),1);
+  const peakIdx=months.reduce((a,b)=>b.count>a.count?b:a).m-1;
 
-  paCtx.clearRect(0, 0, W, H);
+  // season bands — use rgba directly so animation wrapper's globalAlpha is respected
+  [[0,2,'rgba(14,165,233,0.06)','Winter'],[3,5,'rgba(34,197,94,0.06)','Spring'],
+   [6,8,'rgba(249,115,22,0.06)','Summer'],[9,11,'rgba(139,92,246,0.06)','Autumn']].forEach(([st,en,c,lbl])=>{
+    paCtx.fillStyle=c; paCtx.fillRect(PL+st*gap,PT,(en-st+1)*gap,PH);
+    // season label pinned to fixed row (y=11) — always above count labels which start at PT-5=25
+    paCtx.fillStyle='rgba(71,85,105,0.40)'; paCtx.font='9px DM Sans'; paCtx.textAlign='center';
+    paCtx.fillText(lbl,PL+(st+1.5)*gap,11);
+  });
+  // grid
+  [0.5,1].forEach(f=>{
+    const y=PT+(1-f)*PH, val=Math.round(mMax*f);
+    paCtx.strokeStyle=P.dim; paCtx.lineWidth=0.8;
+    paCtx.beginPath();paCtx.moveTo(PL,y);paCtx.lineTo(PL+PW,y);paCtx.stroke();
+    paCtx.fillStyle=P.muted; paCtx.font='10px DM Sans'; paCtx.textAlign='right';
+    paCtx.fillText(val>=1000?(val/1000).toFixed(1)+'k':val,PL-6,y+4);
+  });
+  paCtx.strokeStyle=P.dim; paCtx.lineWidth=1;
+  paCtx.beginPath();paCtx.moveTo(PL,PT);paCtx.lineTo(PL,PT+PH);paCtx.lineTo(PL+PW,PT+PH);paCtx.stroke();
+  // bars — coloured by season, no peak overlay text (avoids label collision)
+  months.forEach((d,i)=>{
+    const cx=PL+(i+.5)*gap, bh=(d.count/mMax)*PH, by=PT+PH-bh;
+    const col=paSeasonCol(i);
+    paCtx.fillStyle=col;
+    paCtx.beginPath();paCtx.roundRect(cx-mBarW/2,by,mBarW,bh,[4,4,0,0]);paCtx.fill();
+    paCtx.fillStyle=P.muted; paCtx.font='9px DM Sans'; paCtx.textAlign='center';
+    paCtx.fillText(PA_MONTHS[i],cx,PT+PH+14);
+  });
 
-  // Month labels
-  const shown = new Set();
-  for(let w=0; w<numWeeks; w++){
-    for(let dow=0; dow<7; dow++){
-      const off = w*7 + dow - startDow;
-      if(off>=0 && off<totalDays){
-        const d = new Date(year, 0, 1+off);
-        if(d.getDate()<=7 && !shown.has(d.getMonth())){
-          shown.add(d.getMonth());
-          paCtx.fillStyle=P.muted; paCtx.font='9px DM Sans'; paCtx.textAlign='left';
-          paCtx.fillText(MN[d.getMonth()], LPAD + w*STEP, TOP-8);
-        }
+  // separator between monthly bars and heatmap
+  const SEP_Y=PT+PH+PB-4;
+  paCtx.strokeStyle=P.dim; paCtx.lineWidth=1; paCtx.setLineDash([4,5]);
+  paCtx.beginPath();paCtx.moveTo(PL,SEP_Y);paCtx.lineTo(PL+PW,SEP_Y);paCtx.stroke();
+  paCtx.setLineDash([]);
+
+  // ── heatmap (bottom section) ──
+  const isLeap=(year%4===0&&year%100!==0)||year%400===0;
+  const totalDays=isLeap?366:365;
+  const jan1=new Date(year,0,1);
+  const startDow=jan1.getDay()===0?6:jan1.getDay()-1;
+  const numWeeks=Math.ceil((startDow+totalDays)/7);
+  const LPAD=40, HTOP_OFF=PT+PH+PB+4;
+  const STEP=Math.floor((cssW-LPAD-8)/numWeeks);
+  const CELL=Math.max(STEP-2,1);
+  const HMTOP=HTOP_OFF+16;
+  const yearMax=Math.max(...DAILY_DATA.filter(d=>d.date.startsWith(String(year))).map(d=>d.count),1);
+
+  // streak
+  const yDates=DAILY_DATA.filter(d=>d.date.startsWith(String(year))).map(d=>d.date).sort();
+  let maxS=1,curS=1,streakEnd=yDates[0];
+  for(let i=1;i<yDates.length;i++){
+    const diff=(new Date(yDates[i])-new Date(yDates[i-1]))/86400000;
+    curS=diff===1?curS+1:1;
+    if(curS>maxS){maxS=curS;streakEnd=yDates[i];}
+  }
+  const streakSet=new Set();
+  if(maxS>2&&streakEnd){
+    const ed=new Date(streakEnd+'T12:00:00');
+    for(let k=0;k<maxS;k++){const d=new Date(ed);d.setDate(d.getDate()-k);streakSet.add(d.toISOString().slice(0,10));}
+  }
+
+  // month labels
+  const shown=new Set();
+  for(let w=0;w<numWeeks;w++)for(let dow=0;dow<7;dow++){
+    const off=w*7+dow-startDow;
+    if(off>=0&&off<totalDays){
+      const d=new Date(year,0,1+off);
+      if(d.getDate()<=7&&!shown.has(d.getMonth())){
+        shown.add(d.getMonth());
+        paCtx.fillStyle=P.muted; paCtx.font='9px DM Sans'; paCtx.textAlign='left';
+        paCtx.fillText(PA_MONTHS[d.getMonth()],LPAD+w*STEP,HTOP_OFF+12);
       }
     }
   }
-
-  // DoW labels
-  [[0,'Mon'],[2,'Wed'],[4,'Fri']].forEach(([dow,lbl])=>{
+  [[0,'M'],[2,'W'],[4,'F']].forEach(([dow,lbl])=>{
     paCtx.fillStyle=P.muted; paCtx.font='9px DM Sans'; paCtx.textAlign='left';
-    paCtx.fillText(lbl, 4, TOP + dow*STEP + CELL/2 + 3);
+    paCtx.fillText(lbl,4,HMTOP+dow*STEP+CELL/2+3);
   });
-
-  // Cells
-  for(let w=0; w<numWeeks; w++){
-    for(let dow=0; dow<7; dow++){
-      const off = w*7 + dow - startDow;
-      if(off<0 || off>=totalDays) continue;
-      const d = new Date(year, 0, 1+off);
-      const ds = d.toISOString().slice(0,10);
-      const count = dailyMap[ds] || 0;
-      const cx = LPAD + w*STEP;
-      const cy = TOP + dow*STEP;
-      paCtx.fillStyle = paColorForCount(count, yearMax);
-      paCtx.beginPath(); paCtx.roundRect(cx, cy, CELL, CELL, 2); paCtx.fill();
-      paHits.push({x:cx, y:cy, w:CELL, h:CELL, date:ds, count});
+  // cells
+  for(let w=0;w<numWeeks;w++)for(let dow=0;dow<7;dow++){
+    const off=w*7+dow-startDow;
+    if(off<0||off>=totalDays) continue;
+    const d=new Date(year,0,1+off), ds=d.toISOString().slice(0,10);
+    const count=dailyMap[ds]||0;
+    const cx=LPAD+w*STEP, cy=HMTOP+dow*STEP;
+    paCtx.fillStyle=paColorForCount(count,yearMax);
+    paCtx.beginPath();paCtx.roundRect(cx,cy,CELL,CELL,2);paCtx.fill();
+    if(streakSet.has(ds)&&count>0){
+      paCtx.strokeStyle='rgba(249,115,22,0.38)'; paCtx.lineWidth=1.5;
+      paCtx.beginPath();paCtx.roundRect(cx+0.75,cy+0.75,CELL-1.5,CELL-1.5,2);paCtx.stroke();
     }
   }
-
-  // Legend
-  const lx = LPAD, ly = TOP + 7*STEP + 6;
+  // legend
+  const lx=LPAD, ly=HMTOP+7*STEP+6;
   paCtx.fillStyle=P.muted; paCtx.font='9px DM Sans'; paCtx.textAlign='left';
-  paCtx.fillText('Less', lx, ly+9);
-  ['#F1F5F9','#DBEAFE','#60A5FA','#2563EB','#1E3A8A'].forEach((c,i)=>{
-    paCtx.fillStyle=c; paCtx.beginPath(); paCtx.roundRect(lx+28+i*14, ly, 11, 11, 2); paCtx.fill();
+  paCtx.fillText('Less',lx,ly+9);
+  ['#F1F5F9','#DBEAFE','#93C5FD','#2563EB','#7C3AED'].forEach((c,ci)=>{
+    paCtx.fillStyle=c; paCtx.beginPath();paCtx.roundRect(lx+28+ci*14,ly,11,11,2);paCtx.fill();
   });
-  paCtx.fillStyle=P.muted; paCtx.fillText('More', lx+28+5*14+4, ly+9);
+  paCtx.fillStyle=P.muted; paCtx.fillText('More',lx+28+5*14+4,ly+9);
+  if(maxS>2){paCtx.fillStyle=P.accent;paCtx.font='500 9px DM Sans';paCtx.fillText(`● ${maxS}-day streak`,lx+28+5*14+50,ly+9);}
 
-  document.getElementById('pa-sub').innerHTML=`Daily activity for ${year} — click a day to see its shooting session. <span style="color:var(--accent);cursor:pointer;text-decoration:underline" onclick="paShowYears()">← all years</span>`;
-  document.getElementById('pa-legend').innerHTML='';
-  document.getElementById('pa-panel').style.display='none';
+  return {months,peakIdx,mBarW,PL,PW,PT,PH,gap,HMTOP,STEP,CELL,numWeeks,startDow,totalDays,yearMax};
 }
 
+// ════════════════════════════════════════════════
+// VIEW 2 — YEAR DETAIL (monthly bars + heatmap)
+// ════════════════════════════════════════════════
+function drawYearDetail(year){
+  hideTT();
+  paView='detail'; paYear=year; paHits=[];
+  const cssW=paCSSW();
+  // dynamic canvas height
+  const isLeap=(year%4===0&&year%100!==0)||year%400===0;
+  const totalDays=isLeap?366:365;
+  const jan1=new Date(year,0,1);
+  const startDow=jan1.getDay()===0?6:jan1.getDay()-1;
+  const numWeeks=Math.ceil((startDow+totalDays)/7);
+  const STEP=Math.floor((cssW-48)/numWeeks);
+  const PT=14,PH=148,PB=28, HTOP_OFF=PT+PH+PB+4, HMTOP=HTOP_OFF+16;
+  const cssH=HMTOP+7*STEP+46;
+  paSetSize(cssW,cssH);
+  paCtx.clearRect(0,0,cssW,cssH);
+
+  const geo=_renderDetail(year,cssW);
+  const {months,mBarW,PL,PW,gap,HMTOP:HT,STEP:ST,CELL,numWeeks:nW,startDow:sDow,totalDays:totD,yearMax:yMx}=geo;
+
+  // build paHits — month bars (hover only)
+  const mMax=Math.max(...months.map(d=>d.count),1);
+  months.forEach((d,i)=>{
+    if(!d.count) return;
+    const cx=PL+(i+.5)*gap, bh=(d.count/mMax)*PH, by=PT+PH-bh;
+    paHits.push({type:'month',x:cx-mBarW/2,y:by,w:mBarW,h:PT+PH-by+14,month:i+1,count:d.count});
+  });
+  // day cells (click for panel)
+  for(let w=0;w<nW;w++)for(let dow=0;dow<7;dow++){
+    const off=w*7+dow-sDow;
+    if(off<0||off>=totD) continue;
+    const ds=new Date(year,0,1+off).toISOString().slice(0,10);
+    const count=dailyMap[ds]||0;
+    paHits.push({type:'day',x:40+w*ST,y:HT+dow*ST,w:CELL,h:CELL,date:ds,count,col:paColorForCount(count,yMx)});
+  }
+
+  document.getElementById('pa-sub').innerHTML=`<span style="color:var(--accent);cursor:pointer;text-decoration:underline" onclick="paShowYears()">← all years</span>`;
+  document.getElementById('pa-breadcrumb').innerHTML=`<span style="color:var(--muted)">All years</span> <span style="color:var(--dim)">›</span> <span style="color:var(--accent);font-weight:500">${year}</span>`;
+  document.getElementById('pa-legend').innerHTML='';
+  document.getElementById('pa-panel').style.display='none';
+  paUpdateStoryCards(year);
+  drawSessionsTimeline(year);
+}
+
+// ════════════════════════════════════════════════
+// D3 SESSIONS BAR CHART (shown below combined view)
+// Top sessions by photo count — horizontal lollipop
+// ════════════════════════════════════════════════
+function drawSessionsTimeline(year){
+  if(typeof d3==='undefined') return;
+  const container=document.getElementById('pa-sessions-timeline');
+  container.style.display='block';
+  container.innerHTML='';
+
+  // group individual shooting days by session name, summing photo counts
+  const grouped={};
+  Object.entries(ALBUM_MAP)
+    .filter(([dt])=>dt.startsWith(String(year)))
+    .forEach(([dt,name])=>{
+      if(!grouped[name]) grouped[name]={name,count:0,days:0};
+      grouped[name].count+=dailyMap[dt]||0;
+      grouped[name].days+=1;
+    });
+  const allSessions=Object.values(grouped).sort((a,b)=>b.count-a.count);
+
+  if(!allSessions.length){
+    container.innerHTML='<div style="font-size:11px;color:var(--muted);padding:6px 0">No named sessions this year.</div>';
+    return;
+  }
+
+  // header
+  const hdr=document.createElement('div');
+  hdr.style.cssText='font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text);margin-bottom:10px;margin-top:6px';
+  hdr.textContent='Named shooting sessions';
+  container.appendChild(hdr);
+
+  // keep top 12; show note if more unique names exist
+  const LIMIT=12;
+  const sessions=allSessions.slice(0,LIMIT);
+  if(allSessions.length>LIMIT){
+    const note=document.createElement('div');
+    note.style.cssText='font-size:10px;font-weight:500;color:var(--muted);margin-bottom:6px';
+    note.innerHTML=`Showing top <strong>${LIMIT}</strong> of <strong>${allSessions.length}</strong> sessions`;
+    container.appendChild(note);
+  }
+
+  const W=paCSSW(), ROW=20, ML=8, MR=12;
+  const namePad=160; // fixed px reserved for name labels
+  const barW=W-namePad-ML-MR-50; // 50px for count text on right
+  const H=sessions.length*ROW+4;
+  const maxCnt=sessions[0].count||1;
+
+  const xScale=d3.scaleLinear().domain([0,maxCnt]).range([0,barW]);
+
+  const svg=d3.select(container).append('svg')
+    .attr('width',W).attr('height',H)
+    .style('font-family','DM Sans').style('overflow','visible');
+
+  const rowG=svg.selectAll('.sr')
+    .data(sessions).enter().append('g').attr('class','sr')
+    .attr('transform',(_,i)=>`translate(${ML},${i*ROW+2})`);
+
+  // session name (left-aligned, fixed-width zone)
+  rowG.append('text')
+    .attr('x',0).attr('y',ROW/2+4)
+    .attr('font-size','11px').attr('fill','#475569')
+    .attr('text-anchor','start')
+    .text(d=>d.name.length>22?d.name.slice(0,21)+'…':d.name);
+
+  // bar track (grey background)
+  rowG.append('rect')
+    .attr('x',namePad).attr('y',ROW/2-3)
+    .attr('width',barW).attr('height',6).attr('rx',3)
+    .attr('fill','#F1F5F9');
+
+  // bar fill (animated)
+  rowG.append('rect')
+    .attr('x',namePad).attr('y',ROW/2-3)
+    .attr('width',0).attr('height',6).attr('rx',3)
+    .attr('fill',(_,i)=>paMonthCol(Math.round(i/Math.max(sessions.length-1,1)*11)))
+    .transition().delay((_,i)=>i*40).duration(420).ease(d3.easeCubicOut)
+    .attr('width',d=>xScale(d.count));
+
+  // count label (right of bar)
+  rowG.append('text')
+    .attr('x',namePad+barW+6).attr('y',ROW/2+4)
+    .attr('font-size','10px').attr('fill','#94A3B8')
+    .attr('opacity',0)
+    .text(d=>d.count>=1000?(d.count/1000).toFixed(1)+'k':d.count)
+    .transition().delay((_,i)=>i*40+350).duration(200)
+    .attr('opacity',1);
+
+  // hover interaction
+  rowG.style('cursor','default')
+    .on('mouseover',function(event,d){
+      d3.select(this).select('rect:nth-child(3)').attr('opacity',0.8);
+      const dayLabel=d.days===1?'1 shooting day':`${d.days} shooting days`;
+      showTT(event,d.name,`${d.count.toLocaleString()} photos total<br><span style="color:var(--muted)">${dayLabel}</span>`);
+    })
+    .on('mousemove',moveTT)
+    .on('mouseleave',function(){
+      d3.select(this).select('rect:nth-child(3)').attr('opacity',1);
+      hideTT();
+    });
+}
+
+// ════════════════════════════════════════════════
+// CANVAS INTERACTION
+// ════════════════════════════════════════════════
 PA_C.addEventListener('click',e=>{
-  const dpr = window.devicePixelRatio || 1;
-  const rect = PA_C.getBoundingClientRect();
-  const mx = (e.clientX - rect.left);
-  const my = (e.clientY - rect.top);
+  if(paView==='morphing') return;
+  const rect=PA_C.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
   for(const b of paHits){
     if(mx>=b.x&&mx<=b.x+b.w&&my>=b.y&&my<=b.y+b.h){
-      if(paView==='years'){
-        paView='heatmap';
-        paYear=b.year;
-        drawHeatmap(b.year);
-      } else if(paView==='heatmap'&& b.count>0){
+      if(paView==='years'&&b.type==='year'){
+        hideTT();
+        animateYearToDetail(b.year,b._a);
+      } else if(paView==='detail'&&b.type==='day'&&b.count>0){
+        hideTT();
         const dateObj=new Date(b.date+'T12:00:00');
-        const fmt=dateObj.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
-        document.getElementById('pa-panel-date').textContent=fmt;
+        document.getElementById('pa-panel-date').textContent=dateObj.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
         document.getElementById('pa-panel-count').textContent=b.count.toLocaleString()+' photos';
         const session=ALBUM_MAP[b.date];
         document.getElementById('pa-panel-albums').innerHTML=session
@@ -1153,18 +1896,38 @@ PA_C.addEventListener('click',e=>{
 });
 
 PA_C.addEventListener('mousemove',e=>{
-  const dpr = window.devicePixelRatio || 1;
-  const rect = PA_C.getBoundingClientRect();
-  const mx = (e.clientX - rect.left);
-  const my = (e.clientY - rect.top);
+  if(paView==='morphing'){PA_C.style.cursor='default';hideTT();return;}
+  const rect=PA_C.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
   let hit=false;
   for(const b of paHits){
     if(mx>=b.x&&mx<=b.x+b.w&&my>=b.y&&my<=b.y+b.h){
-      if(paView==='years'||(paView==='heatmap'&&b.count>0)){
+      const clickable=(paView==='years'&&b.type==='year')||(paView==='detail'&&b.type==='month')||(paView==='detail'&&b.type==='day'&&b.count>0);
+      if(clickable){
         PA_C.style.cursor='pointer';
-        if(paView==='years') showTT(e,String(b.year),b.year+': '+(YEAR_DATA.find(d=>d.year===b.year)?.count||0).toLocaleString()+' photos<br><span style="color:var(--muted)">click to explore days</span>');
-        else{ const session=ALBUM_MAP[b.date]; showTT(e,new Date(b.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}),b.count.toLocaleString()+' photos'+(session?'<br>'+session:'')); }
-        hit=true;break;
+        if(paView==='years'){
+          const yr=b.year;
+          const yd=YEAR_DATA.find(d=>d.year===yr);
+          const barCol=yr===PA_PEAK?P.accent:(YR_BAR_COLS[yr]||P.g1);
+          const total=(yd?.count||0).toLocaleString();
+          let vsLine='';
+          // peak month
+          let peakMonthLine='';
+          const mEntries=Array.from({length:12},(_,i)=>{
+            const key=`${yr}-${String(i+1).padStart(2,'0')}`;
+            return {m:i,count:monthlyTotals[key]||0};
+          });
+          const pm=mEntries.reduce((a,b)=>b.count>a.count?b:a);
+          if(pm.count>0) peakMonthLine=`<br><span style="color:var(--muted)">Peak: ${PA_MONTHS[pm.m]} (${pm.count.toLocaleString()})</span>`;
+          // active days
+          const activeDays=DAILY_DATA.filter(d=>d.date.startsWith(String(yr))).length;
+          const daysLine=`<br><span style="color:var(--muted)">${activeDays} active shooting days</span>`;
+          const hint=`<br><span style="color:var(--dim);font-size:11px">click to explore →</span>`;
+          showTT(e,`<span style="color:${barCol}">${yr}</span>`,`${total} photos${vsLine}${peakMonthLine}${daysLine}${hint}`);
+        }
+        else if(paView==='detail'&&b.type==='month'){const mc=paSeasonCol(b.month-1);showTT(e,`<span style="color:${mc}">${PA_MONTHS[b.month-1]}</span>`,b.count.toLocaleString()+' photos');}
+        else if(paView==='detail'&&b.type==='day'){const s=ALBUM_MAP[b.date];const dl=new Date(b.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});const tc=(b.col==='#F1F5F9'||b.col==='#DBEAFE')?'#93C5FD':(b.col||P.g1);showTT(e,`<span style="color:${tc}">${dl}</span>`,b.count.toLocaleString()+' photos'+(s?'<br>'+s:'')+paThumbTooltipHtml(b.date),{preview:true});}
+        hit=true; break;
       }
     }
   }
@@ -1172,23 +1935,9 @@ PA_C.addEventListener('mousemove',e=>{
 });
 PA_C.addEventListener('mouseleave',()=>{hideTT();PA_C.style.cursor='default';});
 
-// Back button (double-click canvas or call paShowYears())
-function paShowYears(){
-  paView='years';
-  paYear=null;
-  document.getElementById('pa-panel').style.display='none';
-  drawYears();
-}
 function paResize(){
-  const dpr = window.devicePixelRatio || 1;
-  const cssW = cardInnerWidth(PA_C);
-  const cssH = parseInt(PA_C.getAttribute('height'));
-  PA_C.width = cssW * dpr;
-  PA_C.height = cssH * dpr;
-  PA_C.style.width = cssW + 'px';
-  PA_C.style.height = cssH + 'px';
-  paCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  paView === 'years' ? drawYears() : drawHeatmap(paYear);
+  if(paView==='years'||paView==='morphing') paEnterYears();
+  else if(paView==='detail'&&paYear) drawYearDetail(paYear);
 }
 
 // ═══════════════════════════════════════════════
