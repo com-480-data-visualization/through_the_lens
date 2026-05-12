@@ -865,11 +865,16 @@ function buildD3Sankey(){
     .nodePadding(20)
     .extent([[margin.left,margin.top],[W-margin.right,H-margin.bottom]]);
 
+  // Only pass nodes that actually have flow — orphan zero-value nodes break the layout
+  const activeNodes=graph.nodes.filter(n=>n.value>0);
+  const activeNodeIds=new Set(activeNodes.map(n=>n.id));
+  const activeLinks=graph.links.filter(l=>l.value>0&&activeNodeIds.has(l.source)&&activeNodeIds.has(l.target));
+
   let sk;
   try{
     sk=layout({
-      nodes:graph.nodes.map(d=>({...d})),
-      links:graph.links.filter(l=>l.value>0).map(l=>({...l}))
+      nodes:activeNodes.map(d=>({...d})),
+      links:activeLinks.map(l=>({...l}))
     });
   }catch(e){console.error('d3-sankey error:',e);return;}
 
@@ -913,26 +918,27 @@ function buildD3Sankey(){
     .transition().duration(800).ease(d3.easeCubicOut)
     .attr('opacity',0.92);
 
-  // Node name labels
-  svg.append('g')
+  // Labels: right of left-side nodes, left of right-side nodes, vertically centred.
+  // Two tspans: bold name on top, muted count below — no below-node placement to avoid collisions.
+  const labelG=svg.append('g')
     .attr('font-family','DM Sans,sans-serif')
-    .attr('font-size',13).attr('font-weight',600).attr('fill',P.text)
     .selectAll('text')
     .data(nodes)
     .join('text')
-    .attr('x',d=>(d.x0+d.x1)/2).attr('y',d=>d.y1+18)
-    .attr('text-anchor','middle')
+    .attr('x',d=>d.x0<W/2?d.x1+8:d.x0-8)
+    .attr('y',d=>(d.y0+d.y1)/2-8)
+    .attr('text-anchor',d=>d.x0<W/2?'start':'end');
+
+  labelG.append('tspan')
+    .attr('x',d=>d.x0<W/2?d.x1+8:d.x0-8)
+    .attr('dy','0em')
+    .attr('font-size',12).attr('font-weight',600).attr('fill',P.text)
     .text(d=>skLabel(d.id));
 
-  // Value labels
-  svg.append('g')
-    .attr('font-family','DM Sans,sans-serif')
-    .attr('font-size',11).attr('fill',P.muted)
-    .selectAll('text')
-    .data(nodes)
-    .join('text')
-    .attr('x',d=>(d.x0+d.x1)/2).attr('y',d=>d.y1+34)
-    .attr('text-anchor','middle')
+  labelG.append('tspan')
+    .attr('x',d=>d.x0<W/2?d.x1+8:d.x0-8)
+    .attr('dy','1.4em')
+    .attr('font-size',10).attr('fill',P.muted)
     .text(d=>(d.value||0).toLocaleString());
 
   // Legend
