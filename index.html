@@ -849,97 +849,109 @@ function buildD3Sankey(){
 
   container.innerHTML='';
   const W=container.clientWidth||800;
-  const H=380;
-  const margin={top:28,right:64,bottom:72,left:52};
+  const H=400;
 
   const svg=d3.select('#sankey-container')
-    .append('svg')
-    .attr('width',W)
-    .attr('height',H);
+    .append('svg').attr('width',W).attr('height',H);
 
   const graph=buildSankeyGraph(data);
 
-  const layout=d3.sankey()
-    .nodeId(d=>d.id)
-    .nodeWidth(14)
-    .nodePadding(20)
-    .extent([[margin.left,margin.top],[W-margin.right,H-margin.bottom]]);
+  // Manual layout matching original visual: main nodes top row, loss nodes below
+  const PL=52,PR=56,PT=24,PB=60;
+  const PW=W-PL-PR,PH=H-PT-PB;
+  const nodeW=12;
+  const xStep=PW/3;
+  const mainY=PT+PH*0.18;
+  const lossY=PT+PH*0.66;
+  const maxV=Math.max(...graph.nodes.map(n=>n.value),1);
 
-  // Only pass nodes that actually have flow — orphan zero-value nodes break the layout
-  const activeNodes=graph.nodes.filter(n=>n.value>0);
-  const activeNodeIds=new Set(activeNodes.map(n=>n.id));
-  const activeLinks=graph.links.filter(l=>l.value>0&&activeNodeIds.has(l.source)&&activeNodeIds.has(l.target));
+  const pos={};
+  graph.nodes.forEach(n=>{
+    const x=PL+n.col*xStep;
+    const y=n.row==='main'?mainY:lossY;
+    const h=Math.max(10,Math.min(90,10+Math.sqrt((n.value||0)/maxV)*76));
+    pos[n.id]={x,y,w:nodeW,h,value:n.value,row:n.row};
+  });
 
-  let sk;
-  try{
-    sk=layout({
-      nodes:activeNodes.map(d=>({...d})),
-      links:activeLinks.map(l=>({...l}))
-    });
-  }catch(e){console.error('d3-sankey error:',e);return;}
+  // Per-node scale: pixels per unit of value
+  const ns={};
+  graph.nodes.forEach(n=>{
+    const totalOut=graph.links.filter(l=>l.source===n.id).reduce((s,l)=>s+l.value,0);
+    const totalIn =graph.links.filter(l=>l.target===n.id).reduce((s,l)=>s+l.value,0);
+    ns[n.id]=pos[n.id].h/Math.max(totalOut,totalIn,1);
+  });
 
-  const{nodes,links}=sk;
-  const nodeColor=d=>d.row==='loss'?P.g7:(SK_NODE_COLS[d.id]||P.g1);
+  const outC={},inC={};
+  graph.nodes.forEach(n=>{outC[n.id]=0;inC[n.id]=0;});
 
-  // Links (drawn before nodes so nodes sit on top)
-  svg.append('g').attr('fill','none')
-    .selectAll('path')
-    .data(links)
-    .join('path')
-    .attr('d',d3.sankeyLinkHorizontal())
-    .attr('stroke',d=>d.kind==='loss'?P.g7:(SK_NODE_COLS[d.source.id]||P.g1))
-    .attr('stroke-width',d=>Math.max(1,d.width))
-    .attr('stroke-opacity',0)
+  const activeLinks=graph.links.filter(l=>l.value>0);
+  const geoms=activeLinks.map((l,i)=>{
+    const s=pos[l.source],t=pos[l.target];
+    const sy0=s.y+outC[l.source]*ns[l.source];
+    const ty0=t.y+inC[l.target]*ns[l.target];
+    const sTh=Math.max(2,l.value*ns[l.source]);
+    const tTh=Math.max(2,l.value*ns[l.target]);
+    outC[l.source]+=l.value; inC[l.target]+=l.value;
+    return{...l,i,s,t,sy0,sy1:sy0+sTh,ty0,ty1:ty0+tTh};
+  });
+
+  // Gradient defs — one per link, matching original colour scheme
+  const defs=svg.append('defs');
+  geoms.forEach((l,i)=>{
+    const g=defs.append('linearGradient').attr('id',`skG${i}`)
+      .attr('x1','0%').attr('x2','100%').attr('y1','0%').attr('y2','0%');
+    if(l.kind==='loss'){
+      g.append('stop').attr('offset','0%').attr('stop-color',P.g7).attr('stop-opacity',0.15);
+      g.append('stop').attr('offset','100%').attr('stop-color',P.g7).attr('stop-opacity',0.27);
+    }else{
+      g.append('stop').attr('offset','0%').attr('stop-color',SK_NODE_COLS[l.source]||P.g1).attr('stop-opacity',0.19);
+      g.append('stop').attr('offset','100%').attr('stop-color',SK_NODE_COLS[l.target]||P.g2).attr('stop-opacity',0.26);
+    }
+  });
+
+  // Same cubic bezier path as original canvas drawLink
+  const linkPath=l=>{
+    const x1=l.s.x+l.s.w,x2=l.t.x;
+    const c1=x1+(x2-x1)*0.45,c2=x1+(x2-x1)*0.55;
+    return `M${x1},${l.sy0} C${c1},${l.sy0} ${c2},${l.ty0} ${x2},${l.ty0} L${x2},${l.ty1} C${c2},${l.ty1} ${c1},${l.sy1} ${x1},${l.sy1} Z`;
+  };
+
+  // Links
+  svg.append('g').selectAll('path').data(geoms).join('path')
+    .attr('d',linkPath)
+    .attr('fill',(_,i)=>`url(#skG${i})`)
+    .attr('opacity',0)
     .on('mousemove',(event,d)=>{
-      const srcVal=d.source.value||1;
-      const pct=(d.value/srcVal*100).toFixed(1);
-      const metric=d.kind==='loss'?'drop-off':'conversion';
-      showTT(event,`${skLabel(d.source.id)} → ${skLabel(d.target.id)}`,
-        `${d.value.toLocaleString()} photos<br>${pct}% ${metric}`);
+      const pct=(d.value/(pos[d.source].value||1)*100).toFixed(1);
+      showTT(event,`${skLabel(d.source)} → ${skLabel(d.target)}`,
+        `${d.value.toLocaleString()} photos<br>${pct}% ${d.kind==='loss'?'drop-off':'conversion'}`);
     })
     .on('mouseleave',hideTT)
-    .transition().duration(900).ease(d3.easeCubicOut)
-    .attr('stroke-opacity',d=>d.kind==='loss'?0.32:0.45);
+    .transition().duration(900).ease(d3.easeCubicOut).attr('opacity',1);
 
   // Nodes
-  svg.append('g')
-    .selectAll('rect')
-    .data(nodes)
-    .join('rect')
-    .attr('x',d=>d.x0).attr('y',d=>d.y0)
-    .attr('height',d=>Math.max(1,d.y1-d.y0))
-    .attr('width',d=>d.x1-d.x0)
-    .attr('fill',nodeColor)
+  const activeNodes=graph.nodes.filter(n=>n.value>0);
+  svg.append('g').selectAll('rect').data(activeNodes).join('rect')
+    .attr('x',d=>pos[d.id].x).attr('y',d=>pos[d.id].y)
+    .attr('width',d=>pos[d.id].w).attr('height',d=>pos[d.id].h)
+    .attr('fill',d=>d.row==='loss'?P.g7:(SK_NODE_COLS[d.id]||P.g1))
     .attr('rx',3).attr('opacity',0)
-    .on('mousemove',(event,d)=>{
-      showTT(event,skLabel(d.id),`${(d.value||0).toLocaleString()} photos`);
-    })
+    .on('mousemove',(event,d)=>showTT(event,skLabel(d.id),`${(d.value||0).toLocaleString()} photos`))
     .on('mouseleave',hideTT)
-    .transition().duration(800).ease(d3.easeCubicOut)
-    .attr('opacity',0.92);
+    .transition().duration(800).ease(d3.easeCubicOut).attr('opacity',0.95);
 
-  // Labels: right of left-side nodes, left of right-side nodes, vertically centred.
-  // Two tspans: bold name on top, muted count below — no below-node placement to avoid collisions.
-  const labelG=svg.append('g')
-    .attr('font-family','DM Sans,sans-serif')
-    .selectAll('text')
-    .data(nodes)
-    .join('text')
-    .attr('x',d=>d.x0<W/2?d.x1+8:d.x0-8)
-    .attr('y',d=>(d.y0+d.y1)/2-8)
-    .attr('text-anchor',d=>d.x0<W/2?'start':'end');
+  // Labels below each node (same positions as original canvas)
+  svg.append('g').attr('font-family','DM Sans,sans-serif').attr('font-size',13)
+    .attr('font-weight',600).attr('fill',P.text).attr('text-anchor','center')
+    .selectAll('text').data(activeNodes).join('text')
+    .attr('x',d=>pos[d.id].x+pos[d.id].w/2).attr('y',d=>pos[d.id].y+pos[d.id].h+24)
+    .attr('text-anchor','middle').text(d=>skLabel(d.id));
 
-  labelG.append('tspan')
-    .attr('x',d=>d.x0<W/2?d.x1+8:d.x0-8)
-    .attr('dy','0em')
-    .attr('font-size',12).attr('font-weight',600).attr('fill',P.text)
-    .text(d=>skLabel(d.id));
-
-  labelG.append('tspan')
-    .attr('x',d=>d.x0<W/2?d.x1+8:d.x0-8)
-    .attr('dy','1.4em')
-    .attr('font-size',10).attr('fill',P.muted)
-    .text(d=>(d.value||0).toLocaleString());
+  svg.append('g').attr('font-family','DM Sans,sans-serif').attr('font-size',11)
+    .attr('fill',P.muted)
+    .selectAll('text').data(activeNodes).join('text')
+    .attr('x',d=>pos[d.id].x+pos[d.id].w/2).attr('y',d=>pos[d.id].y+pos[d.id].h+40)
+    .attr('text-anchor','middle').text(d=>(d.value||0).toLocaleString());
 
   // Legend
   const lg=document.getElementById('sankey-legend');
