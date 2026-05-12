@@ -88,6 +88,25 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 #tt .tt-preview-img{display:block;width:100%;height:100%;object-fit:cover;vertical-align:top}
 
 canvas{display:block}
+
+/* Workflow funnel */
+#s-sankey .viz-card-title{font-family:'Playfair Display',serif;font-style:italic;font-weight:500}
+#sk-story{display:flex;flex-wrap:wrap;gap:14px 28px;margin:18px 0 14px;padding:14px 18px;background:var(--card2);border:1px solid var(--border);border-radius:10px}
+#sk-story .sk-metric{min-width:120px}
+#sk-story .sk-metric-l{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+#sk-story .sk-metric-v{font-family:'Playfair Display',serif;font-style:italic;font-size:22px;color:var(--text);text-rendering:geometricPrecision;-webkit-font-smoothing:antialiased}
+#sk-story .sk-metric-v.accent{color:var(--accent)}
+#sk-story .sk-metric-v.small{font-size:14px}
+
+/* Stage strip — horizontal, full width above canvas */
+#sk-stage-wrap{margin-bottom:14px}
+#sk-stage-bar{display:flex;align-items:center;gap:0;width:100%;position:relative}
+#sk-stage-bar svg{display:block;width:100%;height:auto}
+#sk-stage-bar .sk-pill{cursor:pointer;transition:opacity .25s,filter .25s}
+#sk-stage-bar .sk-pill:hover{filter:brightness(1.08)}
+#sk-stage-bar .sk-pill.dim{opacity:.32}
+#sk-stage-bar .sk-pill.on rect{filter:drop-shadow(0 0 4px rgba(249,115,22,.55))}
+#sk-canvas-wrap{position:relative}
 @media(max-width:700px){section{padding:60px 16px}.ctrl-row{gap:8px}.hero-stats{gap:28px}}
 </style>
 </head>
@@ -248,8 +267,19 @@ canvas{display:block}
 <section id="s-sankey">
   <div class="viz-card">
     <div class="viz-card-title">Workflow Funnel</div>
-    <div class="viz-card-sub">Estimated flow from captured frames to published photos, including losses at each stage. Hover links to inspect counts and conversion/drop-off rates.</div>
-    <canvas id="sankey-canvas" height="360"></canvas>
+    <div class="viz-card-sub">From every frame you capture to the few you publish — estimated counts after culling, editing, and export. <strong style="font-weight:500">Click a stage</strong> left to right to flow through the funnel. Hover links for detail.</div>
+    <div id="sk-story"></div>
+
+    <!-- Horizontal stage strip (replaces the vertical side panel) -->
+    <div id="sk-stage-wrap">
+      <div id="sk-stage-bar"></div>
+      <div id="sk-focus-hint" style="margin-top:8px;font-size:11px;color:var(--muted);line-height:1.5">Click the same stage again to reset.</div>
+    </div>
+
+    <div id="sk-canvas-wrap">
+      <canvas id="sankey-canvas" height="360"></canvas>
+    </div>
+
     <div class="legend" id="sankey-legend"></div>
   </div>
 </section>
@@ -776,20 +806,82 @@ function lrInit(){
 function resizeLens(){LR_C.width=cardInnerWidth(LR_C);if(lrInited)lrDrawFrame()}
 
 // ═══════════════════════════════════════════════
-// 4. WORKFLOW SANKEY
+// 4. WORKFLOW SANKEY (palette + D3 focus strip)
 // ═══════════════════════════════════════════════
 const SK_C=document.getElementById('sankey-canvas');
 const skCtx=SK_C.getContext('2d');
-const SK_NODE_COLS={shots:P.g1,selection:P.g2,edition:P.g3,published:P.g6};
+const SK_CSS_H=360;
+function skLogicalW(){return Math.max(220,cardInnerWidth(SK_C));}
+let skCanvasCssW=-1,skCanvasDpr=-1;
+function skApplyCanvasSize(){
+  const cssW=skLogicalW(),cssH=SK_CSS_H;
+  const dpr=Math.min(window.devicePixelRatio||1,2.5);
+  if(cssW===skCanvasCssW&&dpr===skCanvasDpr)return;
+  skCanvasCssW=cssW;skCanvasDpr=dpr;
+  SK_C.width=Math.max(1,Math.floor(cssW*dpr));
+  SK_C.height=Math.max(1,Math.floor(cssH*dpr));
+  SK_C.style.width=cssW+'px';
+  SK_C.style.height=cssH+'px';
+  skCtx.setTransform(dpr,0,0,dpr,0,0);
+}
+// Sequential blue → purple (teacher palette); orange accent on Published node only
+const SK_FUNNEL={shots:'#2563EB',selection:'#4338CA',edition:'#5B21B6',published:'#8B5CF6'};
+const SK_LOSS_NODE='#94A3B8';
+const SK_LOSS_LINK_A='#CBD5E1';
+const SK_LOSS_LINK_B='#94A3B8';
 let skHover=null;
+let skFocus=null;
+let skPrevFocus=null;
 let skAnimT=0;
 let skAnimAF=null;
 let skInited=false;
+const SK_STAGE_ORDER=['shots','selection','edition','published'];
 
 function sankeyDataSafe(){
   const d=typeof SANKEY_DATA!=='undefined'?SANKEY_DATA:null;
   if(!d||!d.nodes||!d.links||!d.totals)return null;
   return d;
+}
+
+function skPopulateStory(){
+  const d=sankeyDataSafe();
+  const el=document.getElementById('sk-story');
+  if(!d||!el)return;
+  const t=d.totals||{};
+  const shots=Math.max(0,+t.shots||0);
+  const sel=Math.max(0,+t.selection||0);
+  const ed=Math.max(0,+t.edition||0);
+  const pub=Math.max(0,+t.published||0);
+  const lSel=Math.max(0,shots-sel);
+  const lEd=Math.max(0,sel-ed);
+  const lPub=Math.max(0,ed-pub);
+  const f=skFocus;
+  const row=(a,b,accent)=>`<div class="sk-metric"><div class="sk-metric-l">${a}</div><div class="sk-metric-v${accent?' accent':''}">${b}</div></div>`;
+  let html='';
+  if(!f){
+    const rowS=(a,b,accent)=>`<div class="sk-metric"><div class="sk-metric-l">${a}</div><div class="sk-metric-v small${accent?' accent':''}">${b}</div></div>`;
+    html=rowS('Diagram','Hidden until you pick a stage',false)
+      +rowS('Begin with','Shots',true)
+      +rowS('Then','Select → Edit → Publish',false);
+  }else if(f==='shots'){
+    html=row('Incoming frames',Math.round(shots).toLocaleString(),false)
+      +row('Into selection',shots?(sel/shots*100).toFixed(1)+'%':'0%',false)
+      +row('Lost after selection',lSel.toLocaleString(),false);
+  }else if(f==='selection'){
+    html=row('Keepers (selected)',sel.toLocaleString(),false)
+      +row('Share of captures',shots?(sel/shots*100).toFixed(1)+'%':'0%',true)
+      +row('Not edited onward',lEd.toLocaleString(),false);
+  }else if(f==='edition'){
+    const yp=ed?(pub/ed*100).toFixed(1):'0';
+    html=row('In editing pool',ed.toLocaleString(),false)
+      +row('Reach publish',yp+'%',true)
+      +row('Not published',lPub.toLocaleString(),false);
+  }else if(f==='published'){
+    html=row('Published',pub.toLocaleString(),true)
+      +row('Of all captures',shots?(pub/shots*100).toFixed(1)+'%':'0%',false)
+      +row('Of edited pool',ed?(pub/ed*100).toFixed(1)+'%':'0%',false);
+  }
+  el.innerHTML=html;
 }
 
 function skLabel(id){
@@ -803,6 +895,22 @@ function skLabel(id){
     lost_published:'Not published',
   };
   return map[id]||id;
+}
+
+function skFilterSankeyByStage(fullGraph,focusId){
+  const depth=SK_STAGE_ORDER.indexOf(focusId);
+  if(depth<0)return{nodes:[],links:[]};
+  const{nodes,links}=fullGraph;
+  if(depth===0)return{nodes:nodes.filter(n=>n.id==='shots'),links:[]};
+  if(depth===1)return{
+    nodes:nodes.filter(n=>['shots','selection','lost_selection'].includes(n.id)),
+    links:links.filter(l=>l.source==='shots')
+  };
+  if(depth===2)return{
+    nodes:nodes.filter(n=>['shots','selection','lost_selection','edition','lost_edition'].includes(n.id)),
+    links:links.filter(l=>l.source==='shots'||l.source==='selection')
+  };
+  return fullGraph;
 }
 
 function buildSankeyGraph(data){
@@ -837,9 +945,10 @@ function buildSankeyGraph(data){
 
 function sankeyGeom(){
   const data=sankeyDataSafe();
-  if(!data)return null;
-  const graph=buildSankeyGraph(data);
-  const W=SK_C.width,H=SK_C.height;
+  if(!data||!skFocus)return null;
+  const full=buildSankeyGraph(data);
+  const graph=skFilterSankeyByStage(full,skFocus);
+  const W=skLogicalW(),H=SK_CSS_H;
   const PL=52,PR=56,PT=24,PB=54;
   const PW=W-PL-PR,PH=H-PT-PB;
   const nodeW=12;
@@ -847,13 +956,34 @@ function sankeyGeom(){
   const mainY=PT+PH*0.18;
   const lossY=PT+PH*0.66;
   const maxV=Math.max(...graph.nodes.map(n=>n.value),1);
+  const maxCol=graph.nodes.length?Math.max(...graph.nodes.map(n=>n.col)):0;
+  const numC=Math.max(1,maxCol+1);
+
+  // Which columns were already fully rendered before this click.
+  // skPrevFocus is the focus that was STABLE (animation done) before the current click.
+  const prevDepth=SK_STAGE_ORDER.indexOf(skPrevFocus);
+  // prevNumC = number of columns that already existed: depth 0 → col 0 only, depth 1 → cols 0+1, etc.
+  const prevNumC=prevDepth<0 ? 0 : prevDepth+1;
+
+  // For each column index, return an opacity 0→1.
+  // Columns below prevNumC are already visible → snap to 1 immediately.
+  // New columns sweep in left-to-right.
+  const newCols=numC-prevNumC; // how many columns are being newly revealed
+  const colAlpha=col=>{
+    if(col<prevNumC) return 1;
+    const slot=col-prevNumC;           // 0-based index among new columns
+    const wave=skAnimT*(newCols+0.5);  // wave sweeps across new columns only
+    return ease(clamp(wave-slot,0,1));
+  };
 
   const nodes=graph.nodes.map(n=>{
     const x=PL+n.col*xStep;
     const y=n.row==='main'?mainY:lossY;
-    const h=Math.max(10,Math.min(90,10+Math.sqrt((n.value||0)/maxV)*76))*Math.max(skAnimT,0.08);
-    return {id:n.id,x,y,w:nodeW,h,value:n.value,row:n.row,col:n.col,inSum:0,outSum:0};
+    const alpha=colAlpha(n.col);
+    const hFull=Math.max(10,Math.min(90,10+Math.sqrt((n.value||0)/maxV)*76));
+    return {id:n.id,x,y,w:nodeW,h:hFull,alpha,value:n.value,row:n.row,col:n.col,inSum:0,outSum:0};
   });
+
   const byId=Object.fromEntries(nodes.map(n=>[n.id,n]));
   const activeLinks=graph.links.filter(l=>l.value>0);
   activeLinks.forEach(l=>{
@@ -873,26 +1003,28 @@ function sankeyGeom(){
 
   const links=activeLinks.map((l,idx)=>{
     const s=byId[l.source],t=byId[l.target];
-    const sy=s.y + outCursor[s.id]*nodeScale[s.id];
-    const ty=t.y + inCursor[t.id]*nodeScale[t.id];
+    const sy=s.y+outCursor[s.id]*nodeScale[s.id];
+    const ty=t.y+inCursor[t.id]*nodeScale[t.id];
     const sTh=Math.max(2,l.value*nodeScale[s.id]);
     const tTh=Math.max(2,l.value*nodeScale[t.id]);
     outCursor[s.id]+=l.value;
     inCursor[t.id]+=l.value;
+    // A link between col A and col B is "new" if its rightmost column is new
+    const linkCol=Math.max(s.col,t.col);
+    const flowA=colAlpha(linkCol);
     return {
-      ...l,idx,s,t,srcValue:s.value,
+      ...l,idx,s,t,srcValue:s.value,flowA,
       sy0:sy,sy1:sy+sTh,
       ty0:ty,ty1:ty+tTh,
       thMid:(sTh+tTh)/2
     };
   });
-  return {W,H,PL,PT,PW,PH,nodes,links,maxV};
+  return {W,H,PL,PT,PW,PH,nodes,links,maxV,graph};
 }
 
 function drawLink(link,hovered){
   const {s,t,sy0,sy1,ty0,ty1}=link;
   const x1=s.x+s.w,x2=t.x;
-  const y1m=(sy0+sy1)/2,y2m=(ty0+ty1)/2;
   const c1=x1+(x2-x1)*0.45,c2=x1+(x2-x1)*0.55;
   skCtx.beginPath();
   skCtx.moveTo(x1,sy0);
@@ -902,85 +1034,251 @@ function drawLink(link,hovered){
   skCtx.closePath();
   const grad=skCtx.createLinearGradient(x1,0,x2,0);
   if(link.kind==='loss'){
-    grad.addColorStop(0,P.g7+'26');
-    grad.addColorStop(1,P.g7+'45');
+    grad.addColorStop(0,SK_LOSS_LINK_A+'55');
+    grad.addColorStop(1,SK_LOSS_LINK_B+'70');
   }else{
-    grad.addColorStop(0,(SK_NODE_COLS[link.source]||P.g1)+'30');
-    grad.addColorStop(1,(SK_NODE_COLS[link.target]||P.g2)+'42');
+    const c0=SK_FUNNEL[link.source]||'#2563EB';
+    const c1b=SK_FUNNEL[link.target]||'#6366F1';
+    grad.addColorStop(0,c0+'44');
+    grad.addColorStop(1,c1b+'55');
   }
   skCtx.fillStyle=grad;
-  skCtx.globalAlpha=hovered?0.98:(link.kind==='loss'?0.72:0.8);
+  const fa=typeof link.flowA==='number'?link.flowA:1;
+  let a=(link.kind==='loss'?0.62:0.82)*fa;
+  if(hovered)a=Math.min(1,a+(link.kind==='loss'?0.25:0.18));
+  skCtx.globalAlpha=a;
   skCtx.fill();
   skCtx.globalAlpha=1;
 }
 
 function drawSankey(){
-  const g=sankeyGeom();if(!g)return;
-  const {W,H,nodes,links}=g;
+  skApplyCanvasSize();
+  const W=skLogicalW(),H=SK_CSS_H;
   skCtx.clearRect(0,0,W,H);
+  skCtx.imageSmoothingEnabled=true;
+  if(!skFocus){
+    skCtx.fillStyle=P.muted;
+    skCtx.font='500 13px DM Sans';
+    skCtx.textAlign='center';
+    skCtx.fillText('Select a stage above — start with Shots.',Math.round(W/2),Math.round(H*0.44));
+    skCtx.font='400 12px DM Sans';
+    skCtx.fillStyle='#94A3B8';
+    skCtx.fillText('The funnel flows left → right as you step through.',Math.round(W/2),Math.round(H*0.44+22));
+    SK_C._meta={nodes:[],links:[]};
+    return;
+  }
+  const g=sankeyGeom();if(!g)return;
+  const {nodes,links}=g;
 
   links.forEach(l=>drawLink(l,skHover&&skHover.type==='link'&&skHover.idx===l.idx));
 
   nodes.forEach(n=>{
-    skCtx.fillStyle=n.row==='loss'?P.g7:(SK_NODE_COLS[n.id]||P.g1);
-    skCtx.globalAlpha=0.95;
+    const a=n.alpha??1;
+    if(n.row==='loss'){
+      skCtx.fillStyle=SK_LOSS_NODE;
+      skCtx.globalAlpha=0.55*a;
+    }else{
+      skCtx.fillStyle=SK_FUNNEL[n.id]||'#2563EB';
+      skCtx.globalAlpha=0.92*a;
+    }
     skCtx.fillRect(n.x,n.y,n.w,n.h);
     skCtx.globalAlpha=1;
+    if(n.id==='published'&&skFocus==='published'){
+      skCtx.strokeStyle=P.accent;
+      skCtx.lineWidth=2;
+      skCtx.globalAlpha=a;
+      skCtx.strokeRect(n.x-1.5,n.y-1.5,n.w+3,n.h+3);
+      skCtx.globalAlpha=1;
+    }
   });
 
-  skCtx.fillStyle=P.text;
-  skCtx.font='600 13px DM Sans';
   skCtx.textAlign='center';
-  nodes.forEach(n=>{skCtx.fillText(skLabel(n.id),n.x+n.w/2,n.y+n.h+24)});
-
-  skCtx.fillStyle=P.muted;
-  skCtx.font='11px DM Sans';
-  nodes.forEach(n=>{skCtx.fillText((n.value||0).toLocaleString(),n.x+n.w/2,n.y+n.h+40)});
+  nodes.forEach(n=>{
+    const a=n.alpha??1;
+    if(a<0.06)return;
+    skCtx.globalAlpha=a;
+    skCtx.fillStyle=P.text;
+    skCtx.font='500 12px DM Sans';
+    const tx=Math.round(n.x+n.w/2),ty=Math.round(n.y+n.h+22);
+    skCtx.fillText(skLabel(n.id),tx,ty);
+    skCtx.fillStyle=P.muted;
+    skCtx.font='400 11px DM Sans';
+    skCtx.fillText((n.value||0).toLocaleString(),Math.round(n.x+n.w/2),Math.round(n.y+n.h+38));
+    skCtx.globalAlpha=1;
+  });
 
   SK_C._meta={nodes,links};
 }
 
-function sankeyStart(){
+function skDrawStageBar(){
+  if(typeof d3==='undefined')return;
+  const bar=document.getElementById('sk-stage-bar');
+  if(!bar)return;
+  const stages=[
+    {id:'shots',    title:'Shots',   sub:'All captures'},
+    {id:'selection',title:'Select',  sub:'Keepers'},
+    {id:'edition',  title:'Edit',    sub:'Lightroom'},
+    {id:'published',title:'Publish', sub:'Out the door'},
+  ];
+
+  // Measure container width
+  const containerW=bar.closest('.viz-card')?.clientWidth||800;
+  const availW=Math.max(400,containerW-64); // 32px card padding each side
+  const pillW=Math.floor((availW - 3*32) / 4); // 3 arrows of 32px each
+  const pillH=56;
+  const arrowW=32;
+  const totalW=4*pillW+3*arrowW;
+  const H=pillH;
+
+  const svg=d3.select(bar).html('').append('svg')
+    .attr('width',totalW).attr('height',H)
+    .attr('viewBox',`0 0 ${totalW} ${H}`)
+    .style('overflow','visible')
+    .style('font-family','DM Sans, sans-serif');
+
+  stages.forEach((s,i)=>{
+    const x=i*(pillW+arrowW);
+
+    // Arrow connector between pills (not after last)
+    if(i>0){
+      const ax=x-arrowW;
+      const mid=ax+arrowW/2;
+      // thin line
+      svg.append('line')
+        .attr('x1',ax+4).attr('y1',H/2)
+        .attr('x2',ax+arrowW-8).attr('y2',H/2)
+        .attr('stroke','var(--dim)').attr('stroke-width',1.5);
+      // arrowhead
+      svg.append('polygon')
+        .attr('points',`${ax+arrowW-12},${H/2-4} ${ax+arrowW-6},${H/2} ${ax+arrowW-12},${H/2+4}`)
+        .attr('fill','var(--dim)');
+    }
+
+    const g=svg.append('g').attr('class','sk-pill')
+      .attr('transform',`translate(${x},0)`);
+
+    // Pill background
+    g.append('rect')
+      .attr('width',pillW).attr('height',pillH).attr('rx',10)
+      .attr('fill',SK_FUNNEL[s.id])
+      .attr('stroke','rgba(15,23,42,0.08)').attr('stroke-width',1);
+
+    // Stage title — Playfair Display italic
+    g.append('text')
+      .attr('x',16).attr('y',23)
+      .attr('fill','#fff')
+      .attr('font-family','Playfair Display, serif')
+      .attr('font-style','italic')
+      .attr('font-size','14px')
+      .attr('font-weight','500')
+      .text(s.title);
+
+    // Sub label — DM Sans light
+    g.append('text')
+      .attr('x',16).attr('y',40)
+      .attr('fill','rgba(255,255,255,0.78)')
+      .attr('font-family','DM Sans, sans-serif')
+      .attr('font-size','10px')
+      .attr('font-weight','300')
+      .attr('letter-spacing','0.08em')
+      .text(s.sub.toUpperCase());
+
+    g.on('click',function(){
+      const wasActive=skFocus===s.id;
+      skPrevFocus=wasActive?null:skFocus; // snapshot stable state BEFORE the switch
+      skFocus=wasActive?null:s.id;
+      skPopulateStory();
+      skRunSankeyAnim();
+      svg.selectAll('g.sk-pill').each(function(p,j){
+        const pid=stages[j].id;
+        const on=skFocus===pid, dim=!!skFocus&&!on;
+        d3.select(this).select('rect')
+          .attr('opacity',dim?0.32:1)
+          .attr('stroke',on?P.accent:'rgba(15,23,42,0.08)')
+          .attr('stroke-width',on?2.5:1);
+      });
+    });
+  });
+
+  // Restore active states after redraw
+  svg.selectAll('g.sk-pill').each(function(p,j){
+    const pid=stages[j].id;
+    const on=skFocus===pid, dim=!!skFocus&&!on;
+    d3.select(this).select('rect')
+      .attr('opacity',dim?0.32:1)
+      .attr('stroke',on?P.accent:'rgba(15,23,42,0.08)')
+      .attr('stroke-width',on?2.5:1);
+  });
+}
+
+function skRunSankeyAnim(){
   if(skAnimAF)cancelAnimationFrame(skAnimAF);
   skAnimT=0;
   const start=performance.now();
+  const dur=skFocus?3000:180;
   const tick=(ts)=>{
-    skAnimT=clamp((ts-start)/900,0,1);
+    skAnimT=clamp((ts-start)/dur,0,1);
     drawSankey();
-    if(skAnimT<1)skAnimAF=requestAnimationFrame(tick);else skAnimAF=null;
+    if(skAnimT<1) skAnimAF=requestAnimationFrame(tick);
+    else skAnimAF=null;
   };
   skAnimAF=requestAnimationFrame(tick);
+}
 
+function sankeyStart(){
+  skFocus=null;
+  skPopulateStory();
+  skRunSankeyAnim();
   if(!skInited){
     skInited=true;
     const lg=document.getElementById('sankey-legend');
     lg.innerHTML=[
-      `<div class="li"><div class="li-dot" style="background:${SK_NODE_COLS.shots}"></div>Picture shots</div>`,
-      `<div class="li"><div class="li-line" style="background:${P.g2}"></div>Kept flow</div>`,
-      `<div class="li"><div class="li-line" style="background:${P.g7}"></div>Loss flow</div>`,
-      `<div class="li"><div class="li-dot" style="background:${SK_NODE_COLS.published}"></div>Published</div>`,
+      `<div class="li"><div class="li-dot" style="background:${SK_FUNNEL.shots}"></div><span style="font-weight:500">Progressive reveal</span> — use the focus path; the full funnel appears on <strong>Publish</strong>.</div>`,
+      `<div class="li"><div class="li-dot" style="background:${SK_LOSS_NODE}"></div>Side exits (not taken forward)</div>`,
+      `<div class="li"><div class="li-line" style="background:${P.accent};height:3px"></div>Orange ring = final publish step (when that stage is visible)</div>`,
     ].join('');
   }
+  skDrawStageBar();
 }
+
+SK_C.addEventListener('click',e=>{
+  const m=SK_C._meta;if(!m)return;
+  const rect=SK_C.getBoundingClientRect();
+  const lw=skLogicalW(),lh=SK_CSS_H;
+  const mx=(e.clientX-rect.left)*(lw/rect.width),my=(e.clientY-rect.top)*(lh/rect.height);
+  for(const n of m.nodes){
+    if(mx>=n.x&&mx<=n.x+n.w&&my>=n.y&&my<=n.y+n.h)return;
+  }
+  for(const l of m.links){
+    const x1=l.s.x+l.s.w,x2=l.t.x;
+    if(mx<x1||mx>x2)continue;
+    const t=(mx-x1)/(x2-x1);
+    const top=(1-t)*(1-t)*(1-t)*l.sy0 + 3*(1-t)*(1-t)*t*l.sy0 + 3*(1-t)*t*t*l.ty0 + t*t*t*l.ty0;
+    const bot=(1-t)*(1-t)*(1-t)*l.sy1 + 3*(1-t)*(1-t)*t*l.sy1 + 3*(1-t)*t*t*l.ty1 + t*t*t*l.ty1;
+    if(my>=Math.min(top,bot)-3 && my<=Math.max(top,bot)+3)return;
+  }
+  if(skFocus){skFocus=null;skPrevFocus=null;skPopulateStory();skRunSankeyAnim();skDrawStageBar();}
+});
 
 SK_C.addEventListener('mousemove',e=>{
   const m=SK_C._meta;if(!m)return;
   const rect=SK_C.getBoundingClientRect();
-  const mx=(e.clientX-rect.left)*(SK_C.width/rect.width),my=(e.clientY-rect.top)*(SK_C.height/rect.height);
+  const lw=skLogicalW(),lh=SK_CSS_H;
+  const mx=(e.clientX-rect.left)*(lw/rect.width),my=(e.clientY-rect.top)*(lh/rect.height);
   skHover=null;
 
-  // Nodes first (easier target)
   for(const n of m.nodes){
     if(mx>=n.x&&mx<=n.x+n.w&&my>=n.y&&my<=n.y+n.h){
       skHover={type:'node',id:n.id};
       const title=skLabel(n.id);
-      showTT(e,title,`${n.value.toLocaleString()} photos`);
+      const shots=(sankeyDataSafe()?.totals?.shots)||1;
+      const pct=n.value?((n.value/shots)*100).toFixed(1):'0';
+      showTT(e,title,`${n.value.toLocaleString()} photos<br><span style="color:var(--muted)">${pct}% of all captures</span>`);
       drawSankey();
       return;
     }
   }
 
-  // Then links using y-distance around link centerline.
   for(const l of m.links){
     const x1=l.s.x+l.s.w,x2=l.t.x;
     if(mx<x1||mx>x2)continue;
@@ -989,9 +1287,11 @@ SK_C.addEventListener('mousemove',e=>{
     const bot=(1-t)*(1-t)*(1-t)*l.sy1 + 3*(1-t)*(1-t)*t*l.sy1 + 3*(1-t)*t*t*l.ty1 + t*t*t*l.ty1;
     if(my>=Math.min(top,bot)-2 && my<=Math.max(top,bot)+2){
       skHover={type:'link',idx:l.idx};
-      const pct=l.srcValue?((l.value/l.srcValue)*100):0;
-      const metric=l.kind==='loss'?'drop-off':'conversion';
-      showTT(e,`${skLabel(l.source)} → ${skLabel(l.target)}`,`${l.value.toLocaleString()} photos<br>${pct.toFixed(1)}% ${metric}`);
+      const shots=(sankeyDataSafe()?.totals?.shots)||1;
+      const pctSrc=l.srcValue?((l.value/l.srcValue)*100):0;
+      const pctAll=shots?((l.value/shots)*100):0;
+      const metric=l.kind==='loss'?'leaving the funnel':'moving forward';
+      showTT(e,`${skLabel(l.source)} → ${skLabel(l.target)}`,`${l.value.toLocaleString()} photos<br><span style="color:var(--muted)">${pctSrc.toFixed(1)}% of ${skLabel(l.source)} · ${pctAll.toFixed(1)}% of all captures</span><br><span style="color:var(--dim);font-size:11px">${metric}</span>`);
       drawSankey();
       return;
     }
@@ -1000,7 +1300,11 @@ SK_C.addEventListener('mousemove',e=>{
   drawSankey();
 });
 SK_C.addEventListener('mouseleave',()=>{skHover=null;hideTT();drawSankey()});
-function resizeSankey(){SK_C.width=cardInnerWidth(SK_C);if(skInited)drawSankey()}
+function resizeSankey(){
+  skPopulateStory();
+  skDrawStageBar();
+  if(skInited)drawSankey();
+}
 
 // ═══════════════════════════════════════════════
 // 5. PHOTO ACTIVITY  (enhanced — 3-level drill-down with rotation morph)
