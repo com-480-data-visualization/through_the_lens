@@ -864,18 +864,15 @@ function skPopulateStory(){
       +rowS('Begin with','Shots',true)
       +rowS('Then','Select → Edit → Publish',false);
   }else if(f==='shots'){
-    html=row('Incoming frames',Math.round(shots).toLocaleString(),false)
-      +row('Into selection',shots?(sel/shots*100).toFixed(1)+'%':'0%',false)
-      +row('Lost after selection',lSel.toLocaleString(),false);
+    html=row('Incoming frames',shots.toLocaleString(),false);
   }else if(f==='selection'){
-    html=row('Keepers (selected)',sel.toLocaleString(),false)
-      +row('Share of captures',shots?(sel/shots*100).toFixed(1)+'%':'0%',true)
-      +row('Not edited onward',lEd.toLocaleString(),false);
+    html=row('Kept after selection',sel.toLocaleString(),false)
+      +row('Selection rate',shots?(sel/shots*100).toFixed(1)+'%':'0%',true)
+      +row('Lost after selection',lSel.toLocaleString(),false);
   }else if(f==='edition'){
-    const yp=ed?(pub/ed*100).toFixed(1):'0';
-    html=row('In editing pool',ed.toLocaleString(),false)
-      +row('Reach publish',yp+'%',true)
-      +row('Not published',lPub.toLocaleString(),false);
+    html=row('Into editing',ed.toLocaleString(),false)
+      +row('Edited of keepers',sel?(ed/sel*100).toFixed(1)+'%':'0%',true)
+      +row('Not edited',lEd.toLocaleString(),false);
   }else if(f==='published'){
     html=row('Published',pub.toLocaleString(),true)
       +row('Of all captures',shots?(pub/shots*100).toFixed(1)+'%':'0%',false)
@@ -1215,7 +1212,7 @@ function skRunSankeyAnim(){
   if(skAnimAF)cancelAnimationFrame(skAnimAF);
   skAnimT=0;
   const start=performance.now();
-  const dur=skFocus?3000:180;
+  const dur=skFocus?1800:180;
   const tick=(ts)=>{
     skAnimT=clamp((ts-start)/dur,0,1);
     drawSankey();
