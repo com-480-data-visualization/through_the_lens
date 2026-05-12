@@ -1198,6 +1198,7 @@ function drawYears(animT=1){
 }
 
 function paEnterYears(){
+  hideTT();
   paView='years'; paYear=null; paHits=[];
   document.getElementById('pa-panel').style.display='none';
   document.getElementById('pa-sessions-timeline').style.display='none';
@@ -1218,6 +1219,7 @@ function paShowYears(){ paEnterYears(); }
 // TRANSITION — YEAR BARS fade into COMBINED DETAIL
 // ════════════════════════════════════════════════
 function animateYearToDetail(year, a){
+  hideTT();
   paView='morphing';
   if(paAnimAF){cancelAnimationFrame(paAnimAF);paAnimAF=null;}
   const cssW=a.W;
@@ -1383,6 +1385,7 @@ function _renderDetail(year, cssW){
 // VIEW 2 — YEAR DETAIL (monthly bars + heatmap)
 // ════════════════════════════════════════════════
 function drawYearDetail(year){
+  hideTT();
   paView='detail'; paYear=year; paHits=[];
   const cssW=paCSSW();
   // dynamic canvas height
@@ -1536,8 +1539,10 @@ PA_C.addEventListener('click',e=>{
   for(const b of paHits){
     if(mx>=b.x&&mx<=b.x+b.w&&my>=b.y&&my<=b.y+b.h){
       if(paView==='years'&&b.type==='year'){
+        hideTT();
         animateYearToDetail(b.year,b._a);
       } else if(paView==='detail'&&b.type==='day'&&b.count>0){
+        hideTT();
         const dateObj=new Date(b.date+'T12:00:00');
         document.getElementById('pa-panel-date').textContent=dateObj.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
         document.getElementById('pa-panel-count').textContent=b.count.toLocaleString()+' photos';
@@ -1553,7 +1558,7 @@ PA_C.addEventListener('click',e=>{
 });
 
 PA_C.addEventListener('mousemove',e=>{
-  if(paView==='morphing'){PA_C.style.cursor='default';return;}
+  if(paView==='morphing'){PA_C.style.cursor='default';hideTT();return;}
   const rect=PA_C.getBoundingClientRect();
   const mx=e.clientX-rect.left, my=e.clientY-rect.top;
   let hit=false;
