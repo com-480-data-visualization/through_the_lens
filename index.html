@@ -441,11 +441,14 @@ function computeExpTargets(){
   const W=EXP_C.width,H=EXP_C.height;
   const PL=64,PR=20,PT=22,PB=50,PW=W-PL-PR,PH=H-PT-PB;
   const PAD=20;
+  const r=expZoomRange;
+  const xLo=r?r.xLo:0, xHi=r?r.xHi:1;
+  const yLo=r?r.yLo:0, yHi=r?r.yHi:1;
   EXP_RAW.forEach((d,i)=>{
     const xn=clamp(AXES[xKey].xform(d[xKey])+d.jx,0,1);
     const yn=clamp(AXES[yKey].xform(d[yKey])+d.jy,0,1);
-    expSprings[i].tx=PL+PAD+xn*(PW-2*PAD);
-    expSprings[i].ty=PT+PAD+(1-yn)*(PH-2*PAD);
+    expSprings[i].tx=PL+PAD+(xn-xLo)/(xHi-xLo)*(PW-2*PAD);
+    expSprings[i].ty=PT+PAD+(1-(yn-yLo)/(yHi-yLo))*(PH-2*PAD);
   });
 }
 
@@ -498,7 +501,7 @@ function runExpSprings(){
 }
 
 function redrawExposure(){
-  expBrushSel=null;updateExpStats();
+  expBrushSel=null;expZoomRange=null;expZoomed=false;updateExpStats();
   const xKey=document.getElementById('x-axis').value;
   const yKey=document.getElementById('y-axis').value;
   updateInsightCard(xKey,yKey);computeExpTargets();updateExpAxesSVG();
@@ -522,6 +525,8 @@ function drawExposure(){
 let expBrushSel=null;
 let expD3Brush=null;
 let expHintUsed=false;
+let expZoomed=false;
+let expZoomRange=null;
 function cardInnerWidth(el){const cs=getComputedStyle(el.parentElement);return el.parentElement.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);}
 function resizeExp(){EXP_C.width=cardInnerWidth(EXP_C);redrawExposure()}
 
@@ -530,7 +535,7 @@ const expSVG=d3.select('#exp-svg');
 
 // Tooltip via SVG (SVG intercepts mouse events; canvas tooltip moved here)
 expSVG.on('mousemove',function(event){
-  if(expBrushSel!==null){hideTT();return;}
+  if(expBrushSel!==null&&!expZoomed){hideTT();return;}
   const [mx,my]=d3.pointer(event,this);
   let cl=null,md=22;
   EXP_RAW.forEach((d,i)=>{const s=expSprings[i],ds=Math.hypot(s.cx-mx,s.cy-my);if(ds<md){md=ds;cl=d;}});
@@ -559,13 +564,17 @@ function updateExpStats(){
   const yrStr=Object.entries(yrCounts).sort((a,b)=>+a[0]-+b[0])
     .map(([y,cnt])=>`<span style="color:${YR_COLS[y]||P.muted};font-weight:500">${y}</span> ${Math.round(cnt/n*100)}%`).join(' &nbsp;·&nbsp; ');
   el.style.display='block';
+  const actionBtn=expZoomed
+    ?`<button onclick="expZoomOut()" style="margin-left:auto;font-size:11px;color:var(--accent);background:rgba(249,115,22,0.08);border:1px solid var(--accent);cursor:pointer;padding:2px 10px;border-radius:4px;font-family:inherit;font-weight:500">← Zoom out</button>`
+    :`<button onclick="expClearBrush()" style="margin-left:auto;font-size:11px;color:var(--muted);background:none;border:1px solid var(--dim);cursor:pointer;padding:2px 8px;border-radius:4px;font-family:inherit">× clear</button>`;
   el.innerHTML=`<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:baseline">
+    ${expZoomed?`<span style="font-size:10px;background:rgba(249,115,22,0.1);color:var(--accent);padding:2px 7px;border-radius:3px;font-weight:600;letter-spacing:0.03em">ZOOMED IN</span>`:''}
     <span style="font-size:20px;font-weight:600;color:var(--accent);line-height:1">${n}</span><span style="font-size:11px;color:var(--muted)">photos selected</span>
     <span style="color:var(--muted);font-size:12px">ISO <strong style="color:var(--text)">${mISO.toLocaleString()}</strong></span>
     <span style="color:var(--muted);font-size:12px">f/<strong style="color:var(--text)">${mAp.toFixed(1)}</strong></span>
     <span style="color:var(--muted);font-size:12px">shutter <strong style="color:var(--text)">${sstr}</strong></span>
     <span style="color:var(--muted);font-size:12px">focal <strong style="color:var(--text)">${mFo}mm</strong></span>
-    <button onclick="expClearBrush()" style="margin-left:auto;font-size:11px;color:var(--muted);background:none;border:1px solid var(--dim);cursor:pointer;padding:2px 8px;border-radius:4px;font-family:inherit">× clear</button>
+    ${actionBtn}
   </div>
   <div style="font-size:11px;color:var(--muted);margin-top:6px">${camStr} &nbsp;&nbsp; ${yrStr}</div>`;
 }
@@ -575,6 +584,13 @@ function expClearBrush(){
   drawExpFrame();
   updateExpStats();
   if(expD3Brush) expSVG.select('.exp-brush').call(expD3Brush.move,null);
+}
+function expZoomOut(){
+  expZoomRange=null;expZoomed=false;expBrushSel=null;
+  computeExpTargets();updateExpAxesSVG();
+  if(expAnimAF)cancelAnimationFrame(expAnimAF);
+  expAnimAF=requestAnimationFrame(runExpSprings);
+  updateExpStats();
 }
 
 function updateExpAxesSVG(){
@@ -591,24 +607,30 @@ function updateExpAxesSVG(){
   if(typeof d3==='undefined')return;
 
   const axX=AXES[xKey], axY=AXES[yKey];
-  const xScale=d3.scaleLinear().domain([0,1]).range([PL,PL+PW]);
-  const yScale=d3.scaleLinear().domain([0,1]).range([PT+PH,PT]);
+  const r=expZoomRange;
+  const xDomLo=r?r.xLo:0, xDomHi=r?r.xHi:1;
+  const yDomLo=r?r.yLo:0, yDomHi=r?r.yHi:1;
+
+  const xScale=d3.scaleLinear().domain([xDomLo,xDomHi]).range([PL,PL+PW]);
+  const yScale=d3.scaleLinear().domain([yDomLo,yDomHi]).range([PT+PH,PT]);
   const g=expSVG.append('g');
 
-  // X axis with grid lines
-  const xTickVals=axX.ticks.map(t=>clamp(axX.xform(t),0,1));
+  // X axis — only ticks within the current domain
+  const xTicks=axX.ticks.map(t=>({norm:clamp(axX.xform(t),0,1),label:axX.tickFmt(t)}))
+    .filter(({norm})=>norm>=xDomLo&&norm<=xDomHi);
   g.append('g').attr('transform',`translate(0,${PT+PH})`)
-    .call(d3.axisBottom(xScale).tickValues(xTickVals).tickFormat((_,i)=>axX.tickFmt(axX.ticks[i])).tickSize(-PH))
+    .call(d3.axisBottom(xScale).tickValues(xTicks.map(t=>t.norm)).tickFormat((_,i)=>xTicks[i].label).tickSize(-PH))
     .call(ax=>{
       ax.select('.domain').remove();
       ax.selectAll('.tick line').attr('stroke',P.dim).attr('stroke-dasharray','3,3');
       ax.selectAll('.tick text').attr('fill',P.muted).attr('font-family','DM Sans,sans-serif').attr('font-size',10).attr('dy',14);
     });
 
-  // Y axis with grid lines
-  const yTickVals=axY.ticks.map(t=>clamp(axY.xform(t),0,1));
+  // Y axis — only ticks within the current domain
+  const yTicks=axY.ticks.map(t=>({norm:clamp(axY.xform(t),0,1),label:axY.tickFmt(t)}))
+    .filter(({norm})=>norm>=yDomLo&&norm<=yDomHi);
   g.append('g').attr('transform',`translate(${PL},0)`)
-    .call(d3.axisLeft(yScale).tickValues(yTickVals).tickFormat((_,i)=>axY.tickFmt(axY.ticks[i])).tickSize(-PW))
+    .call(d3.axisLeft(yScale).tickValues(yTicks.map(t=>t.norm)).tickFormat((_,i)=>yTicks[i].label).tickSize(-PW))
     .call(ax=>{
       ax.select('.domain').remove();
       ax.selectAll('.tick line').attr('stroke',P.dim).attr('stroke-dasharray','3,3');
@@ -623,9 +645,20 @@ function updateExpAxesSVG(){
     .attr('text-anchor','middle').attr('font-family','DM Sans,sans-serif').attr('font-size',12).attr('fill',P.muted)
     .text(axY.label);
 
-  // Trend line: binned medians across the x axis (shows actual data pattern)
+  // "Zoomed in" badge top-left of plot
+  if(expZoomed){
+    const zg=g.append('g');
+    zg.append('rect').attr('x',PL+5).attr('y',PT+5).attr('width',68).attr('height',17).attr('rx',4)
+      .attr('fill','rgba(249,115,22,0.12)').attr('stroke',P.accent).attr('stroke-width',1);
+    zg.append('text').attr('x',PL+10).attr('y',PT+16)
+      .attr('font-family','DM Sans,sans-serif').attr('font-size',9.5).attr('font-weight','600')
+      .attr('fill',P.accent).attr('letter-spacing','0.04em').text('ZOOMED IN');
+  }
+
+  // Trend line: zoom-aware binned medians
   const numBins=12;
-  const trendPts=[];
+  const xSpan=xDomHi-xDomLo, ySpan=yDomHi-yDomLo;
+  const trendRaw=[];
   for(let i=0;i<numBins;i++){
     const xlo=i/numBins, xhi=(i+1)/numBins;
     const ys=EXP_RAW
@@ -633,52 +666,77 @@ function updateExpAxesSVG(){
       .map(d=>clamp(axY.xform(d[yKey]),0,1))
       .sort((a,b)=>a-b);
     if(ys.length<8)continue;
-    const med=ys[Math.floor(ys.length/2)];
-    trendPts.push({x:PL+PAD+(i+0.5)/numBins*(PW-2*PAD), y:PT+PAD+(1-med)*(PH-2*PAD)});
+    trendRaw.push({xn:(i+0.5)/numBins, yn:ys[Math.floor(ys.length/2)]});
   }
-  if(trendPts.length>=3){
-    g.append('path').datum(trendPts)
-      .attr('d',d3.line().x(d=>d.x).y(d=>d.y).curve(d3.curveCatmullRom.alpha(0.5)))
-      .attr('fill','none').attr('stroke',P.accent).attr('stroke-width',2.5)
-      .attr('stroke-opacity',0.75).attr('stroke-linecap','round');
-  }
-
-  // Drag-to-select hint — shown until user first brushes, then hidden permanently
-  if(!expHintUsed){
-    const hw=160,hh=30,hx=PL+PW/2-hw/2,hy=PT+PH-hh-16;
-    const hintG=g.append('g').attr('class','drag-hint');
-    hintG.append('rect').attr('x',hx).attr('y',hy).attr('width',hw).attr('height',hh).attr('rx',7)
-      .attr('fill','rgba(255,255,255,0.95)').attr('stroke',P.accent).attr('stroke-width',1.5).attr('stroke-dasharray','4,2');
-    // Mini selection-box icon
-    hintG.append('rect').attr('x',hx+10).attr('y',hy+8).attr('width',13).attr('height',13).attr('rx',2)
-      .attr('fill','rgba(249,115,22,0.12)').attr('stroke',P.accent).attr('stroke-width',1.2).attr('stroke-dasharray','2,2');
-    hintG.append('text').attr('x',hx+28).attr('y',hy+19)
-      .attr('font-family','DM Sans,sans-serif').attr('font-size',12).attr('font-weight','500').attr('fill',P.accent)
-      .text('Drag to select photos');
+  if(trendRaw.length>=3){
+    const trendPts=trendRaw.map(({xn,yn})=>({
+      x:PL+PAD+(xn-xDomLo)/xSpan*(PW-2*PAD),
+      y:PT+PAD+(1-(yn-yDomLo)/ySpan)*(PH-2*PAD)
+    })).filter(({x,y})=>x>PL-30&&x<PL+PW+30&&y>PT-30&&y<PT+PH+30);
+    if(trendPts.length>=2){
+      g.append('path').datum(trendPts)
+        .attr('d',d3.line().x(d=>d.x).y(d=>d.y).curve(d3.curveCatmullRom.alpha(0.5)))
+        .attr('fill','none').attr('stroke',P.accent).attr('stroke-width',2.5)
+        .attr('stroke-opacity',0.75).attr('stroke-linecap','round');
+    }
   }
 
-  // D3 brush — added last so it sits on top (pointer-events layer)
-  expBrushSel=null;
-  updateExpStats();
-  expD3Brush=d3.brush()
-    .extent([[PL,PT],[PL+PW,PT+PH]])
-    .on('start',()=>{hideTT();expHintUsed=true;expSVG.select('.drag-hint').style('display','none');})
-    .on('brush',({selection})=>{
-      if(!selection)return;
-      const [[x0,y0],[x1,y1]]=selection;
-      expBrushSel=new Set();
-      EXP_RAW.forEach((_,i)=>{const s=expSprings[i];if(s.cx>=x0&&s.cx<=x1&&s.cy>=y0&&s.cy<=y1)expBrushSel.add(i);});
-      if(expBrushSel.size===0)expBrushSel=null;
-      drawExpFrame();updateExpStats();
-    })
-    .on('end',({selection})=>{
-      if(!selection){expBrushSel=null;drawExpFrame();updateExpStats();}
-    });
-  const brushG=g.append('g').attr('class','exp-brush').call(expD3Brush);
-  brushG.select('.selection')
-    .attr('fill','rgba(249,115,22,0.06)')
-    .attr('stroke',P.accent).attr('stroke-width',1.5).attr('stroke-dasharray','4,2');
-  brushG.select('.overlay').attr('cursor','crosshair');
+  if(!expZoomed){
+    // Drag-to-select hint (until first use)
+    if(!expHintUsed){
+      const hw=160,hh=30,hx=PL+PW/2-hw/2,hy=PT+PH-hh-16;
+      const hintG=g.append('g').attr('class','drag-hint');
+      hintG.append('rect').attr('x',hx).attr('y',hy).attr('width',hw).attr('height',hh).attr('rx',7)
+        .attr('fill','rgba(255,255,255,0.95)').attr('stroke',P.accent).attr('stroke-width',1.5).attr('stroke-dasharray','4,2');
+      hintG.append('rect').attr('x',hx+10).attr('y',hy+8).attr('width',13).attr('height',13).attr('rx',2)
+        .attr('fill','rgba(249,115,22,0.12)').attr('stroke',P.accent).attr('stroke-width',1.2).attr('stroke-dasharray','2,2');
+      hintG.append('text').attr('x',hx+28).attr('y',hy+19)
+        .attr('font-family','DM Sans,sans-serif').attr('font-size',12).attr('font-weight','500').attr('fill',P.accent)
+        .text('Drag to select photos');
+    }
+
+    // D3 brush — added last so it sits on top
+    expD3Brush=d3.brush()
+      .extent([[PL,PT],[PL+PW,PT+PH]])
+      .on('start',()=>{hideTT();expHintUsed=true;expSVG.select('.drag-hint').style('display','none');})
+      .on('brush',({selection})=>{
+        if(!selection)return;
+        const [[x0,y0],[x1,y1]]=selection;
+        expBrushSel=new Set();
+        EXP_RAW.forEach((_,i)=>{const s=expSprings[i];if(s.cx>=x0&&s.cx<=x1&&s.cy>=y0&&s.cy<=y1)expBrushSel.add(i);});
+        if(expBrushSel.size===0)expBrushSel=null;
+        drawExpFrame();updateExpStats();
+      })
+      .on('end',({selection})=>{
+        if(!selection){expBrushSel=null;drawExpFrame();updateExpStats();return;}
+        if(expBrushSel&&expBrushSel.size>0){
+          // Compute bounding box of selected points in normalized space
+          const sel=EXP_RAW.filter((_,i)=>expBrushSel.has(i));
+          const xNorms=sel.map(d=>clamp(AXES[xKey].xform(d[xKey]),0,1));
+          const yNorms=sel.map(d=>clamp(AXES[yKey].xform(d[yKey]),0,1));
+          const xLo=Math.min(...xNorms), xHi=Math.max(...xNorms);
+          const yLo=Math.min(...yNorms), yHi=Math.max(...yNorms);
+          const xPad=Math.max((xHi-xLo)*0.22,0.04), yPad=Math.max((yHi-yLo)*0.22,0.04);
+          expZoomRange={
+            xLo:Math.max(0,xLo-xPad), xHi:Math.min(1,xHi+xPad),
+            yLo:Math.max(0,yLo-yPad), yHi:Math.min(1,yHi+yPad)
+          };
+          expZoomed=true;
+          expD3Brush&&expSVG.select('.exp-brush').call(expD3Brush.move,null);
+          computeExpTargets();updateExpAxesSVG();
+          if(expAnimAF)cancelAnimationFrame(expAnimAF);
+          expAnimAF=requestAnimationFrame(runExpSprings);
+          updateExpStats();
+        }
+      });
+    const brushG=g.append('g').attr('class','exp-brush').call(expD3Brush);
+    brushG.select('.selection')
+      .attr('fill','rgba(249,115,22,0.06)')
+      .attr('stroke',P.accent).attr('stroke-width',1.5).attr('stroke-dasharray','4,2');
+    brushG.select('.overlay').attr('cursor','crosshair');
+  } else {
+    expD3Brush=null;
+  }
 }
 
 // ═══════════════════════════════════════════════
