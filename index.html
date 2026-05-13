@@ -708,6 +708,7 @@ function updateExpAxesSVG(){
         drawExpFrame();updateExpStats();
       })
       .on('end',({selection})=>{
+        if(expZoomed)return; // ignore synthetic end fired by move(null) during zoom
         if(!selection){expBrushSel=null;drawExpFrame();updateExpStats();return;}
         if(expBrushSel&&expBrushSel.size>0){
           // Compute bounding box of selected points in normalized space
@@ -721,9 +722,8 @@ function updateExpAxesSVG(){
             xLo:Math.max(0,xLo-xPad), xHi:Math.min(1,xHi+xPad),
             yLo:Math.max(0,yLo-yPad), yHi:Math.min(1,yHi+yPad)
           };
-          expZoomed=true;
-          expD3Brush&&expSVG.select('.exp-brush').call(expD3Brush.move,null);
-          computeExpTargets();updateExpAxesSVG();
+          expZoomed=true; // set before move(null) so the guard above catches the re-entrant end
+          computeExpTargets();updateExpAxesSVG(); // SVG rebuild removes brush group
           if(expAnimAF)cancelAnimationFrame(expAnimAF);
           expAnimAF=requestAnimationFrame(runExpSprings);
           updateExpStats();
