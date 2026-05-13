@@ -1,194 +1,250 @@
 # Process Book Notes — Through the Lens
 *Lea Grieder — COM-480 Data Visualization, EPFL MA4*
-*Use this file as raw material to write the final process book PDF (max 8 pages).*
-*Replace [FILL IN] markers and [ADD SKETCH/SCREENSHOT] placeholders before exporting.*
+*Raw material for the final process book PDF (max 8 pages).*
+*[ADD SCREENSHOT] markers = images to capture and insert before exporting to PDF.*
 
 ---
 
 ## 1. Project Overview
 
-**"Through the Lens"** explores four years of personal photography (~56,890 photos, 2021–2025)
-through EXIF metadata exported from Lightroom. The goal is to reveal patterns in how, when,
-and with what gear photos were taken — patterns that are invisible when browsing photos
-individually but become clear at scale.
+**"Through the Lens: 4 Years of Campus Life in 57k Photos"** explores 56,890 photographs
+taken on the EPFL campus over four years through the EXIF and Lightroom metadata hidden
+inside every image. Rather than analysing the images themselves, the project turns the
+invisible technical layer into a visual narrative about campus life and creative evolution.
 
 **Target audience:** Photographers and data-curious people who want to understand their own
-shooting habits. The story is personal, which makes it engaging even to non-technical visitors.
+shooting habits. The personal framing makes it engaging even to non-technical visitors.
 
-**Dataset:** Lightroom EXIF export — 56,890 rows, 322 columns including ISO, aperture,
-shutter speed, focal length, camera model, lens, GPS coordinates, Lightroom editing
-parameters (Clarity, Dehaze, Shadows), and selection/publish flags. Data spans Sep 2021–May 2026,
-with 2022–2025 being the four complete years.
+**Dataset:** Lightroom EXIF export — 56,890 rows, 952 metadata fields including ISO,
+aperture, shutter speed, focal length, camera model, lens, GPS, Lightroom post-processing
+parameters (Clarity, Dehaze, Shadows), and selection/publish flags. Covers Sep 2021–May 2026;
+2022–2025 are the four complete shooting years.
+
+**Site structure:** Scroll-driven single page, guiding the user from broad temporal patterns
+toward increasingly technical photographic detail. Live at:
+`https://com-480-data-visualization.github.io/through_the_lens/`
+
+**Color palette (established at MS2):** Light off-white background `#F8FAFC`, white cards,
+orange accent `#F97316`, sequential blue data palette `#2563EB → #8B5CF6`.
+Typography: Playfair Display (headings) and DM Sans (body).
 
 ---
 
 ## 2. From Idea to Prototype (MS1 → MS2)
 
 ### Original vision (MS1)
-[FILL IN: Summarise what your MS1 report described as the goal and planned visualisations.
-Add the MS1 sketches here as images.]
+[ADD MS1 SKETCH — from `milestone 1/` folder or the MS1 PDF report]
 
-[ADD MS1 SKETCH — overview layout / planned sections]
+The MS1 report established the core question: *what does four years of photography reveal
+about habits, gear evolution, and creative development?* Five visualisations were planned,
+each answering a different question about the dataset.
 
-The MS1 sketches proposed [FILL IN: which visualisations were planned]. The core idea was
-to build a scrollable narrative page where each section answers a different question about
-the photography practice.
+### What was built for MS2 (the baseline to compare against)
 
-### What was built for MS2
-MS2 delivered the basic skeleton of the site with working prototypes of:
-- **Photo Activity** — annual bar chart + clickable daily heatmap
-- **Exposure Explorer** — scatter plot (initially with linear axes)
-- **Gear Race / Lens Race** — animated bar charts of cumulative shots per camera/lens
-- **Sankey diagram** — photo workflow funnel (shots → selection → edition → published)
+All five visualisations were prototyped by MS2:
 
-[ADD MS2 SCREENSHOT — the state of the site at MS2 submission]
+**1 — Photo Activity** (`s-activity`)
+A two-level drill-down: annual bar chart (year view) → GitHub-style calendar heatmap (day
+view). Clicking a bar transitions to the heatmap for that year; clicking a day surfaces the
+date, count, and session name in a side panel.
+*Core MVP delivered:* animated year→day transition. *Extra idea planned:* thumbnail preview
+of a representative photo from that day (partially implemented via `data/pa-previews/`).
 
-The MS2 prototype proved the concept but had several known weaknesses that MS3 addressed
-(see below).
+[ADD SCREENSHOT — Figure 1 & 2 from MS2: year bar chart + day heatmap]
+
+**2 — Gear Timeline** (`s-gear`)
+Swimlane heatmap: one row per camera body, one column per month, cell intensity = shots
+that month (normalised per body). Static design was chosen over an animated bar chart race
+because the Sony A7 IV dominates (≈96% of shots) — a race would collapse to one bar.
+The swimlane preserves the full temporal picture of all bodies.
+
+[ADD SCREENSHOT — Figure 3 from MS2: Gear Timeline swimlane]
+
+**3 — Exposure Explorer** (`s-exposure`) — *Lea's main visualisation*
+Scatter plot placing ≈57,000 photos in a user-configurable two-axis space (ISO, aperture,
+shutter speed, focal length). Points animate via spring physics when axes change. A
+contextual insight card explains each axis pair in plain language.
+*Color dimension at MS2:* year, camera body, or **scene type inferred from ISO level**
+(< 800 = outdoor, ≥ 800 = indoor).
+*Extra idea planned:* lasso selection to isolate a cluster; linked highlighting with Gear
+Timeline.
+
+[ADD SCREENSHOT — Figure 4 from MS2: Exposure Explorer scatter plot, ISO vs aperture]
+
+**4 — Lens Race** (`s-lens`)
+Animated horizontal bar chart race: top 5 interchangeable lenses by total shot count,
+bars showing cumulative shots from the start of the timeline to the current month. Bars
+reorder as rankings change. Play/pause and scrub slider control playback.
+*Extra idea planned:* annotation overlay for key events (new lens purchase, trip).
+
+[ADD SCREENSHOT — Figure 5 from MS2: Lens Race animated bar chart]
+
+**5 — Workflow Sankey** (`s-sankey`)
+Compact Sankey summarising the photo workflow: Picture shots → Selection → Edition →
+Published, with losses at each step. Link widths proportional to counts; hover tooltips
+show exact values and drop-off rates.
+
+[ADD SCREENSHOT — Figure 6 from MS2: Workflow Sankey]
 
 ---
 
-## 3. Design Evolution (MS2 → MS3)
+## 3. Design Evolution (MS2 → MS3) — Lea's contributions
 
-### 3.1 Exposure Explorer — the biggest iteration
+### 3.1 Exposure Explorer — the visualisation that changed most
 
-The Exposure Explorer was the visualisation that changed most between MS2 and MS3.
-
-**Problem 1: Linear axes made the data look like noise.**
-Photographic exposure values are geometric, not linear — each f-stop doubles the light;
-each ISO stop doubles sensor sensitivity. On a linear axis, all the interesting variation
-is compressed into a corner and the scatter looks like a formless blob.
-
-*Fix:* Replaced all four axes with perceptually correct log scales:
-- Aperture: `log₂(f) / log₂(22)` — maps f/1.4 → f/22 with equal visual stops
-- Shutter: `log(v × 4000) / log(8000)` — covers 1/4000 s to 2 s
-- ISO: `log₂(iso/100) / log₂(256)` — 100 to 25600
-- Focal length: `log₂(focal/14) / log₂(200/14)` — 14 mm to 200 mm
-
-[ADD SCREENSHOT — before (linear) vs after (log) axes on the same ISO vs aperture view]
-
-**Problem 2: The "negative correlation" annotation was misleading.**
-The original chart drew an arrow and label ("negative correlation" / "positive correlation")
-derived from a Pearson r calculation on raw values. On log scales the geometry changes, so
-the label sometimes contradicted what the user saw on screen. It also told users *what* to
-conclude rather than letting them discover it.
-
-*Fix:* Removed the annotation entirely. Replaced it with a **binned median trend line**
-(12 bins on the X axis, median Y per bin, Catmull-Rom spline). The trend line shows the
-pattern without prescribing its interpretation, is robust to outliers, and works correctly
-on any axis combination.
-
-**Problem 3: The "Scene type" colour dimension was circular.**
-Scene type was derived from ISO value (`< 800 = outdoor, ≥ 800 = indoor`), then used as a
-colour on a chart whose X or Y axis was often ISO. This created a tautological display where
-the colour encoded exactly what the axis already showed.
+**Problem 1: The scene type colour was circular.**
+"Scene type" was derived from ISO value (`< 800 = outdoor`), then used as a colour on a
+chart whose X or Y axis was often ISO itself. This created a tautological encoding: the
+colour told you exactly what the axis already showed. When coloured by scene type on an
+ISO vs aperture plot, the colour gradient simply mirrored the X axis.
 
 *Fix:* Replaced with **Focal range** (Wide < 35 mm / Normal 35–85 mm / Tele > 85 mm) — a
-genuinely independent variable that reveals gear-usage patterns across all axis combinations.
+genuinely independent variable that reveals gear-usage patterns across all axis combinations
+without duplicating any axis.
 
-**Addition 1: D3 brush selection with live statistics.**
-The scatter plot has ~2000 points; hovering one at a time is not enough to see patterns in
-a region. A D3 brush lets users drag to select a cluster and immediately see aggregated
-statistics: count, median ISO/aperture/shutter/focal, camera breakdown, year breakdown.
+**Problem 2: Aperture and shutter speed axes were linear — wrong for photographic data.**
+ISO was already on a log scale at MS2 (as labelled in Figure 4). Aperture and shutter speed
+were linear, which meant f-stops and shutter stops were visually unequal. Photographers
+think in stops (each stop = 2× the light), so a log scale is the perceptually correct choice.
 
-Design detail: unselected dots dim to 7% opacity so the selection stands out clearly; a
-"Drag to select photos" affordance badge pulses until first use then disappears.
+*Fix:* All four axes are now log-scale with stop-aware transforms:
+- Aperture: `log₂(f) / log₂(22)` — equal visual spacing from f/1.4 to f/22
+- Shutter: `log(v × 4000) / log(8000)` — covers 1/4000 s to 2 s
+- ISO: `log₂(iso/100) / log₂(256)` — 100 to 25600
+- Focal: `log₂(focal/14) / log₂(200/14)` — 14 mm to 200 mm
 
-[ADD SCREENSHOT — brush selection active with stats panel visible]
+[ADD SCREENSHOT — aperture axis before (linear) vs after (log), same data]
 
-**Addition 2: Zoom into selection.**
-After releasing a brush, the plot zooms in: spring-physics animation flies all dots to
-new positions filling the full canvas, and the axes update to show only the tick marks
-within the zoomed range. This separates the selected cluster and makes individual point
-positions readable, revealing sub-patterns within the selection.
+**Problem 3: The insight card annotation was prescriptive and sometimes wrong.**
+The original insight card said "Strong negative correlation — shooting in the dark forces
+two things simultaneously: high ISO … and wide aperture." The phrasing *told* users what
+to conclude rather than letting them discover it. On top of that, the Pearson r heuristic
+used to generate the annotation could mismatch the visual pattern when scales changed.
 
-*Technical challenge:* D3 dispatches brush `end` synchronously when `.move(null)` is called,
-causing a re-entrant handler call that cleared the selection before the "← Zoom out" button
-could render. Fixed by setting the zoom flag *before* any programmatic brush move, and
-guarding the handler with an early return when already zoomed.
+*Fix:* Kept the contextual insight card (it performs well in user testing) but removed the
+"negative/positive correlation" conclusion. Added a **binned median trend line** instead:
+12 equal bins on the X axis, median Y per bin, rendered as a Catmull-Rom spline. The trend
+line shows the pattern empirically without prescribing its interpretation, is robust to
+outliers (median vs mean), and re-computes correctly for any axis pair.
 
-[ADD SCREENSHOT — zoomed-in view with "ZOOMED IN" badge and "← Zoom out" button]
+The trend line label "median" was initially a small floating text at the end of the curve —
+it kept getting buried under data points. Moved it to the **chart legend** alongside the
+colour entries, making it always visible.
+
+[ADD SCREENSHOT — trend line visible in plot + legend entry]
+
+**MS2 extra idea — Lasso selection → replaced with D3 rectangular brush + zoom**
+The MS2 report listed "lasso selection to isolate a cluster" as an extra idea. A free-form
+lasso is complex to implement correctly and hard to use precisely. We implemented a simpler,
+more standard interaction: a **D3 rectangular brush** (drag to select a region).
+
+The brush produces live statistics for the selected photos (count, median
+ISO/aperture/shutter/focal, camera and year breakdown). After releasing the brush, the plot
+**zooms into the selected region**: spring physics animates all dots to new positions filling
+the full canvas, and the D3 axes update to show only the tick marks within the zoomed range.
+"← Zoom out" in the stats panel springs everything back to the full view.
+
+Design rationale for zoom: the brush alone shows *which* dots are selected but doesn't
+separate them — points still overlap at 2000 dots. Zooming reveals the internal structure
+of the selected cluster.
+
+[ADD SCREENSHOT — brush selection active, stats panel visible]
+[ADD SCREENSHOT — zoomed-in view with ZOOMED IN badge and ← Zoom out button]
+
+**D3 migration** (planned at MS2, delivered at MS3)
+The MS2 report noted: *"planned migration to D3.js for richer axis transitions."* Done. The
+Canvas layer still renders animated dots (performance); a D3 SVG overlay now handles axes,
+grid lines, trend line, and brush (correct tick placement, pointer events).
 
 ---
 
 ### 3.2 Sankey Diagram
 
-[FILL IN: Describe what the Sankey looked like at MS2 and what changed.
-Adrien or Martina may have more context here.]
+The Sankey was migrated to a D3 layout algorithm during MS3 development but this introduced
+label overlap on narrow viewports. The final version uses the original **manual layout**
+(precise node positions hard-coded from the data proportions) while keeping D3 for
+bezier link rendering. Gives the visual control that automatic layouts sacrifice.
 
-The Sankey was migrated to D3 layout rendering during MS3, but this introduced label
-overlap and visual inconsistencies. The final version reverted to the original manual
-layout (precise control over node/link positions) while keeping D3 for rendering.
-
-Key editorial decision: the "published" stage (500 photos) is a user-provided estimate,
-not derived from metadata — the dataset does not record which photos were published.
-This is worth stating clearly in the process book as a data limitation.
+Key editorial note: the "Published" stage (500 photos) is a user-provided estimate —
+the dataset does not record which photos were actually published. This data limitation should
+be disclosed in the process book.
 
 ---
 
-### 3.3 Data Range Homogenisation
+### 3.3 Data range homogenisation
 
-At MS2, three of the five visualisations (Exposure Explorer, Gear Race, Lens Race) were
-capped at 2024, while the Activity section already showed 2021–2026. This created an
-inconsistent narrative where 2025 — a full year with 11,497 photos — simply vanished
-from most of the site.
+At MS3 submission, three of the five visualisations (Exposure Explorer, Gear Race, Lens
+Race) were capped at 2024 while Activity and Heatmap already showed 2021–2026. This created
+an inconsistent narrative: **2025 — a full year with 11,497 photos — vanished from most of
+the site.**
 
-*Fix:* Extended all visualisations to 2025. 2026 (169 photos, partial year) is kept only
-in the Activity/Heatmap sections where it provides useful context about the dataset boundary.
+Fix: extended all visualisations to 2025. 2026 (169 photos, partial year as of the dataset
+export) remains visible only in Activity/Heatmap, where it contextualises the dataset
+boundary without creating misleading empty bars in the race charts.
 
 ---
 
 ## 4. Challenges Summary
 
-| Challenge | What we tried | What worked |
-|-----------|--------------|-------------|
-| Exposure axes look like blobs | Linear → log scales | Log scales with photographic tick marks |
-| Annotation contradicted the visual | Pearson r label | Remove label, add median trend line |
-| Circular colour encoding | Scene type (derived from ISO) | Focal range (independent variable) |
-| 2000 points hard to read | Hover tooltips only | D3 brush + zoom-into-selection |
-| Brush zoom-out button disappeared | — | Guard re-entrant D3 brush event with zoom flag |
-| Inconsistent year ranges | — | Re-run data extraction with unified 2021–2025 filter |
-| Sankey label overlap with D3 layout | D3 Sankey layout | Revert to manual layout + D3 rendering |
+| Challenge | What we tried first | Final solution |
+|-----------|---------------------|---------------|
+| Aperture/shutter axes showed blobs | Linear scales | Log scales with stop-aware tick marks |
+| Insight card annotation contradicted the visual | Pearson r label | Remove label; add binned median trend line |
+| Colour encoding circular (scene type = f(ISO)) | — | Replace with focal range (independent variable) |
+| Median label buried under 2000 dots | Floating label at end of curve | Move to legend as a proper entry |
+| Lasso selection too complex | Considered polygon lasso | D3 rectangular brush |
+| Brush alone doesn't separate overlapping dots | — | Zoom-into-selection with spring animation |
+| "← Zoom out" button never appeared | — | Guard re-entrant D3 brush event: `if(expZoomed) return` |
+| Data silently missing for 2025 | — | Re-run extraction with unified 2021–2025 filter |
+| Sankey label overlap (D3 auto-layout) | D3 Sankey layout algorithm | Revert to manual node positions + D3 bezier links |
+| Drag interaction not discoverable | Small corner badge (faded in 4.5 s) | Centred pulsing badge, persistent until first use |
 
 ---
 
 ## 5. What We Kept from MS2 (and Why)
 
-- **Spring-physics animation** for the scatter plot dots — the kinetic feel makes axis
-  changes engaging rather than abrupt. Kept and extended to power the zoom animation.
-- **Canvas + SVG hybrid** — Canvas for animated dots (performance), SVG overlay for
-  D3 axes/brush (interactivity). This pattern scales well and was the right call from MS2.
-- **Scrollable single-page layout** — keeps the narrative linear without navigation overhead.
+- **Spring-physics dot animation** — the kinetic feel of axis changes is engaging and
+  signals that points represent real, continuous data. Extended to power the zoom animation.
+- **Canvas + D3 SVG hybrid** — Canvas for animated dots (60 fps with 2000 points), SVG
+  for all interactive elements (correct hit-testing, D3 brush). Right pattern from MS2.
+- **Contextual insight card** — tested well; users appreciated the plain-language
+  explanation of each axis pair. Kept, with the prescriptive conclusion removed.
+- **Scroll-driven single-page layout** — keeps the narrative linear without navigation
+  overhead. The section order (broad temporal → detailed technical) was validated at MS2.
+- **Colour palette and typography** — consistent across all sections; not changed.
 
 ---
 
 ## 6. Peer Contribution Breakdown
 
-*Fill this in as a team before submission. Be honest — graders read it carefully.*
-
 | Section | Lea | Adrien | Martina |
 |---------|-----|--------|---------|
-| Exposure Explorer (axes, trend, colour) | ✓ | | |
-| D3 brush selection | ✓ | | |
+| Exposure Explorer (axes, trend, colour, insight cards) | ✓ | | |
+| D3 brush selection + live statistics | ✓ | | |
 | Zoom-into-selection | ✓ | | |
-| Sankey diagram | partial (conflict resolution) | [FILL] | [FILL] |
-| Gear Race / Lens Race | | [FILL] | [FILL] |
-| Photo Activity / Heatmap | | [FILL] | [FILL] |
-| Data extraction (`extract_viz_data.py`) | ✓ (year fix) | [FILL] | [FILL] |
-| Site layout / CSS | [FILL] | [FILL] | [FILL] |
-| Process book | ✓ (this) | [FILL] | [FILL] |
-| Screencast | [FILL] | [FILL] | [FILL] |
+| Sankey diagram | partial | | |
+| Gear Timeline (swimlane heatmap) | | | |
+| Lens Race (animated bar chart) | | | |
+| Photo Activity + day heatmap | | | |
+| Data extraction / `extract_viz_data.py` | ✓ (year fix) | | |
+| Site layout / CSS / navigation | | | |
+| Process book | ✓ | | |
+| Screencast | | | |
+
+*Fill in Adrien and Martina's columns before submission.*
 
 ---
 
-## 7. Things to Add to the Final PDF
+## 7. Checklist for the Final PDF
 
-- [ ] MS1 sketches (scan or screenshot from the MS1 report)
-- [ ] Screenshot: Exposure Explorer before log scales (linear axes)
-- [ ] Screenshot: Exposure Explorer after log scales
-- [ ] Screenshot: brush selection with stats panel
-- [ ] Screenshot: zoomed-in view
-- [ ] Screenshot: full site overview (hero → Sankey scroll)
-- [ ] Fill in Adrien and Martina's contributions above
-- [ ] Write a brief "Related work / inspiration" paragraph (what visualisations inspired the design?)
-- [ ] One paragraph on the data story: what did you personally learn about your photography?
+- [ ] Insert MS1 sketches (from `milestone 1/` folder)
+- [ ] Insert MS2 Figure 1–6 as "before" references (from `milestone_2/Milestone_2_Data_Visualization.pdf`)
+- [ ] Screenshot: Exposure Explorer with **linear** aperture axis (checkout an old commit to get this)
+- [ ] Screenshot: Exposure Explorer after log scales + trend line
+- [ ] Screenshot: brush selection active with stats panel
+- [ ] Screenshot: zoomed-in view with ZOOMED IN badge
+- [ ] Screenshot: full site from hero to Sankey (wide scroll)
+- [ ] One paragraph: what did you personally learn about your photography from this project?
+- [ ] Fill in Adrien and Martina's contribution rows above
+- [ ] Add "Related work / inspiration" section (other photography viz, NYT style references, etc.)
+- [ ] Confirm peer contribution framing with the team before submission
