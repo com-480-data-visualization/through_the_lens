@@ -53,9 +53,9 @@ unique_lenses = df["Lens_Recovered"].dropna().nunique()
 
 print(f"Hero: {total_photos} photos, {shooting_days} shooting days, {unique_lenses} lenses")
 
-# Filter to 2021-2024 for viz
-df4 = df[df["Year"].between(2021, 2024)].copy()
-print(f"2021-2024: {len(df4)} rows")
+# Filter to 2021-2025 for viz (2026 has only ~169 photos and is partial)
+df4 = df[df["Year"].between(2021, 2025)].copy()
+print(f"2021-2025: {len(df4)} rows")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 0. SANKEY — photo flow estimation
@@ -196,7 +196,7 @@ exp_points = [
 top6 = df4["Model_norm"].value_counts().head(6).index.tolist()
 print(f"\nTop 6 cameras: {top6}")
 
-all_months = [(y, m) for y in range(2021, 2025) for m in range(1, 13)]
+all_months = [(y, m) for y in range(2021, 2026) for m in range(1, 13)]
 gear_df = df4[df4["Model_norm"].isin(top6)].copy()
 gear_df["ym"] = list(zip(gear_df["Year"], gear_df["Month"]))
 first_ym = min(gear_df["ym"])
