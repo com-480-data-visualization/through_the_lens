@@ -47,6 +47,8 @@ section{min-height:100vh;scroll-snap-align:start;display:flex;flex-direction:col
 .scroll-down{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted);font-size:10px;letter-spacing:.12em;text-transform:uppercase;opacity:.5}
 .sd-line{width:1px;height:40px;background:linear-gradient(to bottom,var(--accent),transparent);animation:sdp 2s ease-in-out infinite}
 @keyframes sdp{0%,100%{opacity:.3}50%{opacity:1}}
+@keyframes expHintPulse{0%,100%{opacity:.85}50%{opacity:1}}
+.drag-hint{animation:expHintPulse 2s ease-in-out infinite;pointer-events:none}
 
 /* VIZ CARD */
 .viz-card{background:var(--card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:min(1400px,calc(100vw - 48px));padding:28px 32px;box-shadow:0 1px 4px rgba(15,23,42,.06)}
@@ -479,6 +481,7 @@ function drawExpFrame(){
   // Legend
   const lg=document.getElementById('exp-legend');lg.innerHTML='';
   colMap.items.forEach(it=>{lg.innerHTML+=`<div class="li"><div class="li-dot" style="background:${it.color}"></div>${it.label}</div>`});
+  lg.innerHTML+=`<div class="li" style="margin-left:8px;padding-left:14px;border-left:1px solid var(--border)"><svg width="22" height="10" style="flex-shrink:0;vertical-align:middle"><line x1="0" y1="5" x2="22" y2="5" stroke="${P.accent}" stroke-width="2.5" stroke-opacity="0.75" stroke-linecap="round"/></svg>&nbsp;Median trend</div>`;
   EXP_C._meta={PL,PT,PW,PH};
 }
 
@@ -518,6 +521,7 @@ function drawExposure(){
 
 let expBrushSel=null;
 let expD3Brush=null;
+let expHintUsed=false;
 function cardInnerWidth(el){const cs=getComputedStyle(el.parentElement);return el.parentElement.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);}
 function resizeExp(){EXP_C.width=cardInnerWidth(EXP_C);redrawExposure()}
 
@@ -635,12 +639,22 @@ function updateExpAxesSVG(){
   if(trendPts.length>=3){
     g.append('path').datum(trendPts)
       .attr('d',d3.line().x(d=>d.x).y(d=>d.y).curve(d3.curveCatmullRom.alpha(0.5)))
-      .attr('fill','none').attr('stroke',P.accent).attr('stroke-width',2)
-      .attr('stroke-opacity',0.55).attr('stroke-linecap','round');
-    const last=trendPts[trendPts.length-1];
-    g.append('text').attr('x',last.x+6).attr('y',last.y+3)
-      .attr('font-family','DM Sans,sans-serif').attr('font-size',9).attr('fill',P.accent).attr('opacity',0.7)
-      .text('median');
+      .attr('fill','none').attr('stroke',P.accent).attr('stroke-width',2.5)
+      .attr('stroke-opacity',0.75).attr('stroke-linecap','round');
+  }
+
+  // Drag-to-select hint — shown until user first brushes, then hidden permanently
+  if(!expHintUsed){
+    const hw=160,hh=30,hx=PL+PW/2-hw/2,hy=PT+PH-hh-16;
+    const hintG=g.append('g').attr('class','drag-hint');
+    hintG.append('rect').attr('x',hx).attr('y',hy).attr('width',hw).attr('height',hh).attr('rx',7)
+      .attr('fill','rgba(255,255,255,0.95)').attr('stroke',P.accent).attr('stroke-width',1.5).attr('stroke-dasharray','4,2');
+    // Mini selection-box icon
+    hintG.append('rect').attr('x',hx+10).attr('y',hy+8).attr('width',13).attr('height',13).attr('rx',2)
+      .attr('fill','rgba(249,115,22,0.12)').attr('stroke',P.accent).attr('stroke-width',1.2).attr('stroke-dasharray','2,2');
+    hintG.append('text').attr('x',hx+28).attr('y',hy+19)
+      .attr('font-family','DM Sans,sans-serif').attr('font-size',12).attr('font-weight','500').attr('fill',P.accent)
+      .text('Drag to select photos');
   }
 
   // D3 brush — added last so it sits on top (pointer-events layer)
@@ -648,7 +662,7 @@ function updateExpAxesSVG(){
   updateExpStats();
   expD3Brush=d3.brush()
     .extent([[PL,PT],[PL+PW,PT+PH]])
-    .on('start',()=>{hideTT();})
+    .on('start',()=>{hideTT();expHintUsed=true;expSVG.select('.drag-hint').style('display','none');})
     .on('brush',({selection})=>{
       if(!selection)return;
       const [[x0,y0],[x1,y1]]=selection;
