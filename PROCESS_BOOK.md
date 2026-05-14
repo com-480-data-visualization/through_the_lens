@@ -224,7 +224,13 @@ were actually shared or published; Lightroom's publish services metadata was not
 The number was chosen conservatively based on memory and should be read as illustrative
 rather than precise.
 
-### 3.3 Data coherence across visualizations
+### 3.3 Gear Timeline — camera naming
+
+The Gear Timeline swimlane heatmap referenced camera bodies by their internal EXIF model identifiers. One body appeared as `FC3582` — the raw model string written by the DJI Mini 4 Pro's firmware — rather than a recognisable name. Because the DJI appears only infrequently in the swimlane, the opaque identifier was easy to miss, but it rendered the row unreadable to any viewer not already familiar with DJI's internal product codes.
+
+The fix was applied in `extract_viz_data.py`: the model normalisation map was extended with `"FC3582": "DJI Mini 4 Pro"`, and `viz_data.js` was regenerated. The Fujifilm X100VI entry was already rendered in a shortened but recognisable form and left unchanged.
+
+### 3.4 Data coherence across visualizations
 
 A consistency issue was identified late in development: three of the five visualizations
 (Exposure Explorer, Gear Race, Lens Race) drew on a filtered dataset capped at 2024, while
@@ -263,6 +269,8 @@ chart looked like a static scatter plot. A visible affordance badge was necessar
 is a general lesson: interactions that feel natural to the implementer often feel invisible
 to the user.
 
+**Camera naming requires human-readable normalisation.** Raw EXIF model strings are written by firmware and do not guarantee a human-readable name. DJI's `FC3582` identifier is unambiguous to a registry but invisible to a viewer. Any pipeline that passes EXIF model strings directly into a visualisation should apply a normalisation map; the correct place to maintain that map is the extraction script, not the front-end, so that the data file always contains resolved names.
+
 **D3 event semantics have sharp edges.** Programmatic calls to D3's brush `.move()` fire
 `end` handlers synchronously, which can cause re-entrant event processing. Testing the
 brush in isolation did not reveal this; it only appeared when zoom was triggered from
@@ -295,7 +303,9 @@ I was responsible for the Exposure Explorer in its entirety for the final submis
 the logarithmic axis transforms, the focal-range colour dimension replacing scene type,
 the binned median trend line, the D3 axes and SVG overlay migration, the brush selection
 with live statistics, the zoom-into-selection animation, and the UX affordance work
-(drag hint, median legend entry). I also identified and fixed the data range
-inconsistency across all five visualizations, extending the dataset to 2025 in the
-extraction script, data file, and colour mapping. I contributed to resolving the Sankey
-merge conflicts that arose when the D3 layout migration was integrated.
+(drag hint, median legend entry). I identified and fixed the data range inconsistency
+across all five visualizations, extending the dataset to 2025 in the extraction script,
+data file, and colour mapping. I corrected the Gear Timeline camera naming by adding the
+`FC3582 → DJI Mini 4 Pro` mapping to the extraction pipeline. I contributed to
+resolving the Sankey merge conflicts that arose when the D3 layout migration was
+integrated.
