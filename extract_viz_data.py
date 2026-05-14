@@ -18,6 +18,7 @@ model_map = {
     "ILCE-7C":   "Sony A7C",
     "ILCE-7CM2": "Sony A7C II",
     "ILCE-7RM4": "Sony A7R IV",
+    "FC3582":    "DJI Mini 4 Pro",
     "X100VI":    "Fuji X100VI",
     "X-T30":     "Fuji X-T30",
     "DMC-LX100": "Panasonic LX100",
