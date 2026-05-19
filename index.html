@@ -107,13 +107,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 canvas{display:block}
 
 /* Workflow funnel */
-#s-sankey .viz-card-title{font-family:'Playfair Display',serif;font-style:italic;font-weight:500}
-#sk-story{display:flex;flex-wrap:wrap;gap:14px 28px;margin:18px 0 14px;padding:14px 18px;background:var(--card2);border:1px solid var(--border);border-radius:10px}
-#sk-story .sk-metric{min-width:120px}
-#sk-story .sk-metric-l{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
-#sk-story .sk-metric-v{font-family:'Playfair Display',serif;font-style:italic;font-size:22px;color:var(--text);text-rendering:geometricPrecision;-webkit-font-smoothing:antialiased}
-#sk-story .sk-metric-v.accent{color:var(--accent)}
-#sk-story .sk-metric-v.small{font-size:14px}
+#s-sankey .viz-card-title{font-family:'Playfair Display',serif;font-weight:500}
 
 /* Stage strip — horizontal, full width above canvas */
 #sk-stage-wrap{margin-bottom:14px}
@@ -217,18 +211,18 @@ canvas{display:block}
     <!-- Story banner -->
     <div id="pa-story" style="display:flex;margin-bottom:20px;border-radius:10px;border:1px solid var(--border);overflow:hidden">
       <div style="flex:1;min-width:120px;padding:14px 18px;border-right:1px solid var(--border)">
-        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Peak month</div>
-        <div id="pa-story-peak-month" style="font-family:'Playfair Display',serif;font-style:italic;font-size:15px;color:var(--text)">—</div>
+        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Peak Month</div>
+        <div id="pa-story-peak-month" style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;color:var(--text)">—</div>
         <div id="pa-story-peak-count" style="font-size:12px;color:var(--accent);margin-top:3px">—</div>
       </div>
       <div style="flex:1;min-width:120px;padding:14px 18px;border-right:1px solid var(--border)">
-        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Longest streak</div>
-        <div id="pa-story-streak" style="font-family:'Playfair Display',serif;font-style:italic;font-size:15px;color:var(--text)">—</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">consecutive days</div>
+        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Longest Streak</div>
+        <div id="pa-story-streak" style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;color:var(--text)">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">days in a row</div>
       </div>
       <div style="flex:1;min-width:120px;padding:14px 18px">
-        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Best single day</div>
-        <div id="pa-story-max-day" style="font-family:'Playfair Display',serif;font-style:italic;font-size:15px;color:var(--text)">—</div>
+        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Best Day</div>
+        <div id="pa-story-max-day" style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;color:var(--text)">—</div>
         <div id="pa-story-max-date" style="font-size:11px;color:var(--muted);margin-top:3px">—</div>
       </div>
     </div>
@@ -332,20 +326,16 @@ canvas{display:block}
 <section id="s-sankey">
   <div class="viz-card">
     <div class="viz-card-title">Workflow Funnel</div>
-    <div class="viz-card-sub">From every frame you capture to the few you publish — estimated counts after culling, editing, and export. <strong style="font-weight:500">Click a stage</strong> left to right to flow through the funnel. Hover links for detail.</div>
-    <div id="sk-story"></div>
-
+    <div class="viz-card-sub">From shutter click to final publish. Select a stage to explore the funnel.</div>
     <!-- Horizontal stage strip (replaces the vertical side panel) -->
     <div id="sk-stage-wrap">
       <div id="sk-stage-bar"></div>
-      <div id="sk-focus-hint" style="margin-top:8px;font-size:11px;color:var(--muted);line-height:1.5">Click the same stage again to reset.</div>
     </div>
 
     <div id="sk-canvas-wrap">
       <canvas id="sankey-canvas" height="360"></canvas>
     </div>
     <div id="sk-photo-strip"></div>
-    <div class="legend" id="sankey-legend"></div>
   </div>
 </section>
 </div>
@@ -1248,41 +1238,6 @@ function sankeyDataSafe(){
 }
 
 function skPopulateStory(){
-  const d=sankeyDataSafe();
-  const el=document.getElementById('sk-story');
-  if(!d||!el)return;
-  const t=d.totals||{};
-  const shots=Math.max(0,+t.shots||0);
-  const sel=Math.max(0,+t.selection||0);
-  const ed=Math.max(0,+t.edition||0);
-  const pub=Math.max(0,+t.published||0);
-  const lSel=Math.max(0,shots-sel);
-  const lEd=Math.max(0,sel-ed);
-  const lPub=Math.max(0,ed-pub);
-  const f=skFocus;
-  const row=(a,b,accent)=>`<div class="sk-metric"><div class="sk-metric-l">${a}</div><div class="sk-metric-v${accent?' accent':''}">${b}</div></div>`;
-  let html='';
-  if(!f){
-    const rowS=(a,b,accent)=>`<div class="sk-metric"><div class="sk-metric-l">${a}</div><div class="sk-metric-v small${accent?' accent':''}">${b}</div></div>`;
-    html=rowS('Diagram','Hidden until you pick a stage',false)
-      +rowS('Begin with','Shots',true)
-      +rowS('Then','Select → Edit → Publish',false);
-  }else if(f==='shots'){
-    html=row('Incoming frames',shots.toLocaleString(),false);
-  }else if(f==='selection'){
-    html=row('Kept after selection',sel.toLocaleString(),false)
-      +row('Selection rate',shots?(sel/shots*100).toFixed(1)+'%':'0%',true)
-      +row('Lost after selection',lSel.toLocaleString(),false);
-  }else if(f==='edition'){
-    html=row('Into editing',ed.toLocaleString(),false)
-      +row('Edited of keepers',sel?(ed/sel*100).toFixed(1)+'%':'0%',true)
-      +row('Not edited',lEd.toLocaleString(),false);
-  }else if(f==='published'){
-    html=row('Published',pub.toLocaleString(),true)
-      +row('Of all captures',shots?(pub/shots*100).toFixed(1)+'%':'0%',false)
-      +row('Of edited pool',ed?(pub/ed*100).toFixed(1)+'%':'0%',false);
-  }
-  el.innerHTML=html;
   skUpdatePhotoStrip(skFocus);
 }
 
@@ -1481,10 +1436,7 @@ function drawSankey(){
     skCtx.fillStyle=P.muted;
     skCtx.font='500 13px DM Sans';
     skCtx.textAlign='center';
-    skCtx.fillText('Select a stage above — start with Shots.',Math.round(W/2),Math.round(H*0.44));
-    skCtx.font='400 12px DM Sans';
-    skCtx.fillStyle='#94A3B8';
-    skCtx.fillText('The funnel flows left → right as you step through.',Math.round(W/2),Math.round(H*0.44+22));
+    skCtx.fillText('Select a stage to explore the funnel.',Math.round(W/2),Math.round(H*0.44));
     SK_C._meta={nodes:[],links:[]};
     return;
   }
@@ -1654,9 +1606,9 @@ function sankeyStart(){
     skInited=true;
     const lg=document.getElementById('sankey-legend');
     lg.innerHTML=[
-      `<div class="li"><div class="li-dot" style="background:${SK_FUNNEL.shots}"></div><span style="font-weight:500">Progressive reveal</span> — use the focus path; the full funnel appears on <strong>Publish</strong>.</div>`,
-      `<div class="li"><div class="li-dot" style="background:${SK_LOSS_NODE}"></div>Side exits (not taken forward)</div>`,
-      `<div class="li"><div class="li-line" style="background:${P.accent};height:3px"></div>Orange ring = final publish step (when that stage is visible)</div>`,
+      `<div class="li"><div class="li-dot" style="background:${SK_FUNNEL.shots}"></div>Step through Shots → Select → Edit → Publish</div>`,
+      `<div class="li"><div class="li-dot" style="background:${SK_LOSS_NODE}"></div>Photos leaving the flow</div>`,
+      `<div class="li"><div class="li-line" style="background:${P.accent};height:3px"></div>Active stage</div>`,
     ].join('');
   }
   skDrawStageBar();
@@ -1691,10 +1643,7 @@ SK_C.addEventListener('mousemove',e=>{
   for(const n of m.nodes){
     if(mx>=n.x&&mx<=n.x+n.w&&my>=n.y&&my<=n.y+n.h){
       skHover={type:'node',id:n.id};
-      const title=skLabel(n.id);
-      const shots=(sankeyDataSafe()?.totals?.shots)||1;
-      const pct=n.value?((n.value/shots)*100).toFixed(1):'0';
-      showTT(e,title,`${n.value.toLocaleString()} photos<br><span style="color:var(--muted)">${pct}% of all captures</span>`);
+      showTT(e,skLabel(n.id),`${n.value.toLocaleString()} photos`);
       drawSankey();
       return;
     }
@@ -1708,11 +1657,8 @@ SK_C.addEventListener('mousemove',e=>{
     const bot=(1-t)*(1-t)*(1-t)*l.sy1 + 3*(1-t)*(1-t)*t*l.sy1 + 3*(1-t)*t*t*l.ty1 + t*t*t*l.ty1;
     if(my>=Math.min(top,bot)-2 && my<=Math.max(top,bot)+2){
       skHover={type:'link',idx:l.idx};
-      const shots=(sankeyDataSafe()?.totals?.shots)||1;
-      const pctSrc=l.srcValue?((l.value/l.srcValue)*100):0;
-      const pctAll=shots?((l.value/shots)*100):0;
-      const metric=l.kind==='loss'?'leaving the funnel':'moving forward';
-      showTT(e,`${skLabel(l.source)} → ${skLabel(l.target)}`,`${l.value.toLocaleString()} photos<br><span style="color:var(--muted)">${pctSrc.toFixed(1)}% of ${skLabel(l.source)} · ${pctAll.toFixed(1)}% of all captures</span><br><span style="color:var(--dim);font-size:11px">${metric}</span>`);
+      const pctSrc=l.srcValue?((l.value/l.srcValue)*100).toFixed(1):0;
+      showTT(e,`${skLabel(l.source)} → ${skLabel(l.target)}`,`${l.value.toLocaleString()} photos<br><span style="color:var(--muted)">${pctSrc}%</span>`);
       drawSankey();
       return;
     }
