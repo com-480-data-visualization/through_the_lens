@@ -124,6 +124,46 @@ canvas{display:block}
 #sk-stage-bar .sk-pill.dim{opacity:.32}
 #sk-stage-bar .sk-pill.on rect{filter:drop-shadow(0 0 4px rgba(249,115,22,.55))}
 #sk-canvas-wrap{position:relative}
+
+/* Photo strip */
+#sk-photo-strip{margin-top:16px;display:none}
+.sk-strip-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;padding:0 2px}
+.sk-strip-photos{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow-x:auto;padding:4px 2px 12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.sk-strip-photos::-webkit-scrollbar{height:4px}
+.sk-strip-photos::-webkit-scrollbar-track{background:transparent}
+.sk-strip-photos::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.sk-strip-item{flex:0 0 auto;width:210px;height:140px;border-radius:8px;overflow:hidden;position:relative;border:1.5px solid var(--border);transition:opacity .3s,border-color .3s,box-shadow .3s}
+.sk-strip-item img{width:100%;height:100%;object-fit:cover;display:block;transition:filter .3s}
+.sk-strip-item.culled{opacity:.22}.sk-strip-item.culled img{filter:grayscale(90%)}
+.sk-strip-item.culled::after{content:'✕';position:absolute;inset:0;display:grid;place-items:center;font-size:20px;font-weight:300;color:rgba(255,255,255,.9);background:rgba(15,23,42,.28)}
+.sk-strip-item.kept{border-color:var(--accent);box-shadow:0 0 0 2.5px rgba(249,115,22,.3)}
+.sk-strip-item.published{width:240px;height:160px;border-color:#8B5CF6;box-shadow:0 0 0 2.5px rgba(139,92,246,.3)}
+.sk-group-tag{flex:0 0 auto;align-self:center;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:20px;line-height:1.4;font-weight:500;white-space:nowrap}
+.sk-group-tag.kept-tag{background:rgba(249,115,22,.12);color:var(--accent);border:1px solid rgba(249,115,22,.35)}
+.sk-group-tag.culled-tag{background:rgba(148,163,184,.1);color:var(--muted);border:1px solid var(--border)}
+.sk-group-sep{flex:0 0 1px;width:1px;height:130px;background:var(--border);align-self:center;margin:0 6px}
+/* Lightbox */
+#sk-lightbox{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;cursor:zoom-out;animation:lbFadeIn .18s ease}
+#sk-lightbox.open{display:flex}
+@keyframes lbFadeIn{from{opacity:0}to{opacity:1}}
+#sk-lb-img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;box-shadow:0 12px 60px rgba(0,0,0,.6);cursor:default;animation:lbZoomIn .2s ease}
+@keyframes lbZoomIn{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+#sk-lb-close{position:fixed;top:18px;right:22px;background:rgba(255,255,255,.1);border:none;color:#fff;font-size:22px;line-height:1;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s}
+#sk-lb-close:hover{background:rgba(255,255,255,.22)}
+#sk-lb-prev,#sk-lb-next{position:fixed;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.1);border:none;color:#fff;font-size:36px;width:48px;height:72px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,opacity .2s;border-radius:8px;line-height:1}
+#sk-lb-prev{left:16px}#sk-lb-next{right:16px}
+#sk-lb-prev:hover,#sk-lb-next:hover{background:rgba(255,255,255,.24)}
+#sk-lb-counter{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.55);font-size:12px;font-family:'DM Sans',sans-serif;letter-spacing:.06em}
+#sk-lb-wrap{position:relative;display:inline-flex}
+#sk-lightbox.lb-culled #sk-lb-img{opacity:.25;filter:grayscale(85%)}
+#sk-lb-culled-cross{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:96px;font-weight:200;color:rgba(255,255,255,.85);pointer-events:none}
+#sk-lightbox.lb-culled #sk-lb-culled-cross{display:flex}
+.sk-strip-item{cursor:zoom-in}
+.sk-pair{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.sk-pair-arrow{font-size:13px;color:var(--dim);line-height:1;user-select:none}
+.sk-pair-badge{position:absolute;bottom:4px;left:5px;font-size:8px;letter-spacing:.05em;text-transform:uppercase;background:rgba(15,23,42,.6);color:#fff;padding:2px 5px;border-radius:3px;line-height:1.3;pointer-events:none}
+.sk-pair-badge.after{background:rgba(139,92,246,.85)}
+
 @media(max-width:700px){section{padding:60px 16px}.ctrl-row{gap:8px}.hero-stats{gap:28px}}
 </style>
 </head>
@@ -134,6 +174,7 @@ canvas{display:block}
 <div id="site-mosaic-scrim" aria-hidden="true"></div>
 <div id="site-content">
 <div id="tt"><div id="tt-head"></div><div id="tt-body"></div></div>
+<div id="sk-lightbox"><button id="sk-lb-close" aria-label="Close">&#x2715;</button><button id="sk-lb-prev" aria-label="Previous">&#x2039;</button><div id="sk-lb-wrap"><img id="sk-lb-img" src="" alt=""><div id="sk-lb-culled-cross">&#x2715;</div></div><button id="sk-lb-next" aria-label="Next">&#x203A;</button><div id="sk-lb-counter"></div></div>
 
 <nav id="topnav">
   <div class="logo">Through the Lens</div>
@@ -303,6 +344,7 @@ canvas{display:block}
     <div id="sk-canvas-wrap">
       <canvas id="sankey-canvas" height="360"></canvas>
     </div>
+    <div id="sk-photo-strip"></div>
     <div class="legend" id="sankey-legend"></div>
   </div>
 </section>
@@ -1178,6 +1220,27 @@ let skAnimAF=null;
 let skInited=false;
 const SK_STAGE_ORDER=['shots','selection','edition','published'];
 
+const SK_PHOTO_BASE='data/workflow-sankey/';
+// ── Update these arrays when you add/remove files ────────────────────────
+const SK_BEFORE_NUMS=[1,8,9];               // numbers that have before_edit-XX.jpg
+const SK_LOST_NUMS=[2,3,4,5,6,7,10,11,12]; // numbers that have lost-XX.jpg
+const SK_AFTER_NUMS=[1,8,9];                  // numbers that have after_edit-X.jpg
+const SK_PUBLISHED_NUMS=[8];               // numbers that have published-X.jpg
+// ─────────────────────────────────────────────────────────────────────────
+const SK_PHOTOS=(function(){
+  const pad=n=>String(n).padStart(2,'0');
+  const shots=[
+    ...SK_BEFORE_NUMS.map(n=>({f:`before_edit-${pad(n)}.jpg`,n})),
+    ...SK_LOST_NUMS.map(n=>({f:`lost-${pad(n)}.jpg`,n}))
+  ].sort((a,b)=>a.n-b.n).map(x=>x.f);
+  return {
+    shots,
+    edition:SK_BEFORE_NUMS.filter(n=>SK_AFTER_NUMS.includes(n))
+      .map(n=>({before:`before_edit-${pad(n)}.jpg`,after:`after_edit-${n}.jpg`})),
+    published:SK_PUBLISHED_NUMS.map(n=>`published-${n}.jpg`)
+  };
+})();
+
 function sankeyDataSafe(){
   const d=typeof SANKEY_DATA!=='undefined'?SANKEY_DATA:null;
   if(!d||!d.nodes||!d.links||!d.totals)return null;
@@ -1220,6 +1283,33 @@ function skPopulateStory(){
       +row('Of edited pool',ed?(pub/ed*100).toFixed(1)+'%':'0%',false);
   }
   el.innerHTML=html;
+  skUpdatePhotoStrip(skFocus);
+}
+
+function skUpdatePhotoStrip(stage){
+  const strip=document.getElementById('sk-photo-strip');
+  if(!strip)return;
+  if(!stage){strip.style.display='none';strip.innerHTML='';return;}
+  const b=SK_PHOTO_BASE;
+  let label='',photos='';
+  if(stage==='shots'){
+    label='All captures &mdash; <span style="color:var(--muted)">'+SK_PHOTOS.shots.length+' frames</span>';
+    photos=SK_PHOTOS.shots.map(f=>`<div class="sk-strip-item"><img src="${b}${f}" alt="" loading="lazy"></div>`).join('');
+  }else if(stage==='selection'){
+    label='After culling &mdash; <span style="color:var(--muted)">9 kept &middot; 3 culled</span>';
+    photos=SK_PHOTOS.shots.map(f=>{
+      const culled=f.startsWith('lost-');
+      return `<div class="sk-strip-item${culled?' culled':''}"><img src="${b}${f}" alt="" loading="lazy"></div>`;
+    }).join('');
+  }else if(stage==='edition'){
+    label='In editing &mdash; <span style="color:var(--muted)">before &rarr; after</span>';
+    photos=SK_PHOTOS.edition.map(p=>`<div class="sk-pair"><div class="sk-strip-item"><img src="${b}${p.before}" alt="" loading="lazy"><div class="sk-pair-badge">Before</div></div><div class="sk-pair-arrow">&rarr;</div><div class="sk-strip-item"><img src="${b}${p.after}" alt="" loading="lazy"><div class="sk-pair-badge after">After</div></div></div>`).join('');
+  }else if(stage==='published'){
+    label='Published &mdash; <span style="color:var(--muted)">final edits</span>';
+    photos=SK_PHOTOS.published.map(f=>`<div class="sk-strip-item published"><img src="${b}${f}" alt="" loading="lazy"></div>`).join('');
+  }
+  strip.style.display='block';
+  strip.innerHTML=`<div class="sk-strip-label">${label}</div><div class="sk-strip-photos">${photos}</div>`;
 }
 
 function skLabel(id){
@@ -1631,6 +1721,46 @@ SK_C.addEventListener('mousemove',e=>{
   drawSankey();
 });
 SK_C.addEventListener('mouseleave',()=>{skHover=null;hideTT();drawSankey()});
+
+// Lightbox
+(function(){
+  const lb=document.getElementById('sk-lightbox');
+  const lbImg=document.getElementById('sk-lb-img');
+  const lbClose=document.getElementById('sk-lb-close');
+  const lbPrev=document.getElementById('sk-lb-prev');
+  const lbNext=document.getElementById('sk-lb-next');
+  const lbCounter=document.getElementById('sk-lb-counter');
+  let lbItems=[],lbIdx=0;
+  function showAt(i){
+    lbIdx=(i+lbItems.length)%lbItems.length;
+    const it=lbItems[lbIdx];
+    lbImg.src=it.src;
+    lb.classList.toggle('lb-culled',!!it.culled);
+    lbCounter.textContent=(lbIdx+1)+' / '+lbItems.length;
+    lbPrev.style.opacity=lbNext.style.opacity=lbItems.length>1?'1':'0';
+  }
+  function openLb(items,idx){lbItems=items;lb.classList.add('open');document.body.style.overflow='hidden';showAt(idx);}
+  function closeLb(){lb.classList.remove('open','lb-culled');document.body.style.overflow='';}
+  document.getElementById('sk-photo-strip').addEventListener('click',e=>{
+    const item=e.target.closest('.sk-strip-item');
+    if(!item)return;
+    const allItems=[...document.querySelectorAll('#sk-photo-strip .sk-strip-item')];
+    const clicked=item.querySelector('img');
+    const idx=allItems.indexOf(item);
+    openLb(allItems.map(el=>({src:el.querySelector('img').src,culled:el.classList.contains('culled')})),Math.max(0,idx));
+  });
+  lb.addEventListener('click',e=>{if(e.target===lb)closeLb();});
+  lbClose.addEventListener('click',closeLb);
+  lbPrev.addEventListener('click',e=>{e.stopPropagation();showAt(lbIdx-1);});
+  lbNext.addEventListener('click',e=>{e.stopPropagation();showAt(lbIdx+1);});
+  document.addEventListener('keydown',e=>{
+    if(!lb.classList.contains('open'))return;
+    if(e.key==='Escape')closeLb();
+    if(e.key==='ArrowLeft')showAt(lbIdx-1);
+    if(e.key==='ArrowRight')showAt(lbIdx+1);
+  });
+})();
+
 function resizeSankey(){
   skPopulateStory();
   skDrawStageBar();
