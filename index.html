@@ -208,8 +208,9 @@ canvas{display:block}
 <!-- ═══ PHOTO ACTIVITY ═══ -->
 <section id="s-activity">
   <div class="viz-card">
+    <div class="viz-card-title">Photo Activity</div>
     <!-- Story banner -->
-    <div id="pa-story" style="display:flex;margin-bottom:20px;border-radius:10px;border:1px solid var(--border);overflow:hidden">
+    <div id="pa-story" style="display:flex;margin-top:28px;margin-bottom:20px;border-radius:10px;border:1px solid var(--border);overflow:hidden">
       <div style="flex:1;min-width:120px;padding:14px 18px;border-right:1px solid var(--border)">
         <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Peak Month</div>
         <div id="pa-story-peak-month" style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;color:var(--text)">—</div>
@@ -226,7 +227,6 @@ canvas{display:block}
         <div id="pa-story-max-date" style="font-size:11px;color:var(--muted);margin-top:3px">—</div>
       </div>
     </div>
-    <div class="viz-card-title">Photo Activity</div>
     <div id="pa-breadcrumb" style="font-size:12px;color:var(--muted);margin-bottom:4px;min-height:18px"></div>
     <div class="viz-card-sub" id="pa-sub"></div>
     <canvas id="pa-canvas" height="380"></canvas>
@@ -478,6 +478,10 @@ async function initSiteMosaic(){
     const data=await res.json();
     mosaicItems=data.items||[];
     if(!mosaicItems.length)throw new Error('manifest empty');
+    mosaicItems.forEach(item=>{
+      if(item.captured_date&&item.thumb&&!PA_GALLERY_THUMB[item.captured_date])
+        PA_GALLERY_THUMB[item.captured_date]=item.thumb;
+    });
     mosaicSeed=(Date.now()&0xffffffff)>>>0;
     rebuildMosaicLayers();
     document.body.dataset.mosaic='ready';
@@ -1777,6 +1781,11 @@ function paColorForCount(c,mx){
   if(r<0.80) return '#2563EB';
   return '#7C3AED';
 }
+function paColorForSession(c,mx){
+  const r=Math.max(0,Math.min(1,(c||0)/mx));
+  const scale=d3.scaleLinear().domain([0,0.5,1]).range(['#93C5FD','#2563EB','#7C3AED']).interpolate(d3.interpolateRgb);
+  return scale(r);
+}
 // Blue shared by all-years bars (2021/2022/2026) and Winter months after drill-down
 const PA_BAR_BLUE = '#3B82F6';
 // sequential blue→purple per month index 0..11 (used for sessions chart)
@@ -1795,11 +1804,12 @@ function paSeasonCol(monthIdx){
 const YR_BAR_COLS = {2021:PA_BAR_BLUE,2022:PA_BAR_BLUE,2023:P.g3,2024:P.g6,2025:P.g8,2026:PA_BAR_BLUE};
 const PA_PEAK = YEAR_DATA.reduce((a,b)=>b.count>a.count?b:a).year;
 const PA_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const PA_MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 // Previews on heatmap hover: PA_YEAR_THUMB = one image per year (data/pa-previews/2024.jpg).
 // PA_DAY_THUMB overrides specific dates (e.g. data/pa-previews/day-2024-05-03.jpg).
-const PA_YEAR_THUMB={
-};
+const PA_YEAR_THUMB={};
+const PA_GALLERY_THUMB={};
 const PA_DAY_THUMB={
   '2022-07-23':'data/pa-previews/day-2022-07-23.jpg',
   '2023-01-17':'data/pa-previews/day-2023-01-17.jpg',
@@ -1813,17 +1823,25 @@ function paYearPlaceholderSvgUri(year){
 }
 function paThumbSrc(isoDate){
   if(PA_DAY_THUMB[isoDate]) return PA_DAY_THUMB[isoDate];
+  if(PA_GALLERY_THUMB[isoDate]) return PA_GALLERY_THUMB[isoDate];
   const y=+isoDate.slice(0,4);
-  return PA_YEAR_THUMB[y]||paYearPlaceholderSvgUri(y);
+  return PA_YEAR_THUMB[y]||null;
 }
 function paThumbTooltipHtml(isoDate){
   const src=paThumbSrc(isoDate);
+  if(!src) return '';
   return `<div class="tt-preview-wrap"><img class="tt-preview-img" src="${src}" alt="" loading="lazy" decoding="async" onerror="this.closest('.tt-preview-wrap').style.display='none'"/></div>`;
 }
 
 // ── state ────────────────────────────────────────
 // paView: 'years' | 'months' | 'heatmap' | 'morphing'
-let paView='years', paYear=null, paHits=[], paAnimAF=null;
+let paView='years', paYear=null, paHits=[], paAnimAF=null, paHighlightSession=null;
+function paRedrawCanvas(){
+  if(paView!=='detail'||!paYear)return;
+  const cssW=paCSSW(),cssH=PA_C.height/((window.devicePixelRatio||1));
+  paCtx.clearRect(0,0,cssW,cssH);
+  _renderDetail(paYear,cssW);
+}
 
 // ── canvas sizing helpers ────────────────────────
 function paDPR(){ return window.devicePixelRatio||1; }
@@ -1844,8 +1862,9 @@ function drawYears(animT=1){
   paSetSize(cssW,cssH);
   paCtx.clearRect(0,0,cssW,cssH);
   const PL=56,PR=16,PT=30,PB=50,PW=cssW-PL-PR,PH=cssH-PT-PB;
-  const n=YEAR_DATA.length, gap=PW/n, barW=Math.min(Math.floor(gap*0.55),90);
-  const mx=Math.max(...YEAR_DATA.map(d=>d.count));
+  const yearDisplay=YEAR_DATA.filter(d=>d.year!==2021);
+  const n=yearDisplay.length, gap=PW/n, barW=Math.min(Math.floor(gap*0.55),90);
+  const mx=Math.max(...yearDisplay.map(d=>d.count));
 
   // gridlines
   [4000,8000,12000,16000].forEach(t=>{
@@ -1858,7 +1877,7 @@ function drawYears(animT=1){
   paCtx.strokeStyle=P.dim; paCtx.lineWidth=1;
   paCtx.beginPath();paCtx.moveTo(PL,PT);paCtx.lineTo(PL,PT+PH);paCtx.lineTo(PL+PW,PT+PH);paCtx.stroke();
 
-  YEAR_DATA.forEach((d,i)=>{
+  yearDisplay.forEach((d,i)=>{
     const cx=PL+(i+.5)*gap;
     const fullBH=(d.count/mx)*PH;
     const bh=fullBH*animT;
@@ -1870,8 +1889,8 @@ function drawYears(animT=1){
     paCtx.beginPath();paCtx.roundRect(cx-barW/2,by,barW,bh,[4,4,0,0]);paCtx.fill();
     paCtx.globalAlpha=1;
     // growth badge — uses the bar's own colour
-    if(animT>0.8&&i>0&&!d.partial&&!YEAR_DATA[i-1].partial){
-      const prev=YEAR_DATA[i-1];
+    if(animT>0.8&&i>0&&!d.partial&&!yearDisplay[i-1].partial){
+      const prev=yearDisplay[i-1];
       const pct=(d.count-prev.count)/prev.count*100;
       paCtx.globalAlpha=Math.min((animT-0.8)/0.2,1);
       paCtx.fillStyle=col;
@@ -1899,7 +1918,7 @@ function drawYears(animT=1){
   });
 
   const lg=document.getElementById('pa-legend'); lg.innerHTML='';
-  YEAR_DATA.forEach(d=>{
+  YEAR_DATA.filter(d=>d.year!==2021).forEach(d=>{
     const isPeak=d.year===PA_PEAK;
     const col=isPeak?P.accent:(YR_BAR_COLS[d.year]||P.g1);
     lg.innerHTML+=`<div class="li" style="opacity:${d.partial?0.45:1}"><div class="li-dot" style="background:${col}"></div>${d.year}</div>`;
@@ -1913,6 +1932,7 @@ function paEnterYears(){
   paView='years'; paYear=null; paHits=[];
   document.getElementById('pa-panel').style.display='none';
   document.getElementById('pa-sessions-timeline').style.display='none';
+  document.getElementById('pa-story').style.display='flex';
   if(PA_GLOBAL_STATS) paSetStoryCards(PA_GLOBAL_STATS);
   if(paAnimAF){cancelAnimationFrame(paAnimAF);paAnimAF=null;}
   let s=null;
@@ -1977,9 +1997,11 @@ function animateYearToDetail(year, a){
 // wrapper's alpha is respected for all elements.
 // ════════════════════════════════════════════════
 function _renderDetail(year, cssW){
-  // ── monthly bars (top section) ──
-  // PT=30 gives season labels (at y=10) enough clearance from count labels (min y=PT-5=25)
-  const PL=56,PR=16,PT=30,PW=cssW-PL-PR,PH=148,PB=28;
+  // compute STEP first so PH can match heatmap height
+  const _isLeap=(year%4===0&&year%100!==0)||year%400===0;
+  const _numWeeks=Math.ceil(((new Date(year,0,1).getDay()===0?6:new Date(year,0,1).getDay()-1)+(_isLeap?366:365))/7);
+  const PL=56,PR=16,PT=30,PW=cssW-PL-PR,PB=20;
+  const PH=7*Math.floor((cssW-PL-PR)/_numWeeks);
   const gap=PW/12, mBarW=Math.min(Math.floor(gap*0.7),60);
   const months=Array.from({length:12},(_,i)=>{
     const key=`${year}-${String(i+1).padStart(2,'0')}`;
@@ -2028,8 +2050,8 @@ function _renderDetail(year, cssW){
   const jan1=new Date(year,0,1);
   const startDow=jan1.getDay()===0?6:jan1.getDay()-1;
   const numWeeks=Math.ceil((startDow+totalDays)/7);
-  const LPAD=40, HTOP_OFF=PT+PH+PB+4;
-  const STEP=Math.floor((cssW-LPAD-8)/numWeeks);
+  const LPAD=56, HTOP_OFF=PT+PH+PB+4;
+  const STEP=Math.floor((cssW-LPAD-PR)/numWeeks);
   const CELL=Math.max(STEP-2,1);
   const HMTOP=HTOP_OFF+16;
   const yearMax=Math.max(...DAILY_DATA.filter(d=>d.date.startsWith(String(year))).map(d=>d.count),1);
@@ -2072,12 +2094,19 @@ function _renderDetail(year, cssW){
     const d=new Date(year,0,1+off), ds=d.toISOString().slice(0,10);
     const count=dailyMap[ds]||0;
     const cx=LPAD+w*STEP, cy=HMTOP+dow*STEP;
+    const sessionMatch=paHighlightSession&&ALBUM_MAP[ds]===paHighlightSession;
+    const dimmed=paHighlightSession&&!sessionMatch;
+    paCtx.globalAlpha=dimmed?0.12:1;
     paCtx.fillStyle=paColorForCount(count,yearMax);
     paCtx.beginPath();paCtx.roundRect(cx,cy,CELL,CELL,2);paCtx.fill();
-    if(streakSet.has(ds)&&count>0){
-      paCtx.strokeStyle='rgba(249,115,22,0.38)'; paCtx.lineWidth=1.5;
+    if(sessionMatch&&count>0){
+      paCtx.strokeStyle=P.accent; paCtx.lineWidth=1.5;
+      paCtx.beginPath();paCtx.roundRect(cx+0.75,cy+0.75,CELL-1.5,CELL-1.5,2);paCtx.stroke();
+    }else if(streakSet.has(ds)&&count>0){
+      paCtx.strokeStyle=P.accent; paCtx.lineWidth=1.5;
       paCtx.beginPath();paCtx.roundRect(cx+0.75,cy+0.75,CELL-1.5,CELL-1.5,2);paCtx.stroke();
     }
+    paCtx.globalAlpha=1;
   }
   // legend
   const lx=LPAD, ly=HMTOP+7*STEP+6;
@@ -2098,6 +2127,7 @@ function _renderDetail(year, cssW){
 function drawYearDetail(year){
   hideTT();
   paView='detail'; paYear=year; paHits=[];
+  document.getElementById('pa-story').style.display='none';
   const cssW=paCSSW();
   // dynamic canvas height
   const isLeap=(year%4===0&&year%100!==0)||year%400===0;
@@ -2105,8 +2135,8 @@ function drawYearDetail(year){
   const jan1=new Date(year,0,1);
   const startDow=jan1.getDay()===0?6:jan1.getDay()-1;
   const numWeeks=Math.ceil((startDow+totalDays)/7);
-  const STEP=Math.floor((cssW-48)/numWeeks);
-  const PT=14,PH=148,PB=28, HTOP_OFF=PT+PH+PB+4, HMTOP=HTOP_OFF+16;
+  const STEP=Math.floor((cssW-56-16)/numWeeks);
+  const PT=14,PH=7*STEP,PB=20, HTOP_OFF=PT+PH+PB+4, HMTOP=HTOP_OFF+16;
   const cssH=HMTOP+7*STEP+46;
   paSetSize(cssW,cssH);
   paCtx.clearRect(0,0,cssW,cssH);
@@ -2127,7 +2157,7 @@ function drawYearDetail(year){
     if(off<0||off>=totD) continue;
     const ds=new Date(year,0,1+off).toISOString().slice(0,10);
     const count=dailyMap[ds]||0;
-    paHits.push({type:'day',x:40+w*ST,y:HT+dow*ST,w:CELL,h:CELL,date:ds,count,col:paColorForCount(count,yMx)});
+    paHits.push({type:'day',x:56+w*ST,y:HT+dow*ST,w:CELL,h:CELL,date:ds,count,col:paColorForCount(count,yMx)});
   }
 
   document.getElementById('pa-sub').innerHTML=`<span style="color:var(--accent);cursor:pointer;text-decoration:underline" onclick="paShowYears()">← all years</span>`;
@@ -2171,7 +2201,7 @@ function drawSessionsTimeline(year){
   container.appendChild(hdr);
 
   // keep top 12; show note if more unique names exist
-  const LIMIT=12;
+  const LIMIT=8;
   const sessions=allSessions.slice(0,LIMIT);
   if(allSessions.length>LIMIT){
     const note=document.createElement('div');
@@ -2180,7 +2210,7 @@ function drawSessionsTimeline(year){
     container.appendChild(note);
   }
 
-  const W=paCSSW(), ROW=20, ML=8, MR=12;
+  const W=paCSSW(), ROW=16, ML=8, MR=12;
   const namePad=160; // fixed px reserved for name labels
   const barW=W-namePad-ML-MR-50; // 50px for count text on right
   const H=sessions.length*ROW+4;
@@ -2194,7 +2224,8 @@ function drawSessionsTimeline(year){
 
   const rowG=svg.selectAll('.sr')
     .data(sessions).enter().append('g').attr('class','sr')
-    .attr('transform',(_,i)=>`translate(${ML},${i*ROW+2})`);
+    .attr('transform',(_,i)=>`translate(${ML},${i*ROW+2})`)
+    .attr('data-session',d=>d.name);
 
   // session name (left-aligned, fixed-width zone)
   rowG.append('text')
@@ -2213,7 +2244,7 @@ function drawSessionsTimeline(year){
   rowG.append('rect')
     .attr('x',namePad).attr('y',ROW/2-3)
     .attr('width',0).attr('height',6).attr('rx',3)
-    .attr('fill',(_,i)=>paMonthCol(Math.round(i/Math.max(sessions.length-1,1)*11)))
+    .attr('fill',d=>paColorForSession(d.count,maxCnt))
     .transition().delay((_,i)=>i*40).duration(420).ease(d3.easeCubicOut)
     .attr('width',d=>xScale(d.count));
 
@@ -2232,11 +2263,17 @@ function drawSessionsTimeline(year){
       d3.select(this).select('rect:nth-child(3)').attr('opacity',0.8);
       const dayLabel=d.days===1?'1 shooting day':`${d.days} shooting days`;
       showTT(event,d.name,`${d.count.toLocaleString()} photos total<br><span style="color:var(--muted)">${dayLabel}</span>`);
+      paHighlightSession=d.name;
+      svg.selectAll('g.sr').style('opacity',function(s){return s.name===d.name?1:0.3;});
+      paRedrawCanvas();
     })
     .on('mousemove',moveTT)
     .on('mouseleave',function(){
       d3.select(this).select('rect:nth-child(3)').attr('opacity',1);
       hideTT();
+      paHighlightSession=null;
+      svg.selectAll('g.sr').style('opacity',1);
+      paRedrawCanvas();
     });
 }
 
@@ -2252,16 +2289,6 @@ PA_C.addEventListener('click',e=>{
       if(paView==='years'&&b.type==='year'){
         hideTT();
         animateYearToDetail(b.year,b._a);
-      } else if(paView==='detail'&&b.type==='day'&&b.count>0){
-        hideTT();
-        const dateObj=new Date(b.date+'T12:00:00');
-        document.getElementById('pa-panel-date').textContent=dateObj.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
-        document.getElementById('pa-panel-count').textContent=b.count.toLocaleString()+' photos';
-        const session=ALBUM_MAP[b.date];
-        document.getElementById('pa-panel-albums').innerHTML=session
-          ?`<div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:${P.g1};flex-shrink:0"></div><span style="font-size:13px;color:var(--text)">${session}</span></div>`
-          :`<span style="font-size:12px;color:var(--muted);font-style:italic">No named session</span>`;
-        document.getElementById('pa-panel').style.display='block';
       }
       break;
     }
@@ -2283,30 +2310,38 @@ PA_C.addEventListener('mousemove',e=>{
           const yd=YEAR_DATA.find(d=>d.year===yr);
           const barCol=yr===PA_PEAK?P.accent:(YR_BAR_COLS[yr]||P.g1);
           const total=(yd?.count||0).toLocaleString();
-          let vsLine='';
-          // peak month
-          let peakMonthLine='';
-          const mEntries=Array.from({length:12},(_,i)=>{
-            const key=`${yr}-${String(i+1).padStart(2,'0')}`;
-            return {m:i,count:monthlyTotals[key]||0};
-          });
-          const pm=mEntries.reduce((a,b)=>b.count>a.count?b:a);
-          if(pm.count>0) peakMonthLine=`<br><span style="color:var(--muted)">Peak: ${PA_MONTHS[pm.m]} (${pm.count.toLocaleString()})</span>`;
-          // active days
-          const activeDays=DAILY_DATA.filter(d=>d.date.startsWith(String(yr))).length;
-          const daysLine=`<br><span style="color:var(--muted)">${activeDays} active shooting days</span>`;
-          const hint=`<br><span style="color:var(--dim);font-size:11px">click to explore →</span>`;
-          showTT(e,`<span style="color:${barCol}">${yr}</span>`,`${total} photos${vsLine}${peakMonthLine}${daysLine}${hint}`);
+          showTT(e,`<span style="color:${barCol}">${yr}</span>`,`${total} photos`);
         }
-        else if(paView==='detail'&&b.type==='month'){const mc=paSeasonCol(b.month-1);showTT(e,`<span style="color:${mc}">${PA_MONTHS[b.month-1]}</span>`,b.count.toLocaleString()+' photos');}
-        else if(paView==='detail'&&b.type==='day'){const s=ALBUM_MAP[b.date];const dl=new Date(b.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});const tc=(b.col==='#F1F5F9'||b.col==='#DBEAFE')?'#93C5FD':(b.col||P.g1);showTT(e,`<span style="color:${tc}">${dl}</span>`,b.count.toLocaleString()+' photos'+(s?'<br>'+s:'')+paThumbTooltipHtml(b.date),{preview:true});}
+        else if(paView==='detail'&&b.type==='month'){const mc=paSeasonCol(b.month-1);showTT(e,`<span style="color:${mc}">${PA_MONTHS_FULL[b.month-1]}</span>`,b.count.toLocaleString()+' photos');}
+        else if(paView==='detail'&&b.type==='day'){
+          const s=ALBUM_MAP[b.date]||null;
+          const dl=new Date(b.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'long'});
+          const tc=(b.col==='#F1F5F9'||b.col==='#DBEAFE')?'#93C5FD':(b.col||P.g1);
+          showTT(e,`<span style="color:${tc}">${dl}</span>`,b.count.toLocaleString()+' photos'+(s?'<br>'+s:'')+paThumbTooltipHtml(b.date),{preview:true});
+          if(s!==paHighlightSession){
+            paHighlightSession=s;
+            document.querySelectorAll('#pa-sessions-timeline .sr').forEach(g=>{g.style.opacity=(!s||g.dataset.session===s)?'1':'0.3';});
+          }
+        }
         hit=true; break;
       }
     }
   }
-  if(!hit){PA_C.style.cursor='default';hideTT();}
+  if(!hit){
+    PA_C.style.cursor='default';hideTT();
+    if(paHighlightSession){
+      paHighlightSession=null;
+      document.querySelectorAll('#pa-sessions-timeline g.sr').forEach(g=>{g.style.opacity='1';});
+      paRedrawCanvas();
+    }
+  }
 });
-PA_C.addEventListener('mouseleave',()=>{hideTT();PA_C.style.cursor='default';});
+PA_C.addEventListener('mouseleave',()=>{
+  hideTT();PA_C.style.cursor='default';
+  paHighlightSession=null;
+  document.querySelectorAll('#pa-sessions-timeline g.sr').forEach(g=>{g.style.opacity='1';});
+  paRedrawCanvas();
+});
 
 function paResize(){
   if(paView==='years'||paView==='morphing') paEnterYears();
