@@ -6,6 +6,15 @@ data/histograms/*.jsonl
 data/immich_embeddings/*.csv
 data/immich_embeddings/*.npz
 data/immich_embeddings/*.json
+
+# Shared dataset (too large for GitHub — keep local or share via Drive)
+shared_dataset/metadata/*.csv
+shared_dataset/histograms/*.parquet
+shared_dataset/histograms/*.jsonl
+shared_dataset/immich_embeddings/*.csv
+shared_dataset/immich_embeddings/*.npz
+shared_dataset/immich_embeddings/*.json
+
 __MACOSX/
 
 # Python/Jupyter

@@ -13,6 +13,7 @@ Paquet prêt à partager : métadonnées, histogrammes RGB 128 bins (avant / apr
 | Immich | `immich_embeddings/immich_clip_embeddings.npz` | `row_index` (51220) + `embedding` (512 flottants) — **uniquement les photos matchées**. |
 | Immich | `immich_embeddings/immich_clip_summary.json` | Statistiques de jointure. |
 | Doc histo | `docs/README_histrgb128.md` | Détail des colonnes histogrammes (schéma d’origine ; le Parquet fusionné suit la même logique). |
+| Galerie hero | `hero-gallery/manifest.json`, `hero-gallery/thumb/` | 124 vignettes WebP + dates de prise (mosaïque intro). Voir `hero-gallery/README.md`. Régénération : `python scripts/build_hero_gallery.py`. |
 
 ## Clés de jointure (recommandé)
 
