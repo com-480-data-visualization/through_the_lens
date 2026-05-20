@@ -341,6 +341,7 @@ canvas{display:block}
 </div>
 
 <script src="viz_data.js"></script>
+<script src="data/hero-gallery/gallery-data.js"></script>
 <script>
 // ═══════════════════════════════════════════════
 // UTILITIES
@@ -473,11 +474,17 @@ async function initSiteMosaic(){
   const host=document.getElementById('mosaic-tiles');
   if(!host)return;
   try{
-    const res=await fetch(mosaicUrl('data/hero-gallery/manifest.json'));
-    if(!res.ok)throw new Error('manifest '+res.status);
-    const data=await res.json();
-    mosaicItems=data.items||[];
-    if(!mosaicItems.length)throw new Error('manifest empty');
+    let items;
+    if(typeof HERO_GALLERY!=='undefined'&&HERO_GALLERY.length){
+      items=HERO_GALLERY;
+    }else{
+      const res=await fetch(mosaicUrl('data/hero-gallery/manifest.json'));
+      if(!res.ok)throw new Error('manifest '+res.status);
+      const data=await res.json();
+      items=data.items||[];
+    }
+    if(!items.length)throw new Error('manifest empty');
+    mosaicItems=items;
     mosaicItems.forEach(item=>{
       if(item.captured_date&&item.thumb&&!PA_GALLERY_THUMB[item.captured_date])
         PA_GALLERY_THUMB[item.captured_date]=item.thumb;
