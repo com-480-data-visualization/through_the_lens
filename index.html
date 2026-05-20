@@ -47,7 +47,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .nav-link:hover,.nav-link.on{color:var(--accent)}
 
 /* SECTIONS */
-section{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px 24px;position:relative}
+section{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:72px 12px;position:relative}
 
 /* HERO */
 #s-hero{background:transparent;text-align:center}
@@ -66,7 +66,7 @@ section{min-height:100vh;display:flex;flex-direction:column;justify-content:cent
 .drag-hint{animation:expHintPulse 2s ease-in-out infinite;pointer-events:none}
 
 /* VIZ CARD */
-.viz-card{background:var(--card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:min(1400px,calc(100vw - 48px));padding:28px 32px;box-shadow:0 1px 4px rgba(15,23,42,.06)}
+.viz-card{background:var(--card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:min(1600px,calc(100vw - 24px));padding:20px 28px;box-shadow:0 1px 4px rgba(15,23,42,.06)}
 .viz-card-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:500;color:var(--text);margin-bottom:4px}
 .viz-card-sub{font-size:13px;color:var(--muted);margin-bottom:22px}
 
@@ -158,7 +158,7 @@ canvas{display:block}
 .sk-pair-badge{position:absolute;bottom:4px;left:5px;font-size:8px;letter-spacing:.05em;text-transform:uppercase;background:rgba(15,23,42,.6);color:#fff;padding:2px 5px;border-radius:3px;line-height:1.3;pointer-events:none}
 .sk-pair-badge.after{background:rgba(139,92,246,.85)}
 
-@media(max-width:700px){section{padding:60px 16px}.ctrl-row{gap:8px}.hero-stats{gap:28px}}
+@media(max-width:700px){section{padding:72px 8px}.ctrl-row{gap:8px}.hero-stats{gap:28px}}
 </style>
 </head>
 <body>
@@ -735,7 +735,14 @@ let expHintUsed=false;
 let expZoomed=false;
 let expZoomRange=null;
 function cardInnerWidth(el){const cs=getComputedStyle(el.parentElement);return el.parentElement.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);}
-function resizeExp(){EXP_C.width=cardInnerWidth(EXP_C);redrawExposure()}
+// section padding 72*2=144 + card padding 20*2=40 = 184 fixed overhead; overhead = non-canvas UI height per viz
+function vizH(minH,overhead){return Math.max(minH,window.innerHeight-184-overhead);}
+function resizeExp(){
+  const h=vizH(400,250);
+  EXP_C.height=h;EXP_C.style.height=h+'px';
+  EXP_C.width=cardInnerWidth(EXP_C);
+  redrawExposure();
+}
 
 // ─── D3 SVG axes overlay + brush for Exposure Explorer ───────────────────────
 const expSVG=d3.select('#exp-svg');
@@ -1055,7 +1062,12 @@ GR_C.addEventListener('mousemove',e=>{
 });
 GR_C.addEventListener('mouseleave',hideTT);
 
-function resizeGear(){GR_C.width=cardInnerWidth(GR_C);drawGear()}
+function resizeGear(){
+  const h=vizH(340,140);
+  GR_C.height=h;GR_C.style.height=h+'px';
+  GR_C.width=cardInnerWidth(GR_C);
+  drawGear();
+}
 
 // ═══════════════════════════════════════════════
 // 3. LENS RACE — animated bar chart race
@@ -1187,21 +1199,26 @@ function lrInit(){
   lrSeek(0);
 }
 
-function resizeLens(){LR_C.width=cardInnerWidth(LR_C);if(lrInited)lrDrawFrame()}
+function resizeLens(){
+  const h=vizH(300,140);
+  LR_C.height=h;LR_C.style.height=h+'px';
+  LR_C.width=cardInnerWidth(LR_C);
+  if(lrInited)lrDrawFrame();
+}
 
 // ═══════════════════════════════════════════════
 // 4. WORKFLOW SANKEY (palette + D3 focus strip)
 // ═══════════════════════════════════════════════
 const SK_C=document.getElementById('sankey-canvas');
 const skCtx=SK_C.getContext('2d');
-const SK_CSS_H=360;
 function skLogicalW(){return Math.max(220,cardInnerWidth(SK_C));}
-let skCanvasCssW=-1,skCanvasDpr=-1;
+function skLogicalH(){return vizH(300,170);}
+let skCanvasCssW=-1,skCanvasCssH=-1,skCanvasDpr=-1;
 function skApplyCanvasSize(){
-  const cssW=skLogicalW(),cssH=SK_CSS_H;
+  const cssW=skLogicalW(),cssH=skLogicalH();
   const dpr=Math.min(window.devicePixelRatio||1,2.5);
-  if(cssW===skCanvasCssW&&dpr===skCanvasDpr)return;
-  skCanvasCssW=cssW;skCanvasDpr=dpr;
+  if(cssW===skCanvasCssW&&cssH===skCanvasCssH&&dpr===skCanvasDpr)return;
+  skCanvasCssW=cssW;skCanvasCssH=cssH;skCanvasDpr=dpr;
   SK_C.width=Math.max(1,Math.floor(cssW*dpr));
   SK_C.height=Math.max(1,Math.floor(cssH*dpr));
   SK_C.style.width=cssW+'px';
@@ -1865,7 +1882,7 @@ function paCSSW(){ return cardInnerWidth(PA_C); }
 // ════════════════════════════════════════════════
 function drawYears(animT=1){
   paHits=[];
-  const cssW=paCSSW(), cssH=380;
+  const cssW=paCSSW(), cssH=vizH(340,200);
   paSetSize(cssW,cssH);
   paCtx.clearRect(0,0,cssW,cssH);
   const PL=56,PR=16,PT=30,PB=50,PW=cssW-PL-PR,PH=cssH-PT-PB;
@@ -1920,7 +1937,7 @@ function drawYears(animT=1){
     if(!d.partial) paHits.push({
       type:'year', x:cx-barW/2, y:by, w:barW, h:PT+PH-by+20,
       year:d.year,
-      _a:{barCX:cx,barTop:by,barW,barH:bh,PL,PW,PT,PH,W:cssW,H:380}
+      _a:{barCX:cx,barTop:by,barW,barH:bh,PL,PW,PT,PH,W:cssW,H:cssH}
     });
   });
 
@@ -1963,12 +1980,13 @@ function animateYearToDetail(year, a){
   const cssW=a.W;
   const yearMx=Math.max(...YEAR_DATA.map(d=>d.count));
   const DUR=480; let s=null;
-  paSetSize(cssW,380);
+  const morphH=vizH(340,200);
+  paSetSize(cssW,morphH);
 
   function tick(ts){
     if(!s) s=ts;
     const t=Math.min((ts-s)/DUR,1);
-    paCtx.clearRect(0,0,cssW,380);
+    paCtx.clearRect(0,0,cssW,morphH);
     // year bars fade out (t 0 → 0.45)
     const outA=Math.max(0,1-ease(clamp(t/0.45,0,1)));
     if(outA>0){
