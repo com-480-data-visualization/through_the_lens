@@ -16,8 +16,8 @@
   --g5:#F59E0B; --g6:#F97316; --g7:#EF4444; --g8:#8B5CF6;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth;scroll-snap-type:y mandatory}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-weight:300;overflow-x:hidden;scroll-snap-type:y mandatory}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-weight:300;overflow-x:hidden}
 /* Site-wide photo mosaic (fixed + parallax) */
 #site-mosaic{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 #site-mosaic-scrim{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 42% 32% at 50% 40%,rgba(248,250,252,.42) 0%,rgba(248,250,252,.14) 50%,transparent 72%),linear-gradient(180deg,rgba(248,250,252,.04) 0%,rgba(248,250,252,.12) 50vh,rgba(248,250,252,.22) 100%)}
@@ -47,7 +47,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .nav-link:hover,.nav-link.on{color:var(--accent)}
 
 /* SECTIONS */
-section{min-height:100vh;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px 24px;position:relative}
+section{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px 24px;position:relative}
 
 /* HERO */
 #s-hero{background:transparent;text-align:center}
