@@ -66,35 +66,35 @@ section{min-height:100vh;display:flex;flex-direction:column;justify-content:cent
 .drag-hint{animation:expHintPulse 2s ease-in-out infinite;pointer-events:none}
 
 /* VIZ CARD */
-.viz-card{background:var(--card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:min(1600px,calc(100vw - 24px));padding:20px 28px;box-shadow:0 1px 4px rgba(15,23,42,.06)}
-.viz-card-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:500;color:var(--text);margin-bottom:4px}
-.viz-card-sub{font-size:14px;color:var(--muted);margin-bottom:22px}
+.viz-card{background:var(--card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:min(1600px,calc(100vw - 24px));padding:28px 36px;box-shadow:0 1px 4px rgba(15,23,42,.06)}
+.viz-card-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:500;color:var(--text);margin-bottom:10px}
+.viz-card-sub{font-size:15px;color:var(--muted);margin-bottom:28px;line-height:1.6}
 
 /* CONTROLS */
-.ctrl-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px}
-.ctrl-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-.ctrl-select{background:var(--card2);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 32px 8px 12px;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23475569' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border-color .2s}
+.ctrl-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:28px}
+.ctrl-label{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ctrl-select{background:var(--card2);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 36px 10px 14px;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23475569' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;transition:border-color .2s}
 .ctrl-select:focus{outline:none;border-color:var(--g1)}
-.ctrl-divider{width:1px;height:24px;background:var(--dim)}
-.toggle-group{display:flex;gap:6px}
-.tg-btn{padding:7px 16px;border-radius:20px;border:1.5px solid var(--dim);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.ctrl-divider{width:1px;height:28px;background:var(--dim)}
+.toggle-group{display:flex;gap:8px}
+.tg-btn{padding:9px 20px;border-radius:20px;border:1.5px solid var(--dim);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;white-space:nowrap}
 .tg-btn.on{border-color:var(--g1);color:var(--g1);background:rgba(37,99,235,.08)}
 .tg-btn:hover:not(.on){border-color:rgba(37,99,235,.3);color:var(--text)}
 
 /* PLAY CONTROLS */
-.play-row{display:flex;align-items:center;gap:14px;margin-bottom:16px}
-.play-btn{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:var(--card2);color:var(--g1);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s;flex-shrink:0}
+.play-row{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.play-btn{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border);background:var(--card2);color:var(--g1);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .2s;flex-shrink:0}
 .play-btn:hover{border-color:var(--g1);background:rgba(37,99,235,.08)}
-.time-label{font-family:'DM Sans',monospace;font-size:22px;font-weight:500;color:var(--text);min-width:90px}
-input[type=range]{flex:1;height:4px;-webkit-appearance:none;background:var(--dim);border-radius:2px;cursor:pointer}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--g1);cursor:pointer;border:2px solid var(--bg)}
+.time-label{font-family:'DM Sans',monospace;font-size:24px;font-weight:500;color:var(--text);min-width:100px}
+input[type=range]{flex:1;height:5px;-webkit-appearance:none;background:var(--dim);border-radius:3px;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--g1);cursor:pointer;border:2px solid var(--bg)}
 
 /* LEGEND */
-.legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px}
-.li{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;transition:color .2s}
+.legend{display:flex;gap:24px;flex-wrap:wrap;margin-top:20px}
+.li{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);cursor:pointer;transition:color .2s}
 .li:hover{color:var(--text)}
-.li-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-.li-line{width:20px;height:2.5px;border-radius:2px;flex-shrink:0}
+.li-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.li-line{width:24px;height:3px;border-radius:2px;flex-shrink:0}
 
 /* TOOLTIP */
 #tt{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 15px;font-size:12px;pointer-events:none;z-index:500;display:none;max-width:220px;box-shadow:0 4px 16px rgba(15,23,42,.1)}
@@ -278,7 +278,7 @@ canvas{display:block}
         <option value="focal_cat">Focal range</option>
       </select>
     </div>
-    <div id="exp-insight" style="margin-top:14px;padding:14px 18px;background:var(--card2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;display:flex;gap:16px;align-items:flex-start;margin-bottom:14px">
+    <div id="exp-insight" style="margin-top:0;padding:18px 24px;background:var(--card2);border-left:4px solid var(--accent);border-radius:0 10px 10px 0;display:flex;gap:18px;align-items:flex-start;margin-bottom:20px">
       <div style="font-size:18px;flex-shrink:0" id="exp-insight-icon">📷</div>
       <div>
         <div id="exp-insight-title" style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px"></div>
@@ -646,7 +646,7 @@ function computeExpTargets(){
   const xKey=document.getElementById('x-axis').value;
   const yKey=document.getElementById('y-axis').value;
   const W=EXP_C.width,H=EXP_C.height;
-  const PL=64,PR=20,PT=22,PB=50,PW=W-PL-PR,PH=H-PT-PB;
+  const PL=72,PR=20,PT=24,PB=56,PW=W-PL-PR,PH=H-PT-PB;
   const PAD=20;
   const r=expZoomRange;
   const xLo=r?r.xLo:0, xHi=r?r.xHi:1;
@@ -662,7 +662,7 @@ function computeExpTargets(){
 function drawExpFrame(){
   const W=EXP_C.width,H=EXP_C.height;
   expCtx.clearRect(0,0,W,H);
-  const PL=64,PR=20,PT=22,PB=50,PW=W-PL-PR,PH=H-PT-PB;
+  const PL=72,PR=20,PT=24,PB=56,PW=W-PL-PR,PH=H-PT-PB;
   const xKey=document.getElementById('x-axis').value;
   const yKey=document.getElementById('y-axis').value;
   const colKey=document.getElementById('color-by').value;
@@ -721,7 +721,7 @@ function drawExposure(){
   const yKey=document.getElementById('y-axis').value;
   updateInsightCard(xKey,yKey);updateExpAxesSVG();
   const W=EXP_C.width,H=EXP_C.height;
-  const PL=64,PR=20,PT=22,PB=50,PW=W-PL-PR,PH=H-PT-PB;
+  const PL=72,PR=20,PT=24,PB=56,PW=W-PL-PR,PH=H-PT-PB;
   const r2=rng(77);
   expSprings.forEach(s=>{s.cx=PL+r2()*PW;s.cy=PT+r2()*PH;s.vx=0;s.vy=0});
   computeExpTargets();
@@ -735,10 +735,10 @@ let expHintUsed=false;
 let expZoomed=false;
 let expZoomRange=null;
 function cardInnerWidth(el){const cs=getComputedStyle(el.parentElement);return el.parentElement.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);}
-// section padding 72*2=144 + card padding 20*2=40 = 184 fixed overhead; overhead = non-canvas UI height per viz
-function vizH(minH,overhead){return Math.max(minH,window.innerHeight-184-overhead);}
+// cap canvas at 46% viewport so surrounding text is not dwarfed
+function vizH(minH){return Math.max(minH,Math.min(Math.round(window.innerHeight*0.46),520));}
 function resizeExp(){
-  const h=vizH(400,250);
+  const h=vizH(380);
   EXP_C.height=h;EXP_C.style.height=h+'px';
   EXP_C.width=cardInnerWidth(EXP_C);
   redrawExposure();
@@ -811,7 +811,7 @@ function updateExpAxesSVG(){
   const xKey=document.getElementById('x-axis').value;
   const yKey=document.getElementById('y-axis').value;
   const W=EXP_C.width,H=EXP_C.height;
-  const PL=64,PR=20,PT=22,PB=50,PW=W-PL-PR,PH=H-PT-PB;
+  const PL=72,PR=20,PT=24,PB=56,PW=W-PL-PR,PH=H-PT-PB;
   const PAD=20;
 
   expSVG.attr('width',W).attr('height',H)
@@ -990,12 +990,12 @@ CAMERAS.forEach(c=>{camMax[c]=Math.max(...cumGear[c],1)});
 
 function drawGear(){
   const W=GR_C.width,H=GR_C.height;grCtx.clearRect(0,0,W,H);
-  const PL=150,PR=16,PT=32,PB=16,PW=W-PL-PR,PH=H-PT-PB;
+  const PL=172,PR=16,PT=32,PB=16,PW=W-PL-PR,PH=H-PT-PB;
   const active=[...activeCams];
   const nM=MONTH_LABELS.length;
   const cellW=PW/nM;
   const rowGap=6;
-  const rowH=Math.min(Math.floor((PH-rowGap*(active.length-1))/active.length),42);
+  const rowH=Math.min(Math.floor((PH-rowGap*(active.length-1))/active.length),48);
 
   // Year markers
   MONTH_LABELS.forEach((lbl,i)=>{
@@ -1064,7 +1064,7 @@ GR_C.addEventListener('mouseleave',hideTT);
 
 function resizeGear(){
   const n=[...activeCams].length;
-  const h=32+16+n*42+Math.max(0,n-1)*6; // PT+PB + n rows at max rowH + gaps
+  const h=32+20+n*48+Math.max(0,n-1)*8; // PT+PB + n rows at max rowH + gaps
   GR_C.height=h;GR_C.style.height=h+'px';
   GR_C.width=cardInnerWidth(GR_C);
   drawGear();
@@ -1105,8 +1105,8 @@ function lrDrawFrame(){
   lrCtx.clearRect(0,0,W,H);
 
   const nL=LENSES.length;
-  const PL=130,PR=16,PT=20,PB=20,PW=W-PL-PR,PH=H-PT-PB;
-  const rowH=Math.min(Math.floor((PH-8*(nL-1))/nL),56);
+  const PL=155,PR=16,PT=20,PB=20,PW=W-PL-PR,PH=H-PT-PB;
+  const rowH=Math.min(Math.floor((PH-10*(nL-1))/nL),62);
   const rowGap=8;
 
   // Sort by current cumulative count descending (creates the race)
@@ -1202,7 +1202,7 @@ function lrInit(){
 
 function resizeLens(){
   const nL=LENSES.length;
-  const h=20+20+nL*56+Math.max(0,nL-1)*8; // PT+PB + n bars at max rowH + gaps
+  const h=20+20+nL*62+Math.max(0,nL-1)*10; // PT+PB + n bars at max rowH + gaps
   LR_C.height=h;LR_C.style.height=h+'px';
   LR_C.width=cardInnerWidth(LR_C);
   if(lrInited)lrDrawFrame();
@@ -1884,7 +1884,7 @@ function paCSSW(){ return cardInnerWidth(PA_C); }
 // ════════════════════════════════════════════════
 function drawYears(animT=1){
   paHits=[];
-  const cssW=paCSSW(), cssH=vizH(340,200);
+  const cssW=paCSSW(), cssH=vizH(340);
   paSetSize(cssW,cssH);
   paCtx.clearRect(0,0,cssW,cssH);
   const PL=56,PR=16,PT=30,PB=50,PW=cssW-PL-PR,PH=cssH-PT-PB;
@@ -1982,7 +1982,7 @@ function animateYearToDetail(year, a){
   const cssW=a.W;
   const yearMx=Math.max(...YEAR_DATA.map(d=>d.count));
   const DUR=480; let s=null;
-  const morphH=vizH(340,200);
+  const morphH=vizH(340);
   paSetSize(cssW,morphH);
 
   function tick(ts){
