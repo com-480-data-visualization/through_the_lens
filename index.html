@@ -232,6 +232,8 @@ canvas{display:block}
     <canvas id="pa-canvas" height="380"></canvas>
     <!-- D3 sessions timeline (shown in heatmap view) -->
     <div id="pa-sessions-timeline" style="display:none;margin-top:18px;overflow:visible"></div>
+    <!-- Pinned session card -->
+    <div id="pa-session-card" style="display:none;margin-top:16px;padding:18px 24px;background:var(--card2);border:1.5px solid var(--g1);border-radius:10px;position:relative"></div>
     <!-- Day detail panel -->
     <div id="pa-panel" style="display:none;margin-top:18px;padding:18px 24px;background:var(--card2);border:1px solid var(--border);border-radius:10px;max-width:500px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -1850,7 +1852,7 @@ function paThumbTooltipHtml(isoDate){
 
 // ── state ────────────────────────────────────────
 // paView: 'years' | 'months' | 'heatmap' | 'morphing'
-let paView='years', paYear=null, paHits=[], paAnimAF=null, paHighlightSession=null;
+let paView='years', paYear=null, paHits=[], paAnimAF=null, paHighlightSession=null, paPinnedSession=null;
 function paRedrawCanvas(){
   if(paView!=='detail'||!paYear)return;
   const cssW=paCSSW(),cssH=PA_C.height/((window.devicePixelRatio||1));
@@ -1944,8 +1946,9 @@ function drawYears(animT=1){
 
 function paEnterYears(){
   hideTT();
-  paView='years'; paYear=null; paHits=[];
+  paView='years'; paYear=null; paHits=[]; paPinnedSession=null; paHighlightSession=null;
   document.getElementById('pa-panel').style.display='none';
+  document.getElementById('pa-session-card').style.display='none';
   document.getElementById('pa-sessions-timeline').style.display='none';
   document.getElementById('pa-story').style.display='flex';
   if(PA_GLOBAL_STATS) paSetStoryCards(PA_GLOBAL_STATS);
@@ -2283,9 +2286,10 @@ function drawSessionsTimeline(year){
     .transition().delay((_,i)=>i*40+350).duration(200)
     .attr('opacity',1);
 
-  // hover interaction
+  // hover + click interaction
   rowG.style('cursor','pointer')
     .on('mouseover',function(event,d){
+      if(paPinnedSession&&paPinnedSession!==d.name) return; // keep pin visible
       d3.select(this).select('rect:nth-child(3)').attr('opacity',0.8);
       const dayLabel=d.days===1?'1 shooting day':`${d.days} shooting days`;
       showTT(event,d.name,`${d.count.toLocaleString()} photos total<br><span style="color:var(--muted)">${dayLabel}</span>`);
@@ -2295,12 +2299,53 @@ function drawSessionsTimeline(year){
     })
     .on('mousemove',moveTT)
     .on('mouseleave',function(){
-      d3.select(this).select('rect:nth-child(3)').attr('opacity',1);
+      d3.select(this).select('rect:nth-child(3)').attr('opacity',paPinnedSession===d3.select(this).datum().name?0.8:1);
       hideTT();
-      paHighlightSession=null;
-      svg.selectAll('g.sr').style('opacity',1);
+      // restore to pinned state, not blank
+      paHighlightSession=paPinnedSession;
+      svg.selectAll('g.sr').style('opacity',function(s){return !paPinnedSession||s.name===paPinnedSession?1:0.3;});
+      paRedrawCanvas();
+    })
+    .on('click',function(event,d){
+      hideTT();
+      if(paPinnedSession===d.name){
+        paPinnedSession=null; paHighlightSession=null;
+        svg.selectAll('g.sr').style('opacity',1);
+        d3.select(this).select('rect:nth-child(3)').attr('opacity',1);
+        document.getElementById('pa-session-card').style.display='none';
+      } else {
+        paPinnedSession=d.name; paHighlightSession=d.name;
+        svg.selectAll('g.sr').style('opacity',function(s){return s.name===d.name?1:0.3;});
+        paShowSessionCard(d.name);
+      }
       paRedrawCanvas();
     });
+}
+
+function paShowSessionCard(name){
+  const card=document.getElementById('pa-session-card');
+  if(!name){card.style.display='none';return;}
+  // gather all dates for this session in the current year
+  const dates=Object.entries(ALBUM_MAP)
+    .filter(([dt,n])=>n===name&&dt.startsWith(String(paYear)))
+    .map(([dt])=>dt).sort();
+  if(!dates.length){card.style.display='none';return;}
+  const first=dates[0], last=dates[dates.length-1];
+  const fmt=s=>{const d=new Date(s+'T12:00:00');return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});};
+  const range=first===last?fmt(first):`${fmt(first)} – ${fmt(last)}`;
+  const peakDate=dates.reduce((best,dt)=>(dailyMap[dt]||0)>(dailyMap[best]||0)?dt:best,dates[0]);
+  const peakCount=dailyMap[peakDate]||0;
+  const totalPhotos=dates.reduce((s,dt)=>s+(dailyMap[dt]||0),0);
+  card.style.display='block';
+  card.innerHTML=`
+    <button onclick="paPinnedSession=null;paHighlightSession=null;paRedrawCanvas();document.getElementById('pa-session-card').style.display='none';document.querySelectorAll('#pa-sessions-timeline g.sr').forEach(g=>g.style.opacity='1');" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1">×</button>
+    <div style="font-size:17px;font-weight:600;color:var(--g1);margin-bottom:14px">${name}</div>
+    <div style="display:flex;gap:32px;flex-wrap:wrap">
+      <div><div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Dates</div><div style="font-size:16px;font-weight:500;color:var(--text)">${range}</div></div>
+      <div><div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Photos</div><div style="font-size:16px;font-weight:500;color:var(--text)">${totalPhotos.toLocaleString()}</div></div>
+      <div><div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Shooting days</div><div style="font-size:16px;font-weight:500;color:var(--text)">${dates.length}</div></div>
+      <div><div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Peak day</div><div style="font-size:16px;font-weight:500;color:var(--text)">${fmt(peakDate)} <span style="color:var(--accent)">${peakCount.toLocaleString()} photos</span></div></div>
+    </div>`;
 }
 
 // ════════════════════════════════════════════════
