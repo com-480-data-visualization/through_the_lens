@@ -22,6 +22,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 #site-mosaic{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 #site-mosaic-scrim{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 42% 32% at 50% 40%,rgba(248,250,252,.42) 0%,rgba(248,250,252,.14) 50%,transparent 72%),linear-gradient(180deg,rgba(248,250,252,.04) 0%,rgba(248,250,252,.12) 50vh,rgba(248,250,252,.22) 100%)}
 #site-content{position:relative;z-index:2}
+#photo-reveal-layer{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.reveal-photo{position:fixed;display:block;overflow:hidden;border-radius:8px;box-shadow:0 var(--reveal-shadow-y,10px) var(--reveal-shadow-blur,34px) rgba(15,23,42,var(--reveal-shadow-a,.18));opacity:0;transform:translate(-50%,-50%) rotate(var(--reveal-rot,0deg)) scale(var(--reveal-start,.72));transition:opacity var(--reveal-in,.24s) ease,transform var(--reveal-move,.65s) cubic-bezier(.16,1,.3,1),filter var(--reveal-move,.65s) ease;will-change:opacity,transform,filter;filter:saturate(var(--reveal-sat,1.04)) blur(var(--reveal-blur,0px))}
+.reveal-photo.show{opacity:var(--reveal-opacity,.92);transform:translate(-50%,-50%) rotate(var(--reveal-rot,0deg)) scale(1);filter:saturate(var(--reveal-sat,1.04)) blur(var(--reveal-blur,0px))}
+.reveal-photo.fade{opacity:0;transform:translate(-50%,-50%) rotate(var(--reveal-rot,0deg)) scale(var(--reveal-end,1.08));filter:saturate(var(--reveal-sat,1.04)) blur(calc(var(--reveal-blur,0px) + var(--reveal-fade-blur,1px)))}
+.reveal-photo img{width:100%;height:100%;object-fit:cover;display:block}
 .mosaic-layer{position:absolute;left:0;right:0;top:0;width:100%}
 #mosaic-tiles{opacity:.88;filter:saturate(.98)}
 .mosaic-cell{position:absolute;overflow:hidden;border-radius:6px;box-shadow:0 4px 22px rgba(15,23,42,.12);will-change:transform;transform:rotate(var(--tile-rot,0deg)) translate3d(0,0,0)}
@@ -31,6 +36,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 #tt{z-index:500}
 @media (prefers-reduced-motion:reduce){
   .mosaic-cell{transform:rotate(var(--tile-rot,0deg))!important;will-change:auto}
+  .reveal-photo{transition:none;will-change:auto}
 }
 
 /* NAV DOTS */
@@ -166,6 +172,7 @@ canvas{display:block}
   <div class="mosaic-layer" id="mosaic-tiles"></div>
 </div>
 <div id="site-mosaic-scrim" aria-hidden="true"></div>
+<div id="photo-reveal-layer" aria-hidden="true"></div>
 <div id="site-content">
 <div id="tt"><div id="tt-head"></div><div id="tt-body"></div></div>
 <div id="sk-lightbox"><button id="sk-lb-close" aria-label="Close">&#x2715;</button><button id="sk-lb-prev" aria-label="Previous">&#x2039;</button><div id="sk-lb-wrap"><img id="sk-lb-img" src="" alt=""><div id="sk-lb-culled-cross">&#x2715;</div></div><button id="sk-lb-next" aria-label="Next">&#x203A;</button><div id="sk-lb-counter"></div></div>
@@ -319,9 +326,11 @@ canvas{display:block}
       <button class="play-btn" id="lr-play-btn" onclick="lrTogglePlay()">▶</button>
       <span class="time-label" id="lr-time-label">Feb 2022</span>
       <input type="range" id="lr-slider" min="0" value="0" oninput="lrSeek(+this.value)">
+      <span style="font-size:14px;color:var(--muted);margin-left:8px">Speed</span>
+      <input type="range" id="lr-speed" min="0.4" max="2" step="0.1" value="1" oninput="lrSetSpeed(+this.value)" style="width:110px;flex:0 0 110px">
+      <span class="time-label" id="lr-speed-label" style="min-width:34px">1×</span>
     </div>
     <canvas id="lens-canvas" height="360"></canvas>
-    <div class="legend" id="lens-legend"></div>
   </div>
 </section>
 
@@ -473,6 +482,60 @@ function onMosaicScroll(){
   requestAnimationFrame(updateMosaicParallax);
 }
 
+let revealLastT=0,revealLastX=-999,revealLastY=-999,revealIdx=0;
+function shouldRevealPhoto(e){
+  if(MOSAIC_REDUCE_MOTION||!mosaicItems||!mosaicItems.length)return false;
+  if(e.target.closest('.viz-card,#topnav,#nav-dots,#tt,#sk-lightbox'))return false;
+  return true;
+}
+function spawnRevealPhoto(x,y){
+  const layer=document.getElementById('photo-reveal-layer');
+  if(!layer)return;
+  const pool=mosaicItems.filter(item=>item.thumb);
+  if(!pool.length)return;
+  const item=pool[revealIdx++%pool.length];
+  const r=Math.random();
+  const size=Math.round(58+Math.pow(r,1.8)*170);
+  const ratio=0.58+Math.random()*0.28;
+  const rot=(Math.random()*18-9).toFixed(1)+'deg';
+  const blur=(Math.random()<0.34?0.4+Math.random()*1.8:Math.random()*0.25).toFixed(2)+'px';
+  const opacity=(0.38+Math.random()*0.52).toFixed(2);
+  const life=Math.round(520+Math.random()*780);
+  const cell=document.createElement('span');
+  cell.className='reveal-photo';
+  cell.style.left=x+'px';cell.style.top=y+'px';
+  cell.style.width=size+'px';cell.style.height=Math.round(size*ratio)+'px';
+  cell.style.setProperty('--reveal-rot',rot);
+  cell.style.setProperty('--reveal-opacity',opacity);
+  cell.style.setProperty('--reveal-blur',blur);
+  cell.style.setProperty('--reveal-fade-blur',(0.4+Math.random()*1.6).toFixed(2)+'px');
+  cell.style.setProperty('--reveal-sat',(0.78+Math.random()*0.42).toFixed(2));
+  cell.style.setProperty('--reveal-start',(0.58+Math.random()*0.2).toFixed(2));
+  cell.style.setProperty('--reveal-end',(1.02+Math.random()*0.16).toFixed(2));
+  cell.style.setProperty('--reveal-in',(0.16+Math.random()*0.18).toFixed(2)+'s');
+  cell.style.setProperty('--reveal-move',(0.45+Math.random()*0.42).toFixed(2)+'s');
+  cell.style.setProperty('--reveal-shadow-y',Math.round(5+Math.random()*14)+'px');
+  cell.style.setProperty('--reveal-shadow-blur',Math.round(18+Math.random()*34)+'px');
+  cell.style.setProperty('--reveal-shadow-a',(0.09+Math.random()*0.14).toFixed(2));
+  const img=document.createElement('img');
+  img.src=mosaicUrl(item.thumb);img.alt='';img.loading='lazy';img.decoding='async';
+  cell.appendChild(img);
+  layer.appendChild(cell);
+  requestAnimationFrame(()=>cell.classList.add('show'));
+  setTimeout(()=>cell.classList.add('fade'),life);
+  setTimeout(()=>cell.remove(),life+650);
+}
+function initWhitespacePhotoReveal(){
+  window.addEventListener('mousemove',e=>{
+    if(!shouldRevealPhoto(e))return;
+    const now=performance.now();
+    if(now-revealLastT<70)return;
+    if(Math.hypot(e.clientX-revealLastX,e.clientY-revealLastY)<34)return;
+    revealLastT=now;revealLastX=e.clientX;revealLastY=e.clientY;
+    spawnRevealPhoto(e.clientX,e.clientY);
+  },{passive:true});
+}
+
 async function initSiteMosaic(){
   const host=document.getElementById('mosaic-tiles');
   if(!host)return;
@@ -494,6 +557,7 @@ async function initSiteMosaic(){
     });
     mosaicSeed=(Date.now()&0xffffffff)>>>0;
     rebuildMosaicLayers();
+    initWhitespacePhotoReveal();
     document.body.dataset.mosaic='ready';
     window.addEventListener('scroll',onMosaicScroll,{passive:true});
     let mosaicResizeT;
@@ -551,9 +615,9 @@ const io=new IntersectionObserver(entries=>{entries.forEach(e=>{
   const id=e.target.id;
   if(id==='s-hero'){animCount('c1',HERO_STATS.photos);animCount('c2',HERO_STATS.days);animCount('c3',HERO_STATS.lenses)}
   if(id==='s-exposure'){resizeExp();drawExposure()}
-  if(id==='s-gear'){resizeGear()}
-  if(id==='s-lens'){resizeLens();lrInit()}
-  if(id==='s-sankey'){resizeSankey();sankeyStart()}
+  if(id==='s-gear'){gearEnter()}
+  if(id==='s-lens'){lrEnter()}
+  if(id==='s-sankey'){resizeSankey();sankeyStart(true)}
   if(id==='s-activity'){paEnterYears()}
   io.unobserve(e.target);
 })},{threshold:.25});
@@ -615,7 +679,15 @@ const EXP_RAW=EXP_DATA.map(d=>({
 }));
 
 const expSpeedRnd=rng(88);
-const expSprings=EXP_RAW.map(()=>({cx:0,cy:0,vx:0,vy:0,tx:0,ty:0,stiff:0.018+expSpeedRnd()*0.055,damp:0.78+expSpeedRnd()*0.14}));
+const EXP_SPRING_STIFF_MIN=0.006;
+const EXP_SPRING_STIFF_SPAN=0.018;
+const EXP_SPRING_DAMP_MIN=0.76;
+const EXP_SPRING_DAMP_SPAN=0.08;
+const expSprings=EXP_RAW.map(()=>({
+  cx:0,cy:0,vx:0,vy:0,tx:0,ty:0,
+  stiff:EXP_SPRING_STIFF_MIN+expSpeedRnd()*EXP_SPRING_STIFF_SPAN,
+  damp:EXP_SPRING_DAMP_MIN+expSpeedRnd()*EXP_SPRING_DAMP_SPAN
+}));
 let expAnimAF=null;
 
 const EXP_INSIGHTS={
@@ -789,7 +861,6 @@ function updateExpStats(){
     <span style="color:var(--muted);font-size:17px">f/<strong style="color:var(--text)">${mAp.toFixed(1)}</strong></span>
     <span style="color:var(--muted);font-size:17px">shutter <strong style="color:var(--text)">${sstr}</strong></span>
     <span style="color:var(--muted);font-size:17px">focal <strong style="color:var(--text)">${mFo}mm</strong></span>
-    <button onclick="expClearBrush()" style="margin-left:auto;font-size:15px;color:var(--muted);background:none;border:1px solid var(--dim);cursor:pointer;padding:6px 14px;border-radius:4px;font-family:inherit">× clear</button>
   </div>
   <div style="font-size:15px;color:var(--muted);margin-top:10px">${camStr} &nbsp;&nbsp; ${yrStr}</div>`;
 }
@@ -886,62 +957,59 @@ function updateExpAxesSVG(){
     }
   }
 
-  if(!expZoomed){
-    // Drag-to-select hint (until first use)
-    if(!expHintUsed){
-      const hw=160,hh=30,hx=PL+PW/2-hw/2,hy=PT+PH-hh-16;
-      const hintG=g.append('g').attr('class','drag-hint');
-      hintG.append('rect').attr('x',hx).attr('y',hy).attr('width',hw).attr('height',hh).attr('rx',7)
-        .attr('fill','rgba(255,255,255,0.95)').attr('stroke',P.accent).attr('stroke-width',1.5).attr('stroke-dasharray','4,2');
-      hintG.append('rect').attr('x',hx+10).attr('y',hy+8).attr('width',13).attr('height',13).attr('rx',2)
-        .attr('fill','rgba(249,115,22,0.12)').attr('stroke',P.accent).attr('stroke-width',1.2).attr('stroke-dasharray','2,2');
-      hintG.append('text').attr('x',hx+28).attr('y',hy+19)
-        .attr('font-family','Inter,sans-serif').attr('font-size',13).attr('font-weight','500').attr('fill',P.accent)
-        .text('Drag to select photos');
-    }
-
-    // D3 brush — added last so it sits on top
-    expD3Brush=d3.brush()
-      .extent([[PL,PT],[PL+PW,PT+PH]])
-      .on('start',()=>{hideTT();expHintUsed=true;expSVG.select('.drag-hint').style('display','none');})
-      .on('brush',({selection})=>{
-        if(!selection)return;
-        const [[x0,y0],[x1,y1]]=selection;
-        expBrushSel=new Set();
-        EXP_RAW.forEach((_,i)=>{const s=expSprings[i];if(s.cx>=x0&&s.cx<=x1&&s.cy>=y0&&s.cy<=y1)expBrushSel.add(i);});
-        if(expBrushSel.size===0)expBrushSel=null;
-        drawExpFrame();updateExpStats();
-      })
-      .on('end',({selection})=>{
-        if(expZoomed)return; // ignore synthetic end fired by move(null) during zoom
-        if(!selection){expBrushSel=null;drawExpFrame();updateExpStats();return;}
-        if(expBrushSel&&expBrushSel.size>0){
-          // Compute bounding box of selected points in normalized space
-          const sel=EXP_RAW.filter((_,i)=>expBrushSel.has(i));
-          const xNorms=sel.map(d=>clamp(AXES[xKey].xform(d[xKey]),0,1));
-          const yNorms=sel.map(d=>clamp(AXES[yKey].xform(d[yKey]),0,1));
-          const xLo=Math.min(...xNorms), xHi=Math.max(...xNorms);
-          const yLo=Math.min(...yNorms), yHi=Math.max(...yNorms);
-          const xPad=Math.max((xHi-xLo)*0.22,0.04), yPad=Math.max((yHi-yLo)*0.22,0.04);
-          expZoomRange={
-            xLo:Math.max(0,xLo-xPad), xHi:Math.min(1,xHi+xPad),
-            yLo:Math.max(0,yLo-yPad), yHi:Math.min(1,yHi+yPad)
-          };
-          expZoomed=true; // set before move(null) so the guard above catches the re-entrant end
-          computeExpTargets();updateExpAxesSVG(); // SVG rebuild removes brush group
-          if(expAnimAF)cancelAnimationFrame(expAnimAF);
-          expAnimAF=requestAnimationFrame(runExpSprings);
-          updateExpStats();
-        }
-      });
-    const brushG=g.append('g').attr('class','exp-brush').call(expD3Brush);
-    brushG.select('.selection')
-      .attr('fill','rgba(249,115,22,0.06)')
-      .attr('stroke',P.accent).attr('stroke-width',1.5).attr('stroke-dasharray','4,2');
-    brushG.select('.overlay').attr('cursor','crosshair');
-  } else {
-    expD3Brush=null;
+  // Drag-to-select hint (until first use)
+  if(!expZoomed&&!expHintUsed){
+    const hw=160,hh=30,hx=PL+PW/2-hw/2,hy=PT+PH-hh-16;
+    const hintG=g.append('g').attr('class','drag-hint');
+    hintG.append('rect').attr('x',hx).attr('y',hy).attr('width',hw).attr('height',hh).attr('rx',7)
+      .attr('fill','rgba(255,255,255,0.95)').attr('stroke',P.accent).attr('stroke-width',1.5).attr('stroke-dasharray','4,2');
+    hintG.append('rect').attr('x',hx+10).attr('y',hy+8).attr('width',13).attr('height',13).attr('rx',2)
+      .attr('fill','rgba(249,115,22,0.12)').attr('stroke',P.accent).attr('stroke-width',1.2).attr('stroke-dasharray','2,2');
+    hintG.append('text').attr('x',hx+28).attr('y',hy+19)
+      .attr('font-family','Inter,sans-serif').attr('font-size',13).attr('font-weight','500').attr('fill',P.accent)
+      .text('Drag to select photos');
   }
+
+  // D3 brush — added last so it sits on top. In zoomed mode it selects only;
+  // in the overview it selects and then zooms into that selection.
+  expD3Brush=d3.brush()
+    .extent([[PL,PT],[PL+PW,PT+PH]])
+    .on('start',()=>{hideTT();expHintUsed=true;expSVG.select('.drag-hint').style('display','none');})
+    .on('brush',({selection})=>{
+      if(!selection)return;
+      const [[x0,y0],[x1,y1]]=selection;
+      expBrushSel=new Set();
+      EXP_RAW.forEach((_,i)=>{const s=expSprings[i];if(s.cx>=x0&&s.cx<=x1&&s.cy>=y0&&s.cy<=y1)expBrushSel.add(i);});
+      if(expBrushSel.size===0)expBrushSel=null;
+      drawExpFrame();updateExpStats();
+    })
+    .on('end',({selection})=>{
+      if(!selection){expBrushSel=null;drawExpFrame();updateExpStats();return;}
+      if(expZoomed){drawExpFrame();updateExpStats();return;}
+      if(expBrushSel&&expBrushSel.size>0){
+        // Compute bounding box of selected points in normalized space
+        const sel=EXP_RAW.filter((_,i)=>expBrushSel.has(i));
+        const xNorms=sel.map(d=>clamp(AXES[xKey].xform(d[xKey]),0,1));
+        const yNorms=sel.map(d=>clamp(AXES[yKey].xform(d[yKey]),0,1));
+        const xLo=Math.min(...xNorms), xHi=Math.max(...xNorms);
+        const yLo=Math.min(...yNorms), yHi=Math.max(...yNorms);
+        const xPad=Math.max((xHi-xLo)*0.22,0.04), yPad=Math.max((yHi-yLo)*0.22,0.04);
+        expZoomRange={
+          xLo:Math.max(0,xLo-xPad), xHi:Math.min(1,xHi+xPad),
+          yLo:Math.max(0,yLo-yPad), yHi:Math.min(1,yHi+yPad)
+        };
+        expZoomed=true;
+        computeExpTargets();updateExpAxesSVG();
+        if(expAnimAF)cancelAnimationFrame(expAnimAF);
+        expAnimAF=requestAnimationFrame(runExpSprings);
+        updateExpStats();
+      }
+    });
+  const brushG=g.append('g').attr('class','exp-brush').call(expD3Brush);
+  brushG.select('.selection')
+    .attr('fill','rgba(249,115,22,0.06)')
+    .attr('stroke',P.accent).attr('stroke-width',1.5).attr('stroke-dasharray','4,2');
+  brushG.select('.overlay').attr('cursor','crosshair');
 }
 
 // ═══════════════════════════════════════════════
@@ -954,6 +1022,7 @@ const grCtx=GR_C.getContext('2d');
 const cumGear=GEAR_MONTHLY;
 
 let activeCams=new Set(CAMERAS);
+let gearRevealT=1, gearAnimAF=null;
 const MONTH_LABELS=GEAR_MONTH_LABELS;
 const camMax={};
 CAMERAS.forEach(c=>{camMax[c]=Math.max(...cumGear[c],1)});
@@ -973,6 +1042,7 @@ CAMERAS.forEach(c=>{camMax[c]=Math.max(...cumGear[c],1)});
       btn.style.background=activeCams.has(c)?CAM_COLS[c]+'18':'transparent';
       btn.style.borderColor=activeCams.has(c)?CAM_COLS[c]:P.dim;
       btn.style.color=activeCams.has(c)?CAM_COLS[c]:P.muted;
+      gearRevealT=1;
       drawGear();
     };
     cont.appendChild(btn);
@@ -988,15 +1058,19 @@ function drawGear(){
   const rowGap=6;
   const rowH=Math.min(Math.floor((PH-rowGap*(active.length-1))/active.length),48);
 
+  const revealMonths=gearRevealT*nM;
+
   // Year markers
   MONTH_LABELS.forEach((lbl,i)=>{
-    if(!lbl.startsWith('Jan'))return;
+    if(!lbl.startsWith('Jan')||i>revealMonths)return;
     const x=PL+i*cellW;
+    grCtx.globalAlpha=clamp((revealMonths-i)/2,0,1);
     grCtx.strokeStyle=P.dim;grCtx.lineWidth=0.8;grCtx.setLineDash([3,4]);
     grCtx.beginPath();grCtx.moveTo(x,PT-14);grCtx.lineTo(x,PT+active.length*(rowH+rowGap)-rowGap);grCtx.stroke();
     grCtx.setLineDash([]);
     grCtx.fillStyle=P.muted;grCtx.font='14px Inter';grCtx.textAlign='left';
     grCtx.fillText(lbl.split(' ')[1],x+3,PT-4);
+    grCtx.globalAlpha=1;
   });
 
   active.forEach((cam,row)=>{
@@ -1018,8 +1092,10 @@ function drawGear(){
     grCtx.beginPath();grCtx.roundRect(PL,y,PW,rowH,4);grCtx.clip();
     cumGear[cam].forEach((shots,mi)=>{
       if(shots===0)return;
+      if(mi>revealMonths) return;
       const cx=PL+mi*cellW;
-      const cw=Math.min(cellW-0.5, PL+PW-cx);
+      const revealFrac=clamp(revealMonths-mi,0,1);
+      const cw=Math.min((cellW-0.5)*revealFrac, PL+PW-cx);
       if(cw<=0)return;
       const alpha=0.2+0.8*Math.sqrt(shots/mx);
       grCtx.fillStyle=col;grCtx.globalAlpha=alpha;
@@ -1061,6 +1137,20 @@ function resizeGear(){
   drawGear();
 }
 
+function gearEnter(){
+  if(gearAnimAF)cancelAnimationFrame(gearAnimAF);
+  gearRevealT=0;
+  resizeGear();
+  const start=performance.now(), dur=1700;
+  const tick=ts=>{
+    gearRevealT=ease(clamp((ts-start)/dur,0,1));
+    drawGear();
+    if(gearRevealT<1)gearAnimAF=requestAnimationFrame(tick);
+    else {gearRevealT=1;gearAnimAF=null;drawGear();}
+  };
+  gearAnimAF=requestAnimationFrame(tick);
+}
+
 // ═══════════════════════════════════════════════
 // 3. LENS RACE — animated bar chart race
 // ═══════════════════════════════════════════════
@@ -1085,6 +1175,9 @@ let lrFrameF=0; // float frame index for smooth animation
 let lrPlaying=false;
 let lrAF=null;
 let lrInited=false;
+let lrLastTs=null;
+let lrSpeed=1;
+const LR_BASE_MONTHS_PER_SEC=3.6;
 
 function lrMaxAt(fi){
   const fi0=Math.floor(fi);
@@ -1156,9 +1249,15 @@ function lrTickValues(){
 }
 
 function lrStep(ts){
-  if(!lrPlaying){lrAF=null;return}
-  lrFrameF+=0.06; // ~0.06 months per frame at ~60fps → ~1 month per second
-  if(lrFrameF>=nLensMonths-1){lrFrameF=nLensMonths-1;lrPlaying=false;document.getElementById('lr-play-btn').textContent='▶'}
+  if(!lrPlaying){lrAF=null;lrLastTs=null;return}
+  if(lrLastTs===null)lrLastTs=ts;
+  const dt=Math.min((ts-lrLastTs)/1000,0.08);
+  lrLastTs=ts;
+  lrFrameF+=LR_BASE_MONTHS_PER_SEC*lrSpeed*dt;
+  if(lrFrameF>=nLensMonths-1){
+    lrFrameF=nLensMonths-1;lrPlaying=false;lrLastTs=null;
+    document.getElementById('lr-play-btn').textContent='▶';
+  }
   lrTickValues();
   lrDrawFrame();
   document.getElementById('lr-slider').value=Math.round(lrFrameF);
@@ -1169,26 +1268,44 @@ function lrStep(ts){
 function lrTogglePlay(){
   lrPlaying=!lrPlaying;
   document.getElementById('lr-play-btn').textContent=lrPlaying?'⏸':'▶';
+  lrLastTs=null;
   if(lrPlaying){
     if(lrFrameF>=nLensMonths-1)lrFrameF=0;
+    if(lrAF)cancelAnimationFrame(lrAF);
     lrAF=requestAnimationFrame(lrStep);
   }
 }
 
 function lrSeek(fi){
   lrPlaying=false;document.getElementById('lr-play-btn').textContent='▶';
+  lrLastTs=null;
   if(lrAF){cancelAnimationFrame(lrAF);lrAF=null}
   lrFrameF=fi;
   lrTickValues();lrDrawFrame();
   document.getElementById('lr-time-label').textContent=LENS_MONTH_LABELS[clamp(fi,0,nLensMonths-1)];
 }
 
+function lrSetSpeed(v){
+  lrSpeed=clamp(v,0.4,2);
+  const label=document.getElementById('lr-speed-label');
+  if(label)label.textContent=lrSpeed.toFixed(lrSpeed%1?2:0).replace(/0$/,'')+'×';
+}
+
 function lrInit(){
   if(lrInited)return;lrInited=true;
-  // Populate legend
-  const lg=document.getElementById('lens-legend');lg.innerHTML='';
-  LENSES.forEach(l=>{lg.innerHTML+=`<div class="li"><div class="li-line" style="background:${LENS_COLS[l]}"></div>${l}</div>`});
+  lrSetSpeed(+(document.getElementById('lr-speed')?.value||1));
   lrSeek(0);
+}
+
+function lrEnter(){
+  resizeLens();
+  lrInit();
+  lrSeek(0);
+  lrPlaying=true;
+  document.getElementById('lr-play-btn').textContent='⏸';
+  lrLastTs=null;
+  if(lrAF)cancelAnimationFrame(lrAF);
+  lrAF=requestAnimationFrame(lrStep);
 }
 
 function resizeLens(){
@@ -1229,6 +1346,7 @@ let skPrevFocus=null;
 let skAnimT=0;
 let skAnimAF=null;
 let skInited=false;
+let skIntroTimers=[];
 const SK_STAGE_ORDER=['shots','selection','edition','published'];
 
 const SK_PHOTO_BASE='data/workflow-sankey/';
@@ -1578,6 +1696,7 @@ function skDrawStageBar(){
       .text(s.sub.toUpperCase());
 
     g.on('click',function(){
+      skIntroTimers.forEach(clearTimeout);skIntroTimers=[];
       const wasActive=skFocus===s.id;
       skPrevFocus=wasActive?null:skFocus; // snapshot stable state BEFORE the switch
       skFocus=wasActive?null:s.id;
@@ -1619,10 +1738,8 @@ function skRunSankeyAnim(){
   skAnimAF=requestAnimationFrame(tick);
 }
 
-function sankeyStart(){
-  skFocus=null;
-  skPopulateStory();
-  skRunSankeyAnim();
+function sankeyStart(withIntro=false){
+  skIntroTimers.forEach(clearTimeout);skIntroTimers=[];
   if(!skInited){
     skInited=true;
     const lg=document.getElementById('sankey-legend');
@@ -1632,10 +1749,28 @@ function sankeyStart(){
       `<div class="li"><div class="li-line" style="background:${P.accent};height:3px"></div>Active stage</div>`,
     ].join('');
   }
+  if(withIntro){
+    skRunIntro();
+    return;
+  }
+  skFocus=null;
+  skPrevFocus=null;
+  skPopulateStory();
+  skRunSankeyAnim();
+  skDrawStageBar();
+}
+
+function skRunIntro(){
+  skIntroTimers.forEach(clearTimeout);skIntroTimers=[];
+  skPrevFocus=null;
+  skFocus='published';
+  skUpdatePhotoStrip(null);
+  skRunSankeyAnim();
   skDrawStageBar();
 }
 
 SK_C.addEventListener('click',e=>{
+  skIntroTimers.forEach(clearTimeout);skIntroTimers=[];
   const m=SK_C._meta;if(!m)return;
   const rect=SK_C.getBoundingClientRect();
   const lw=skLogicalW(),lh=SK_CSS_H;
@@ -1798,6 +1933,20 @@ function paColorForCount(c,mx){
   if(r<0.80) return '#2563EB';
   return '#7C3AED';
 }
+function paRgbParts(col){
+  if(!col) return [0,0,0];
+  if(col[0]==='#'){
+    const h=col.slice(1);
+    const v=h.length===3?h.split('').map(ch=>ch+ch).join(''):h;
+    return [parseInt(v.slice(0,2),16),parseInt(v.slice(2,4),16),parseInt(v.slice(4,6),16)];
+  }
+  const m=col.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  return m?[+m[1],+m[2],+m[3]]:[0,0,0];
+}
+function paMixColor(a,b,t){
+  const ca=paRgbParts(a), cb=paRgbParts(b), k=clamp(t,0,1);
+  return `rgb(${Math.round(lerp(ca[0],cb[0],k))},${Math.round(lerp(ca[1],cb[1],k))},${Math.round(lerp(ca[2],cb[2],k))})`;
+}
 function paColorForSession(c,mx){
   const r=Math.max(0,Math.min(1,(c||0)/mx));
   const scale=d3.scaleLinear().domain([0,0.5,1]).range(['#93C5FD','#2563EB','#7C3AED']).interpolate(d3.interpolateRgb);
@@ -1874,6 +2023,9 @@ function paCSSW(){ return cardInnerWidth(PA_C); }
 // VIEW 1 — YEAR BARS (animated entry)
 // ════════════════════════════════════════════════
 function drawYears(animT=1){
+  const paLegend=document.getElementById('pa-legend');
+  paLegend.style.transition='';
+  paLegend.style.opacity='1';
   paHits=[];
   const cssW=paCSSW(), cssH=vizH(340);
   paSetSize(cssW,cssH);
@@ -1965,8 +2117,13 @@ function paEnterYears(){
 function paShowYears(){ paEnterYears(); }
 
 // ════════════════════════════════════════════════
-// TRANSITION — YEAR BAR expands into HEATMAP
+// TRANSITION — YEAR BAR rotates (clockwise 0→90°) into HEATMAP
 // ════════════════════════════════════════════════
+// After a 90° CW rotation the canvas axes swap: drawn width becomes screen
+// height and drawn height becomes screen width.  So we morph:
+//   drawn width  : barW → heatH   (lands as screen height = heatH  ✓)
+//   drawn height : barH → cssW    (lands as screen width  = cssW   ✓)
+// The bar never compresses — it just swings clockwise while growing.
 function animateYearToDetail(year, a){
   hideTT();
   paView='morphing';
@@ -1974,28 +2131,34 @@ function animateYearToDetail(year, a){
   const cssW=a.W, cssH=a.H;
   const yearMx=Math.max(...YEAR_DATA.map(d=>d.count));
   const barCol=YR_BAR_COLS[year]||P.g1;
-  const DUR=1200; let s=null, _sessionsPrepared=false;
+  const DUR=2400; let s=null, _sessionsPrepared=false;
+  const paLegend=document.getElementById('pa-legend');
+  paLegend.style.transition='opacity 0.18s ease';
+  paLegend.style.opacity='0';
+  setTimeout(()=>{ if(paView==='morphing') paLegend.innerHTML=''; },180);
   paSetSize(cssW,cssH);
 
-  // ── Pre-compute heatmap geometry so we know the target rect ────────
+  // ── Pre-compute heatmap geometry ──────────────────────────────────
   const _isLeap=(year%4===0&&year%100!==0)||year%400===0;
   const _jan1=new Date(year,0,1);
   const _startDow=_jan1.getDay()===0?6:_jan1.getDay()-1;
   const _totalDays=_isLeap?366:365;
   const _numWeeks=Math.ceil((_startDow+_totalDays)/7);
   const LPAD=56,PR=16,PT=30,PB=20;
-  const PH=7*Math.floor((cssW-LPAD-PR)/_numWeeks);
   const STEP=Math.floor((cssW-LPAD-PR)/_numWeeks);
-  const HMTOP=PT+PH+PB+4+16;   // where the calendar grid starts
-  const heatH=7*STEP;           // height of the calendar grid
+  const heatH=7*STEP;
+  const HMTOP=PT+heatH+PB+4+16;
+
+  const barCY=a.barTop+a.barH/2;
+  const heatCX=cssW/2, heatCY=HMTOP+heatH/2;
 
   function tick(ts){
     if(!s) s=ts;
     const raw=Math.min((ts-s)/DUR,1);
     paCtx.clearRect(0,0,cssW,cssH);
 
-    // ── 1. Other bars fade out (first 35%) ───────────────────────────
-    const outA=Math.max(0,1-ease(clamp(raw/0.35,0,1)));
+    // ── 1. Other bars fade out (first 25%) ───────────────────────────
+    const outA=Math.max(0,1-ease(clamp(raw/0.25,0,1)));
     if(outA>0){
       YEAR_DATA.forEach((d,i)=>{
         if(d.year===year) return;
@@ -2010,36 +2173,46 @@ function animateYearToDetail(year, a){
       });
     }
 
-    // ── 2. Bar expands → heatmap rect, colour cross-fades ────────────
-    // Target: full width, positioned over the calendar grid only
-    const tExp=ease(clamp(raw/0.85,0,1));
-    const rx=lerp(a.barCX-a.barW/2, 0,     tExp);
-    const rw=lerp(a.barW,           cssW,   tExp);
-    const ry=lerp(a.barTop,         HMTOP,  tExp);
-    const rh=lerp(a.barH,           heatH,  tExp);
-    const rr=lerp(4, 0, tExp);
+    // ── 2. Bar rotates clockwise while morphing toward heatmap ────────
+    const p=ease(raw);
+    const angle=p * Math.PI/2;                  // 0 → 90° CW
+    const rcx=lerp(a.barCX, heatCX, p);
+    const rcy=lerp(barCY,   heatCY, p);
+    const rw =lerp(a.barW,  heatH,  p);         // drawn width  → screen height
+    const rh =lerp(a.barH,  cssW,   p);         // drawn height → screen width
 
-    // Bar colour fades out as heatmap fades in
-    const barA=Math.max(0,1-ease(clamp((raw-0.25)/0.55,0,1)));
+    // ── 3. The same rectangle becomes the heatmap ────────────────────
+    // Clip the final heatmap to the rotating/growing rectangle. This keeps
+    // the selected year bar visually continuous instead of replacing it.
+    const heatA=ease(clamp((raw-0.34)/0.58,0,1));
+    const barA=Math.max(0,1-ease(clamp((raw-0.42)/0.42,0,1)));
+    paCtx.save();
+    paCtx.translate(rcx, rcy);
+    paCtx.rotate(angle);
+    paCtx.beginPath();
+    paCtx.roundRect(-rw/2, -rh/2, rw, rh, 4);
+    paCtx.clip();
     if(barA>0){
-      paCtx.fillStyle=barCol; paCtx.globalAlpha=barA;
-      paCtx.beginPath();paCtx.roundRect(rx,ry,rw,rh,rr);paCtx.fill();
-      paCtx.globalAlpha=1;
+      paCtx.fillStyle=barCol;
+      paCtx.globalAlpha=barA;
+      paCtx.fillRect(-rw/2, -rh/2, rw, rh);
     }
-
-    // ── 3. Calendar heatmap fades in inside the expanding rect ────────
-    const heatA=ease(clamp((raw-0.3)/0.6,0,1));
     if(heatA>0){
-      paCtx.save();
-      paCtx.beginPath();paCtx.rect(rx,HMTOP,rw,heatH+50);paCtx.clip();
+      const colorT=ease(clamp((raw-0.34)/0.58,0,1));
+      // Draw the calendar in the rectangle's moving space. It only resolves
+      // to the fixed final orientation when the flip reaches 90 degrees.
+      paCtx.rotate(-Math.PI/2);
+      paCtx.translate(-heatCX, -heatCY);
+      paCtx.beginPath();
+      paCtx.rect(0,HMTOP,cssW,heatH+50);
+      paCtx.clip();
       paCtx.globalAlpha=heatA;
-      _renderDetail(year,cssW);
-      paCtx.globalAlpha=1;
-      paCtx.restore();
+      _renderDetail(year,cssW,{heatmapFromColor:barCol,heatmapColorT:colorT});
     }
+    paCtx.restore();
 
-    // ── 4. Monthly bars arrive separately, delayed ───────────────────
-    const barsA=ease(clamp((raw-0.62)/0.38,0,1));
+    // ── 4. Monthly bars arrive after heatmap is visible ───────────────
+    const barsA=ease(clamp((raw-0.68)/0.32,0,1));
     if(barsA>0){
       paCtx.save();
       paCtx.beginPath();paCtx.rect(0,0,cssW,HMTOP);paCtx.clip();
@@ -2049,7 +2222,7 @@ function animateYearToDetail(year, a){
       paCtx.restore();
     }
 
-    // ── 5. Sessions timeline (DOM) fades in alongside monthly bars ────
+    // ── 5. Sessions timeline fades in with monthly bars ───────────────
     if(!_sessionsPrepared&&raw>=0.62){
       _sessionsPrepared=true;
       const tl=document.getElementById('pa-sessions-timeline');
@@ -2072,7 +2245,7 @@ function animateYearToDetail(year, a){
 // NOTE: avoids explicit globalAlpha so the animation
 // wrapper's alpha is respected for all elements.
 // ════════════════════════════════════════════════
-function _renderDetail(year, cssW){
+function _renderDetail(year, cssW, opts={}){
   // compute STEP first so PH can match heatmap height
   const _isLeap=(year%4===0&&year%100!==0)||year%400===0;
   const _numWeeks=Math.ceil(((new Date(year,0,1).getDay()===0?6:new Date(year,0,1).getDay()-1)+(_isLeap?366:365))/7);
@@ -2172,9 +2345,13 @@ function _renderDetail(year, cssW){
     const cx=LPAD+w*STEP, cy=HMTOP+dow*STEP;
     const sessionMatch=paHighlightSession&&ALBUM_MAP[ds]===paHighlightSession;
     const dimmed=paHighlightSession&&!sessionMatch;
-    paCtx.globalAlpha=dimmed?0.12:1;
+    const baseAlpha=paCtx.globalAlpha;
+    paCtx.globalAlpha=baseAlpha*(dimmed?0.12:1);
     // session-match days: boost fill to at least a mid-blue so pale days stay visible
-    paCtx.fillStyle=sessionMatch&&count===0?'#DBEAFE':paColorForCount(count,yearMax);
+    const finalCellColor=sessionMatch&&count===0?'#DBEAFE':paColorForCount(count,yearMax);
+    paCtx.fillStyle=opts.heatmapFromColor
+      ? paMixColor(opts.heatmapFromColor,finalCellColor,opts.heatmapColorT??1)
+      : finalCellColor;
     paCtx.beginPath();paCtx.roundRect(cx,cy,CELL,CELL,2);paCtx.fill();
     if(sessionMatch){
       paCtx.strokeStyle=P.g1; paCtx.lineWidth=2;
@@ -2183,7 +2360,7 @@ function _renderDetail(year, cssW){
       paCtx.strokeStyle=P.accent; paCtx.lineWidth=1.5;
       paCtx.beginPath();paCtx.roundRect(cx+0.75,cy+0.75,CELL-1.5,CELL-1.5,2);paCtx.stroke();
     }
-    paCtx.globalAlpha=1;
+    paCtx.globalAlpha=baseAlpha;
   }
   // legend
   const lx=LPAD, ly=HMTOP+7*STEP+6;

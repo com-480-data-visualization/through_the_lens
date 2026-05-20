@@ -243,6 +243,42 @@ The fix required updating `extract_viz_data.py` to extend the year range from 20
 and Heatmap sections, where it contextualises the dataset boundary rather than creating
 misleading empty bars in the race charts.
 
+### 3.5 Photo Activity — session pinning and the year→heatmap transition
+
+**Session pinning on click.**  The sessions timeline below the heatmap originally showed
+shooting sessions as passive reference markers. Making it interactive required deciding
+what "selecting a session" should mean visually. The chosen design locks the heatmap into
+a highlight state: all days belonging to the pinned session are outlined in blue, zero-count
+days within the session are tinted light blue so they remain findable, and all other days
+dim to 12% opacity. A detail card appears below the timeline showing the session date
+range, total photo count, and peak shooting day. A second click on the same session
+(or any click outside it) releases the lock.  The pinned state persists through
+mouse-move hovering, preventing the highlight from flickering when the user moves the
+pointer to read the detail card.
+
+**Iterating the year→heatmap transition.**  The original transition compressed the
+clicked bar's height to zero before re-expanding it as the heatmap — visually convincing
+in isolation but subjectively wrong: the bar appeared to shrink and vanish rather than
+*transform* into something new.
+
+Several approaches were attempted before landing on the current design:
+
+- *3D card flip (Y axis):* the bar's width pinched to zero at the midpoint, then expanded
+  as the heatmap face — like flipping a playing card.  The effect was clean but felt
+  mechanical; the width-pinch read as a glitch rather than a physical motion.
+
+- *Outward expansion:* the bar grew directly into the heatmap area without rotation.
+  This felt abrupt on short bars (the bar had little visual momentum).
+
+- *Clockwise rotation (current):* `ctx.translate(center); ctx.rotate(angle)` rotates
+  the bar 90° clockwise around its own centre, like a domino falling to the right.
+  Because a 90° CW rotation swaps the canvas axes, the drawn dimensions are deliberately
+  inverted during the morph — drawn width lerps `barW → heatH` and drawn height lerps
+  `barH → cssW` — so after the full rotation the rectangle lands in screen space at
+  exactly `cssW × heatH`, the correct heatmap dimensions.  The bar never compresses:
+  it only grows and rotates.  The bar colour cross-fades out over the second half while
+  the heatmap grid fades in, so the "flip point" is visually smooth rather than a snap.
+
 ---
 
 ## 4. Challenges and What We Learned

@@ -184,6 +184,38 @@ boundary without creating misleading empty bars in the race charts.
 
 ---
 
+### 3.5 Photo Activity — session pinning + year→heatmap transition
+
+**Session pin on click (delivered post-MS3)**
+- Sessions timeline is interactive: click a session bar → heatmap enters highlight-lock state.
+- Locked state: session days get blue outline, zero-count days tinted light-blue, all other
+  days dim to 12% opacity.  Prevents hover from overriding the highlight while reading the
+  detail card.
+- Detail card shows date range, total photo count, and peak shooting day.
+- Click same session or elsewhere → releases lock.
+
+**Transition animation — iterative design**
+
+Goal: clicking a year bar should *transform* into the heatmap, not shrink and re-expand.
+
+| Attempt | Technique | Why abandoned |
+|---------|-----------|---------------|
+| Original | Height → 0, re-expand | Bar visually vanished; felt like two separate animations |
+| 3D card flip | Width → 0 at midpoint (Y-axis flip) | Read as a glitch/flicker, not physical motion |
+| Outward expansion | Bar grows directly into heatmap area | No rotational momentum; abrupt on short bars |
+| **Clockwise rotation (current)** | `ctx.rotate(angle)`, 0 → π/2 | Bar falls like a domino — continuous physical motion |
+
+**How the rotation math works:**
+- After a 90° CW rotation, drawn width appears as screen height and vice versa.
+- So drawn width lerps `barW → heatH` and drawn height lerps `barH → cssW`.
+- Result: at rotation=90° the rect lands at screen dimensions `cssW × heatH` exactly.
+- Bar colour fades out raw 0.25→0.80; heatmap grid fades in raw 0.35→0.85; monthly bars
+  arrive raw 0.68→1.00. No abrupt snap — everything overlaps via cross-fade.
+
+[ADD SCREENSHOT — year bar mid-rotation, tilted ~45°, heatmap cells visible beneath]
+
+---
+
 ## 4. Challenges Summary
 
 | Challenge | What we tried first | Final solution |
