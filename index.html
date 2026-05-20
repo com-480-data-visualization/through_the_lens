@@ -2002,7 +2002,7 @@ function paThumbSrc(isoDate){
 function paThumbTooltipHtml(isoDate){
   const src=paThumbSrc(isoDate);
   if(!src) return '';
-  return `<div class="tt-preview-wrap"><img class="tt-preview-img" src="${src}" alt="" loading="lazy" decoding="async" onerror="this.closest('.tt-preview-wrap').style.display='none'"/></div>`;
+  return `<div class="tt-preview-wrap"><img class="tt-preview-img" src="${src}" alt="" loading="eager" decoding="sync" onerror="this.closest('.tt-preview-wrap').style.display='none'"/></div>`;
 }
 
 // ── state ────────────────────────────────────────
@@ -2125,11 +2125,12 @@ function paShowYears(){ paEnterYears(); }
 // ════════════════════════════════════════════════
 // TRANSITION — YEAR BAR rotates (clockwise 0→90°) into HEATMAP
 // ════════════════════════════════════════════════
-// After a 90° CW rotation the canvas axes swap: drawn width becomes screen
-// height and drawn height becomes screen width.  So we morph:
-//   drawn width  : barW → heatH   (lands as screen height = heatH  ✓)
-//   drawn height : barH → cssW    (lands as screen width  = cssW   ✓)
-// The bar never compresses — it just swings clockwise while growing.
+// TRANSITION — YEAR BAR rotates clockwise into HEATMAP
+// After a 90° CW rotation the canvas axes swap:
+//   drawn width  : barW → heatH   (lands as screen height = heatH ✓)
+//   drawn height : barH → cssW    (lands as screen width  = cssW  ✓)
+// Heatmap reveals via a left→right clip sweep (no nested transforms or
+// globalAlpha inside _renderDetail — works identically in all browsers).
 function animateYearToDetail(year, a){
   hideTT();
   paView='morphing';
@@ -2137,7 +2138,7 @@ function animateYearToDetail(year, a){
   const cssW=a.W, cssH=a.H;
   const yearMx=Math.max(...YEAR_DATA.map(d=>d.count));
   const barCol=YR_BAR_COLS[year]||P.g1;
-  const DUR=2400; let s=null, _sessionsPrepared=false;
+  const DUR=1600; let s=null, _sessionsPrepared=false;
   const paLegend=document.getElementById('pa-legend');
   paLegend.style.transition='opacity 0.18s ease';
   paLegend.style.opacity='0';
@@ -2179,49 +2180,38 @@ function animateYearToDetail(year, a){
       });
     }
 
-    // ── 2. Bar rotates clockwise while morphing toward heatmap ────────
+    // ── 2. Bar rotates 0→90° CW (pure transform, no nested clips) ────
     const p=ease(raw);
-    const angle=p * Math.PI/2;                  // 0 → 90° CW
+    const angle=p * Math.PI/2;
     const rcx=lerp(a.barCX, heatCX, p);
     const rcy=lerp(barCY,   heatCY, p);
-    const rw =lerp(a.barW,  heatH,  p);         // drawn width  → screen height
-    const rh =lerp(a.barH,  cssW,   p);         // drawn height → screen width
-
-    // ── 3. The same rectangle becomes the heatmap ────────────────────
-    // Clip the final heatmap to the rotating/growing rectangle. This keeps
-    // the selected year bar visually continuous instead of replacing it.
-    const heatA=ease(clamp((raw-0.34)/0.58,0,1));
-    const barA=Math.max(0,1-ease(clamp((raw-0.42)/0.42,0,1)));
-    paCtx.save();
-    paCtx.translate(rcx, rcy);
-    paCtx.rotate(angle);
-    paCtx.beginPath();
-    paCtx.roundRect(-rw/2, -rh/2, rw, rh, 4);
-    paCtx.clip();
+    const rw =lerp(a.barW,  heatH,  p);
+    const rh =lerp(a.barH,  cssW,   p);
+    const barA=Math.max(0,1-ease(clamp((raw-0.25)/0.5,0,1)));
     if(barA>0){
-      paCtx.fillStyle=barCol;
-      paCtx.globalAlpha=barA;
-      paCtx.fillRect(-rw/2, -rh/2, rw, rh);
+      paCtx.save();
+      paCtx.translate(rcx,rcy); paCtx.rotate(angle);
+      paCtx.fillStyle=barCol; paCtx.globalAlpha=barA;
+      paCtx.beginPath(); paCtx.roundRect(-rw/2,-rh/2,rw,rh,4); paCtx.fill();
+      paCtx.restore();
     }
-    if(heatA>0){
-      const colorT=ease(clamp((raw-0.34)/0.58,0,1));
-      // Draw the calendar in the rectangle's moving space. It only resolves
-      // to the fixed final orientation when the flip reaches 90 degrees.
-      paCtx.rotate(-Math.PI/2);
-      paCtx.translate(-heatCX, -heatCY);
-      paCtx.beginPath();
-      paCtx.rect(0,HMTOP,cssW,heatH+50);
-      paCtx.clip();
-      paCtx.globalAlpha=heatA;
-      _renderDetail(year,cssW,{heatmapFromColor:barCol,heatmapColorT:colorT});
-    }
-    paCtx.restore();
 
-    // ── 4. Monthly bars arrive after heatmap is visible ───────────────
+    // ── 3. Heatmap grid sweeps in left→right as bar falls ────────────
+    // Clip-based (no globalAlpha) — _renderDetail resets alpha internally
+    // so a clip is the only cross-browser-safe reveal mechanism.
+    const revealP=ease(clamp((raw-0.45)/0.45,0,1));
+    if(revealP>0){
+      paCtx.save();
+      paCtx.beginPath(); paCtx.rect(0,HMTOP,cssW*revealP,heatH+50); paCtx.clip();
+      _renderDetail(year,cssW);
+      paCtx.restore();
+    }
+
+    // ── 4. Monthly bars arrive after heatmap ─────────────────────────
     const barsA=ease(clamp((raw-0.68)/0.32,0,1));
     if(barsA>0){
       paCtx.save();
-      paCtx.beginPath();paCtx.rect(0,0,cssW,HMTOP);paCtx.clip();
+      paCtx.beginPath(); paCtx.rect(0,0,cssW,HMTOP); paCtx.clip();
       paCtx.globalAlpha=barsA;
       _renderDetail(year,cssW);
       paCtx.globalAlpha=1;
@@ -2638,6 +2628,7 @@ PA_C.addEventListener('mousemove',e=>{
           if(s!==paHighlightSession){
             paHighlightSession=s;
             document.querySelectorAll('#pa-sessions-timeline .sr').forEach(g=>{g.style.opacity=(!s||g.dataset.session===s)?'1':'0.3';});
+            paRedrawCanvas();
           }
         }
         hit=true; break;
