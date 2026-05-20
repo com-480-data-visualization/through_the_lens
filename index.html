@@ -68,7 +68,7 @@ section{min-height:100vh;display:flex;flex-direction:column;justify-content:cent
 /* VIZ CARD */
 .viz-card{background:var(--card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:min(1600px,calc(100vw - 24px));padding:20px 28px;box-shadow:0 1px 4px rgba(15,23,42,.06)}
 .viz-card-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:500;color:var(--text);margin-bottom:4px}
-.viz-card-sub{font-size:13px;color:var(--muted);margin-bottom:22px}
+.viz-card-sub{font-size:14px;color:var(--muted);margin-bottom:22px}
 
 /* CONTROLS */
 .ctrl-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px}
@@ -212,17 +212,17 @@ canvas{display:block}
     <!-- Story banner -->
     <div id="pa-story" style="display:flex;margin-top:28px;margin-bottom:20px;border-radius:10px;border:1px solid var(--border);overflow:hidden">
       <div style="flex:1;min-width:120px;padding:14px 18px;border-right:1px solid var(--border)">
-        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Peak Month</div>
+        <div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Peak Month</div>
         <div id="pa-story-peak-month" style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;color:var(--text)">—</div>
         <div id="pa-story-peak-count" style="font-size:12px;color:var(--accent);margin-top:3px">—</div>
       </div>
       <div style="flex:1;min-width:120px;padding:14px 18px;border-right:1px solid var(--border)">
-        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Longest Streak</div>
+        <div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Longest Streak</div>
         <div id="pa-story-streak" style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;color:var(--text)">—</div>
         <div style="font-size:11px;color:var(--muted);margin-top:3px">days in a row</div>
       </div>
       <div style="flex:1;min-width:120px;padding:14px 18px">
-        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Best Day</div>
+        <div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Best Day</div>
         <div id="pa-story-max-day" style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;color:var(--text)">—</div>
         <div id="pa-story-max-date" style="font-size:11px;color:var(--muted);margin-top:3px">—</div>
       </div>
@@ -242,7 +242,7 @@ canvas{display:block}
         <button onclick="document.getElementById('pa-panel').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1">×</button>
       </div>
       <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
-        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Shooting session</div>
+        <div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Shooting session</div>
         <div id="pa-panel-albums"></div>
       </div>
     </div>
@@ -281,15 +281,15 @@ canvas{display:block}
     <div id="exp-insight" style="margin-top:14px;padding:14px 18px;background:var(--card2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;display:flex;gap:16px;align-items:flex-start;margin-bottom:14px">
       <div style="font-size:18px;flex-shrink:0" id="exp-insight-icon">📷</div>
       <div>
-        <div id="exp-insight-title" style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px"></div>
-        <div id="exp-insight-body" style="font-size:12px;color:var(--muted);line-height:1.75"></div>
+        <div id="exp-insight-title" style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px"></div>
+        <div id="exp-insight-body" style="font-size:13px;color:var(--muted);line-height:1.75"></div>
       </div>
     </div>
     <div id="exp-wrap" style="position:relative;width:100%">
       <canvas id="exp-canvas" height="500" style="display:block"></canvas>
       <svg id="exp-svg" style="position:absolute;top:0;left:0;overflow:visible"></svg>
     </div>
-    <div id="exp-stats" style="display:none;margin-top:10px;padding:12px 18px;background:var(--card2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;font-size:13px"></div>
+    <div id="exp-stats" style="display:none;margin-top:12px;padding:16px 22px;background:var(--card2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;font-size:13px"></div>
     <div class="legend" id="exp-legend"></div>
   </div>
 </section>
@@ -779,18 +779,18 @@ function updateExpStats(){
     .map(([y,cnt])=>`<span style="color:${YR_COLS[y]||P.muted};font-weight:500">${y}</span> ${Math.round(cnt/n*100)}%`).join(' &nbsp;·&nbsp; ');
   el.style.display='block';
   const actionBtn=expZoomed
-    ?`<button onclick="expZoomOut()" style="margin-left:auto;font-size:11px;color:var(--accent);background:rgba(249,115,22,0.08);border:1px solid var(--accent);cursor:pointer;padding:2px 10px;border-radius:4px;font-family:inherit;font-weight:500">← Zoom out</button>`
-    :`<button onclick="expClearBrush()" style="margin-left:auto;font-size:11px;color:var(--muted);background:none;border:1px solid var(--dim);cursor:pointer;padding:2px 8px;border-radius:4px;font-family:inherit">× clear</button>`;
-  el.innerHTML=`<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:baseline">
-    ${expZoomed?`<span style="font-size:10px;background:rgba(249,115,22,0.1);color:var(--accent);padding:2px 7px;border-radius:3px;font-weight:600;letter-spacing:0.03em">ZOOMED IN</span>`:''}
-    <span style="font-size:20px;font-weight:600;color:var(--accent);line-height:1">${n}</span><span style="font-size:11px;color:var(--muted)">photos selected</span>
-    <span style="color:var(--muted);font-size:12px">ISO <strong style="color:var(--text)">${mISO.toLocaleString()}</strong></span>
-    <span style="color:var(--muted);font-size:12px">f/<strong style="color:var(--text)">${mAp.toFixed(1)}</strong></span>
-    <span style="color:var(--muted);font-size:12px">shutter <strong style="color:var(--text)">${sstr}</strong></span>
-    <span style="color:var(--muted);font-size:12px">focal <strong style="color:var(--text)">${mFo}mm</strong></span>
+    ?`<button onclick="expZoomOut()" style="margin-left:auto;font-size:13px;color:var(--accent);background:rgba(249,115,22,0.08);border:1px solid var(--accent);cursor:pointer;padding:4px 14px;border-radius:4px;font-family:inherit;font-weight:500">← Zoom out</button>`
+    :`<button onclick="expClearBrush()" style="margin-left:auto;font-size:13px;color:var(--muted);background:none;border:1px solid var(--dim);cursor:pointer;padding:4px 12px;border-radius:4px;font-family:inherit">× clear</button>`;
+  el.innerHTML=`<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:baseline">
+    ${expZoomed?`<span style="font-size:12px;background:rgba(249,115,22,0.1);color:var(--accent);padding:3px 9px;border-radius:3px;font-weight:600;letter-spacing:0.03em">ZOOMED IN</span>`:''}
+    <span style="font-size:22px;font-weight:600;color:var(--accent);line-height:1">${n}</span><span style="font-size:14px;color:var(--muted)">photos selected</span>
+    <span style="color:var(--muted);font-size:15px">ISO <strong style="color:var(--text)">${mISO.toLocaleString()}</strong></span>
+    <span style="color:var(--muted);font-size:15px">f/<strong style="color:var(--text)">${mAp.toFixed(1)}</strong></span>
+    <span style="color:var(--muted);font-size:15px">shutter <strong style="color:var(--text)">${sstr}</strong></span>
+    <span style="color:var(--muted);font-size:15px">focal <strong style="color:var(--text)">${mFo}mm</strong></span>
     ${actionBtn}
   </div>
-  <div style="font-size:11px;color:var(--muted);margin-top:6px">${camStr} &nbsp;&nbsp; ${yrStr}</div>`;
+  <div style="font-size:13px;color:var(--muted);margin-top:8px">${camStr} &nbsp;&nbsp; ${yrStr}</div>`;
 }
 
 function expClearBrush(){
@@ -837,7 +837,7 @@ function updateExpAxesSVG(){
     .call(ax=>{
       ax.select('.domain').remove();
       ax.selectAll('.tick line').attr('stroke',P.dim).attr('stroke-dasharray','3,3');
-      ax.selectAll('.tick text').attr('fill',P.muted).attr('font-family','DM Sans,sans-serif').attr('font-size',10).attr('dy',14);
+      ax.selectAll('.tick text').attr('fill',P.muted).attr('font-family','DM Sans,sans-serif').attr('font-size',12).attr('dy',14);
     });
 
   // Y axis — only ticks within the current domain
@@ -848,15 +848,15 @@ function updateExpAxesSVG(){
     .call(ax=>{
       ax.select('.domain').remove();
       ax.selectAll('.tick line').attr('stroke',P.dim).attr('stroke-dasharray','3,3');
-      ax.selectAll('.tick text').attr('fill',P.muted).attr('font-family','DM Sans,sans-serif').attr('font-size',10).attr('dx',-6).attr('dy','0.32em');
+      ax.selectAll('.tick text').attr('fill',P.muted).attr('font-family','DM Sans,sans-serif').attr('font-size',12).attr('dx',-6).attr('dy','0.32em');
     });
 
   // Axis labels
   g.append('text').attr('x',PL+PW/2).attr('y',PT+PH+42)
-    .attr('text-anchor','middle').attr('font-family','DM Sans,sans-serif').attr('font-size',12).attr('fill',P.muted)
+    .attr('text-anchor','middle').attr('font-family','DM Sans,sans-serif').attr('font-size',13).attr('fill',P.muted)
     .text(axX.label);
   g.append('text').attr('transform',`translate(14,${PT+PH/2}) rotate(-90)`)
-    .attr('text-anchor','middle').attr('font-family','DM Sans,sans-serif').attr('font-size',12).attr('fill',P.muted)
+    .attr('text-anchor','middle').attr('font-family','DM Sans,sans-serif').attr('font-size',13).attr('fill',P.muted)
     .text(axY.label);
 
   // "Zoomed in" badge top-left of plot
@@ -865,7 +865,7 @@ function updateExpAxesSVG(){
     zg.append('rect').attr('x',PL+5).attr('y',PT+5).attr('width',68).attr('height',17).attr('rx',4)
       .attr('fill','rgba(249,115,22,0.12)').attr('stroke',P.accent).attr('stroke-width',1);
     zg.append('text').attr('x',PL+10).attr('y',PT+16)
-      .attr('font-family','DM Sans,sans-serif').attr('font-size',9.5).attr('font-weight','600')
+      .attr('font-family','DM Sans,sans-serif').attr('font-size',12).attr('font-weight','600')
       .attr('fill',P.accent).attr('letter-spacing','0.04em').text('ZOOMED IN');
   }
 
@@ -1004,7 +1004,7 @@ function drawGear(){
     grCtx.strokeStyle=P.dim;grCtx.lineWidth=0.8;grCtx.setLineDash([3,4]);
     grCtx.beginPath();grCtx.moveTo(x,PT-14);grCtx.lineTo(x,PT+active.length*(rowH+rowGap)-rowGap);grCtx.stroke();
     grCtx.setLineDash([]);
-    grCtx.fillStyle=P.muted;grCtx.font='11px DM Sans';grCtx.textAlign='left';
+    grCtx.fillStyle=P.muted;grCtx.font='13px DM Sans';grCtx.textAlign='left';
     grCtx.fillText(lbl.split(' ')[1],x+3,PT-4);
   });
 
@@ -1014,7 +1014,7 @@ function drawGear(){
     const mx=camMax[cam];
 
     // Camera label
-    grCtx.fillStyle=P.muted;grCtx.font='500 12px DM Sans';grCtx.textAlign='right';
+    grCtx.fillStyle=P.muted;grCtx.font='500 14px DM Sans';grCtx.textAlign='right';
     grCtx.fillText(cam,PL-8,y+rowH/2+4);
 
     // Track background
@@ -1133,21 +1133,21 @@ function lrDrawFrame(){
     lrCtx.restore();
 
     // Lens name label
-    lrCtx.fillStyle=P.muted;lrCtx.font='500 12px DM Sans';lrCtx.textAlign='right';
+    lrCtx.fillStyle=P.muted;lrCtx.font='500 14px DM Sans';lrCtx.textAlign='right';
     lrCtx.fillText(lens,PL-8,y+rowH/2+4);
 
     // Shot count inside/outside bar
     const val=Math.round(lrCur[lens]).toLocaleString();
     const textX=PL+barW+(barW>PW*0.15?-8:6);
     lrCtx.fillStyle=barW>PW*0.15?'#fff':P.muted;
-    lrCtx.font='500 12px DM Sans';
+    lrCtx.font='500 14px DM Sans';
     lrCtx.textAlign=barW>PW*0.15?'right':'left';
     lrCtx.fillText(val+' shots',textX,y+rowH/2+4);
   });
 
   // Month label top-right
   const fi0=clamp(Math.floor(lrFrameF),0,nLensMonths-1);
-  lrCtx.fillStyle=P.muted;lrCtx.font='11px DM Sans';lrCtx.textAlign='right';
+  lrCtx.fillStyle=P.muted;lrCtx.font='13px DM Sans';lrCtx.textAlign='right';
   lrCtx.fillText(LENS_MONTH_LABELS[fi0],W-PR,PT-6);
 }
 
@@ -1464,7 +1464,7 @@ function drawSankey(){
   skCtx.imageSmoothingEnabled=true;
   if(!skFocus){
     skCtx.fillStyle=P.muted;
-    skCtx.font='500 13px DM Sans';
+    skCtx.font='500 15px DM Sans';
     skCtx.textAlign='center';
     skCtx.fillText('Select a stage to explore the funnel.',Math.round(W/2),Math.round(H*0.44));
     SK_C._meta={nodes:[],links:[]};
@@ -1501,11 +1501,11 @@ function drawSankey(){
     if(a<0.06)return;
     skCtx.globalAlpha=a;
     skCtx.fillStyle=P.text;
-    skCtx.font='500 12px DM Sans';
+    skCtx.font='500 14px DM Sans';
     const tx=Math.round(n.x+n.w/2),ty=Math.round(n.y+n.h+22);
     skCtx.fillText(skLabel(n.id),tx,ty);
     skCtx.fillStyle=P.muted;
-    skCtx.font='400 11px DM Sans';
+    skCtx.font='400 13px DM Sans';
     skCtx.fillText((n.value||0).toLocaleString(),Math.round(n.x+n.w/2),Math.round(n.y+n.h+38));
     skCtx.globalAlpha=1;
   });
@@ -1572,7 +1572,7 @@ function skDrawStageBar(){
       .attr('fill','#fff')
       .attr('font-family','Playfair Display, serif')
       .attr('font-style','italic')
-      .attr('font-size','14px')
+      .attr('font-size','15px')
       .attr('font-weight','500')
       .text(s.title);
 
@@ -1581,7 +1581,7 @@ function skDrawStageBar(){
       .attr('x',16).attr('y',40)
       .attr('fill','rgba(255,255,255,0.78)')
       .attr('font-family','DM Sans, sans-serif')
-      .attr('font-size','10px')
+      .attr('font-size','12px')
       .attr('font-weight','300')
       .attr('letter-spacing','0.08em')
       .text(s.sub.toUpperCase());
@@ -1897,7 +1897,7 @@ function drawYears(animT=1){
     const y=PT+(1-t/mx)*PH;
     paCtx.strokeStyle=P.dim; paCtx.lineWidth=0.8;
     paCtx.beginPath();paCtx.moveTo(PL,y);paCtx.lineTo(PL+PW,y);paCtx.stroke();
-    paCtx.fillStyle=P.muted; paCtx.font='10px DM Sans'; paCtx.textAlign='right';
+    paCtx.fillStyle=P.muted; paCtx.font='12px DM Sans'; paCtx.textAlign='right';
     paCtx.fillText(t>=1000?(t/1000)+'k':t,PL-6,y+4);
   });
   paCtx.strokeStyle=P.dim; paCtx.lineWidth=1;
@@ -1920,7 +1920,7 @@ function drawYears(animT=1){
       const pct=(d.count-prev.count)/prev.count*100;
       paCtx.globalAlpha=Math.min((animT-0.8)/0.2,1);
       paCtx.fillStyle=col;
-      paCtx.font='500 10px DM Sans'; paCtx.textAlign='center';
+      paCtx.font='500 12px DM Sans'; paCtx.textAlign='center';
       paCtx.fillText((pct>=0?'+':'')+pct.toFixed(0)+'%',cx,by-18);
       paCtx.globalAlpha=1;
     }
@@ -1934,7 +1934,7 @@ function drawYears(animT=1){
       paCtx.globalAlpha=1;
     }
     paCtx.fillStyle=P.muted;
-    paCtx.font='11px DM Sans'; paCtx.textAlign='center';
+    paCtx.font='13px DM Sans'; paCtx.textAlign='center';
     paCtx.fillText(String(d.year),cx,PT+PH+16);
     if(!d.partial) paHits.push({
       type:'year', x:cx-barW/2, y:by, w:barW, h:PT+PH-by+20,
@@ -2042,7 +2042,7 @@ function _renderDetail(year, cssW){
    [6,8,'rgba(249,115,22,0.06)','Summer'],[9,11,'rgba(139,92,246,0.06)','Autumn']].forEach(([st,en,c,lbl])=>{
     paCtx.fillStyle=c; paCtx.fillRect(PL+st*gap,PT,(en-st+1)*gap,PH);
     // season label pinned to fixed row (y=11) — always above count labels which start at PT-5=25
-    paCtx.fillStyle='rgba(71,85,105,0.40)'; paCtx.font='9px DM Sans'; paCtx.textAlign='center';
+    paCtx.fillStyle='rgba(71,85,105,0.40)'; paCtx.font='13px DM Sans'; paCtx.textAlign='center';
     paCtx.fillText(lbl,PL+(st+1.5)*gap,11);
   });
   // grid
@@ -2050,7 +2050,7 @@ function _renderDetail(year, cssW){
     const y=PT+(1-f)*PH, val=Math.round(mMax*f);
     paCtx.strokeStyle=P.dim; paCtx.lineWidth=0.8;
     paCtx.beginPath();paCtx.moveTo(PL,y);paCtx.lineTo(PL+PW,y);paCtx.stroke();
-    paCtx.fillStyle=P.muted; paCtx.font='10px DM Sans'; paCtx.textAlign='right';
+    paCtx.fillStyle=P.muted; paCtx.font='12px DM Sans'; paCtx.textAlign='right';
     paCtx.fillText(val>=1000?(val/1000).toFixed(1)+'k':val,PL-6,y+4);
   });
   paCtx.strokeStyle=P.dim; paCtx.lineWidth=1;
@@ -2061,7 +2061,7 @@ function _renderDetail(year, cssW){
     const col=paSeasonCol(i);
     paCtx.fillStyle=col;
     paCtx.beginPath();paCtx.roundRect(cx-mBarW/2,by,mBarW,bh,[4,4,0,0]);paCtx.fill();
-    paCtx.fillStyle=P.muted; paCtx.font='9px DM Sans'; paCtx.textAlign='center';
+    paCtx.fillStyle=P.muted; paCtx.font='13px DM Sans'; paCtx.textAlign='center';
     paCtx.fillText(PA_MONTHS[i],cx,PT+PH+14);
   });
 
@@ -2105,13 +2105,13 @@ function _renderDetail(year, cssW){
       const d=new Date(year,0,1+off);
       if(d.getDate()<=7&&!shown.has(d.getMonth())){
         shown.add(d.getMonth());
-        paCtx.fillStyle=P.muted; paCtx.font='9px DM Sans'; paCtx.textAlign='left';
+        paCtx.fillStyle=P.muted; paCtx.font='13px DM Sans'; paCtx.textAlign='left';
         paCtx.fillText(PA_MONTHS[d.getMonth()],LPAD+w*STEP,HTOP_OFF+12);
       }
     }
   }
   [[0,'M'],[2,'W'],[4,'F']].forEach(([dow,lbl])=>{
-    paCtx.fillStyle=P.muted; paCtx.font='9px DM Sans'; paCtx.textAlign='left';
+    paCtx.fillStyle=P.muted; paCtx.font='13px DM Sans'; paCtx.textAlign='left';
     paCtx.fillText(lbl,4,HMTOP+dow*STEP+CELL/2+3);
   });
   // cells
@@ -2137,13 +2137,13 @@ function _renderDetail(year, cssW){
   }
   // legend
   const lx=LPAD, ly=HMTOP+7*STEP+6;
-  paCtx.fillStyle=P.muted; paCtx.font='9px DM Sans'; paCtx.textAlign='left';
+  paCtx.fillStyle=P.muted; paCtx.font='13px DM Sans'; paCtx.textAlign='left';
   paCtx.fillText('Less',lx,ly+9);
   ['#F1F5F9','#DBEAFE','#93C5FD','#2563EB','#7C3AED'].forEach((c,ci)=>{
     paCtx.fillStyle=c; paCtx.beginPath();paCtx.roundRect(lx+28+ci*14,ly,11,11,2);paCtx.fill();
   });
   paCtx.fillStyle=P.muted; paCtx.fillText('More',lx+28+5*14+4,ly+9);
-  if(maxS>2){paCtx.fillStyle=P.accent;paCtx.font='500 9px DM Sans';paCtx.fillText(`● ${maxS}-day streak`,lx+28+5*14+50,ly+9);}
+  if(maxS>2){paCtx.fillStyle=P.accent;paCtx.font='500 11px DM Sans';paCtx.fillText(`● ${maxS}-day streak`,lx+28+5*14+50,ly+9);}
 
   return {months,peakIdx,mBarW,PL,PW,PT,PH,gap,HMTOP,STEP,CELL,numWeeks,startDow,totalDays,yearMax};
 }
@@ -2217,13 +2217,13 @@ function drawSessionsTimeline(year){
   const allSessions=Object.values(grouped).sort((a,b)=>b.count-a.count);
 
   if(!allSessions.length){
-    container.innerHTML='<div style="font-size:11px;color:var(--muted);padding:6px 0">No named sessions this year.</div>';
+    container.innerHTML='<div style="font-size:13px;color:var(--muted);padding:8px 0">No named sessions this year.</div>';
     return;
   }
 
   // header
   const hdr=document.createElement('div');
-  hdr.style.cssText='font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text);margin-bottom:10px;margin-top:6px';
+  hdr.style.cssText='font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text);margin-bottom:12px;margin-top:8px';
   hdr.textContent='Named shooting sessions';
   container.appendChild(hdr);
 
@@ -2232,15 +2232,15 @@ function drawSessionsTimeline(year){
   const sessions=allSessions.slice(0,LIMIT);
   if(allSessions.length>LIMIT){
     const note=document.createElement('div');
-    note.style.cssText='font-size:10px;font-weight:500;color:var(--muted);margin-bottom:6px';
+    note.style.cssText='font-size:12px;font-weight:500;color:var(--muted);margin-bottom:8px';
     note.innerHTML=`Showing top <strong>${LIMIT}</strong> of <strong>${allSessions.length}</strong> sessions`;
     container.appendChild(note);
   }
 
-  const W=paCSSW(), ROW=16, ML=8, MR=12;
-  const namePad=160; // fixed px reserved for name labels
-  const barW=W-namePad-ML-MR-50; // 50px for count text on right
-  const H=sessions.length*ROW+4;
+  const W=paCSSW(), ROW=24, ML=8, MR=12;
+  const namePad=180; // fixed px reserved for name labels
+  const barW=W-namePad-ML-MR-60; // 60px for count text on right
+  const H=sessions.length*ROW+6;
   const maxCnt=sessions[0].count||1;
 
   const xScale=d3.scaleLinear().domain([0,maxCnt]).range([0,barW]);
@@ -2257,20 +2257,20 @@ function drawSessionsTimeline(year){
   // session name (left-aligned, fixed-width zone)
   rowG.append('text')
     .attr('x',0).attr('y',ROW/2+4)
-    .attr('font-size','11px').attr('fill','#475569')
+    .attr('font-size','13px').attr('fill','#475569')
     .attr('text-anchor','start')
     .text(d=>d.name.length>22?d.name.slice(0,21)+'…':d.name);
 
   // bar track (grey background)
   rowG.append('rect')
-    .attr('x',namePad).attr('y',ROW/2-3)
-    .attr('width',barW).attr('height',6).attr('rx',3)
+    .attr('x',namePad).attr('y',ROW/2-4)
+    .attr('width',barW).attr('height',8).attr('rx',4)
     .attr('fill','#F1F5F9');
 
   // bar fill (animated)
   rowG.append('rect')
-    .attr('x',namePad).attr('y',ROW/2-3)
-    .attr('width',0).attr('height',6).attr('rx',3)
+    .attr('x',namePad).attr('y',ROW/2-4)
+    .attr('width',0).attr('height',8).attr('rx',4)
     .attr('fill',d=>paColorForSession(d.count,maxCnt))
     .transition().delay((_,i)=>i*40).duration(420).ease(d3.easeCubicOut)
     .attr('width',d=>xScale(d.count));
@@ -2278,7 +2278,7 @@ function drawSessionsTimeline(year){
   // count label (right of bar)
   rowG.append('text')
     .attr('x',namePad+barW+6).attr('y',ROW/2+4)
-    .attr('font-size','10px').attr('fill','#94A3B8')
+    .attr('font-size','12px').attr('fill','#94A3B8')
     .attr('opacity',0)
     .text(d=>d.count>=1000?(d.count/1000).toFixed(1)+'k':d.count)
     .transition().delay((_,i)=>i*40+350).duration(200)
