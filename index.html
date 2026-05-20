@@ -2113,9 +2113,13 @@ function _renderDetail(year, cssW){
     const sessionMatch=paHighlightSession&&ALBUM_MAP[ds]===paHighlightSession;
     const dimmed=paHighlightSession&&!sessionMatch;
     paCtx.globalAlpha=dimmed?0.12:1;
-    paCtx.fillStyle=paColorForCount(count,yearMax);
+    // session-match days: boost fill to at least a mid-blue so pale days stay visible
+    paCtx.fillStyle=sessionMatch&&count===0?'#DBEAFE':paColorForCount(count,yearMax);
     paCtx.beginPath();paCtx.roundRect(cx,cy,CELL,CELL,2);paCtx.fill();
-    if(streakSet.has(ds)&&count>0&&!paHighlightSession){
+    if(sessionMatch){
+      paCtx.strokeStyle=P.g1; paCtx.lineWidth=2;
+      paCtx.beginPath();paCtx.roundRect(cx+1,cy+1,CELL-2,CELL-2,2);paCtx.stroke();
+    } else if(streakSet.has(ds)&&count>0&&!paHighlightSession){
       paCtx.strokeStyle=P.accent; paCtx.lineWidth=1.5;
       paCtx.beginPath();paCtx.roundRect(cx+0.75,cy+0.75,CELL-1.5,CELL-1.5,2);paCtx.stroke();
     }
