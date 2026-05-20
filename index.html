@@ -2115,10 +2115,7 @@ function _renderDetail(year, cssW){
     paCtx.globalAlpha=dimmed?0.12:1;
     paCtx.fillStyle=paColorForCount(count,yearMax);
     paCtx.beginPath();paCtx.roundRect(cx,cy,CELL,CELL,2);paCtx.fill();
-    if(sessionMatch&&count>0){
-      paCtx.strokeStyle=P.accent; paCtx.lineWidth=1.5;
-      paCtx.beginPath();paCtx.roundRect(cx+0.75,cy+0.75,CELL-1.5,CELL-1.5,2);paCtx.stroke();
-    }else if(streakSet.has(ds)&&count>0){
+    if(streakSet.has(ds)&&count>0&&!paHighlightSession){
       paCtx.strokeStyle=P.accent; paCtx.lineWidth=1.5;
       paCtx.beginPath();paCtx.roundRect(cx+0.75,cy+0.75,CELL-1.5,CELL-1.5,2);paCtx.stroke();
     }
