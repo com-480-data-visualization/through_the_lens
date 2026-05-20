@@ -2176,8 +2176,8 @@ function drawYearDetail(year){
     paHits.push({type:'day',x:56+w*ST,y:HT+dow*ST,w:CELL,h:CELL,date:ds,count,col:paColorForCount(count,yMx)});
   }
 
-  document.getElementById('pa-sub').innerHTML=`<span style="color:var(--accent);cursor:pointer;text-decoration:underline" onclick="paShowYears()">← all years</span>`;
-  document.getElementById('pa-breadcrumb').innerHTML=`<span style="color:var(--muted)">All years</span> <span style="color:var(--dim)">›</span> <span style="color:var(--accent);font-weight:500">${year}</span>`;
+  document.getElementById('pa-sub').innerHTML=`<button onclick="paShowYears()" style="font-family:inherit;font-size:15px;font-weight:600;color:var(--accent);background:rgba(249,115,22,0.1);border:1.5px solid var(--accent);border-radius:6px;padding:6px 16px;cursor:pointer;letter-spacing:.01em;transition:background .2s">← All years</button>`;
+  document.getElementById('pa-breadcrumb').innerHTML='';
   document.getElementById('pa-legend').innerHTML='';
   document.getElementById('pa-panel').style.display='none';
   paUpdateStoryCards(year);
@@ -2226,10 +2226,10 @@ function drawSessionsTimeline(year){
     container.appendChild(note);
   }
 
-  const W=paCSSW(), ROW=24, ML=8, MR=12;
-  const namePad=180; // fixed px reserved for name labels
-  const barW=W-namePad-ML-MR-60; // 60px for count text on right
-  const H=sessions.length*ROW+6;
+  const W=paCSSW(), ROW=36, ML=8, MR=12;
+  const namePad=200; // fixed px reserved for name labels
+  const barW=W-namePad-ML-MR-70; // 70px for count text on right
+  const H=sessions.length*ROW+8;
   const maxCnt=sessions[0].count||1;
 
   const xScale=d3.scaleLinear().domain([0,maxCnt]).range([0,barW]);
@@ -2245,36 +2245,36 @@ function drawSessionsTimeline(year){
 
   // session name (left-aligned, fixed-width zone)
   rowG.append('text')
-    .attr('x',0).attr('y',ROW/2+4)
-    .attr('font-size','14px').attr('fill','#475569')
+    .attr('x',0).attr('y',ROW/2+5)
+    .attr('font-size','15px').attr('fill','#475569')
     .attr('text-anchor','start')
-    .text(d=>d.name.length>22?d.name.slice(0,21)+'…':d.name);
+    .text(d=>d.name.length>24?d.name.slice(0,23)+'…':d.name);
 
   // bar track (grey background)
   rowG.append('rect')
-    .attr('x',namePad).attr('y',ROW/2-4)
-    .attr('width',barW).attr('height',8).attr('rx',4)
+    .attr('x',namePad).attr('y',ROW/2-5)
+    .attr('width',barW).attr('height',10).attr('rx',5)
     .attr('fill','#F1F5F9');
 
   // bar fill (animated)
   rowG.append('rect')
-    .attr('x',namePad).attr('y',ROW/2-4)
-    .attr('width',0).attr('height',8).attr('rx',4)
+    .attr('x',namePad).attr('y',ROW/2-5)
+    .attr('width',0).attr('height',10).attr('rx',5)
     .attr('fill',d=>paColorForSession(d.count,maxCnt))
     .transition().delay((_,i)=>i*40).duration(420).ease(d3.easeCubicOut)
     .attr('width',d=>xScale(d.count));
 
   // count label (right of bar)
   rowG.append('text')
-    .attr('x',namePad+barW+6).attr('y',ROW/2+4)
-    .attr('font-size','13px').attr('fill','#94A3B8')
+    .attr('x',namePad+barW+8).attr('y',ROW/2+5)
+    .attr('font-size','14px').attr('fill','#94A3B8')
     .attr('opacity',0)
     .text(d=>d.count>=1000?(d.count/1000).toFixed(1)+'k':d.count)
     .transition().delay((_,i)=>i*40+350).duration(200)
     .attr('opacity',1);
 
   // hover interaction
-  rowG.style('cursor','default')
+  rowG.style('cursor','pointer')
     .on('mouseover',function(event,d){
       d3.select(this).select('rect:nth-child(3)').attr('opacity',0.8);
       const dayLabel=d.days===1?'1 shooting day':`${d.days} shooting days`;
