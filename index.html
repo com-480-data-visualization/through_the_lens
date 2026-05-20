@@ -1974,18 +1974,28 @@ function animateYearToDetail(year, a){
   const cssW=a.W, cssH=a.H;
   const yearMx=Math.max(...YEAR_DATA.map(d=>d.count));
   const barCol=YR_BAR_COLS[year]||P.g1;
-  // use a softer ease-out so the expansion feels natural
-  const easeExp=t=>1-Math.pow(1-clamp(t,0,1),2.8);
-  const DUR=1050; let s=null;
+  const DUR=1200; let s=null;
   paSetSize(cssW,cssH);
+
+  // ── Pre-compute heatmap geometry so we know the target rect ────────
+  const _isLeap=(year%4===0&&year%100!==0)||year%400===0;
+  const _jan1=new Date(year,0,1);
+  const _startDow=_jan1.getDay()===0?6:_jan1.getDay()-1;
+  const _totalDays=_isLeap?366:365;
+  const _numWeeks=Math.ceil((_startDow+_totalDays)/7);
+  const LPAD=56,PR=16,PT=30,PB=20;
+  const PH=7*Math.floor((cssW-LPAD-PR)/_numWeeks);
+  const STEP=Math.floor((cssW-LPAD-PR)/_numWeeks);
+  const HMTOP=PT+PH+PB+4+16;   // where the calendar grid starts
+  const heatH=7*STEP;           // height of the calendar grid
 
   function tick(ts){
     if(!s) s=ts;
     const raw=Math.min((ts-s)/DUR,1);
     paCtx.clearRect(0,0,cssW,cssH);
 
-    // ── Other bars fade out in first 40% of duration ─────────────────
-    const outA=Math.max(0,1-ease(clamp(raw/0.4,0,1)));
+    // ── 1. Other bars fade out (first 35%) ───────────────────────────
+    const outA=Math.max(0,1-ease(clamp(raw/0.35,0,1)));
     if(outA>0){
       YEAR_DATA.forEach((d,i)=>{
         if(d.year===year) return;
@@ -2000,27 +2010,40 @@ function animateYearToDetail(year, a){
       });
     }
 
-    // ── Expanding rect: bar → full chart area ────────────────────────
-    // Left edge sweeps left, right edge sweeps right, top edge sweeps up.
-    // Bottom edge is already at PT+PH (bar always touches the axis).
-    const tExp=easeExp(raw);
-    const rx  = lerp(a.barCX - a.barW/2,  0,    tExp);
-    const rw  = lerp(a.barW,              cssW,  tExp);
-    const ry  = lerp(a.barTop,            a.PT,  tExp);
-    const rh  = lerp(a.barH,              a.PH,  tExp);
-    const rr  = lerp(4, 0, tExp); // radius shrinks as it becomes full-width
+    // ── 2. Bar expands → heatmap rect, colour cross-fades ────────────
+    // Target: full width, positioned over the calendar grid only
+    const tExp=ease(clamp(raw/0.85,0,1));
+    const rx=lerp(a.barCX-a.barW/2, 0,     tExp);
+    const rw=lerp(a.barW,           cssW,   tExp);
+    const ry=lerp(a.barTop,         HMTOP,  tExp);
+    const rh=lerp(a.barH,           heatH,  tExp);
+    const rr=lerp(4, 0, tExp);
 
-    // 1. Bar-colour fill (shows through until heatmap takes over)
-    paCtx.fillStyle=barCol;
-    paCtx.beginPath();paCtx.roundRect(rx,ry,rw,rh,rr);paCtx.fill();
+    // Bar colour fades out as heatmap fades in
+    const barA=Math.max(0,1-ease(clamp((raw-0.25)/0.55,0,1)));
+    if(barA>0){
+      paCtx.fillStyle=barCol; paCtx.globalAlpha=barA;
+      paCtx.beginPath();paCtx.roundRect(rx,ry,rw,rh,rr);paCtx.fill();
+      paCtx.globalAlpha=1;
+    }
 
-    // 2. Heatmap content, revealed inside the expanding rect once it's
-    //    wide enough (starts after ~55% of the animation)
-    if(raw>0.5){
-      const heatA=ease(clamp((raw-0.5)/0.5,0,1));
+    // ── 3. Calendar heatmap fades in inside the expanding rect ────────
+    const heatA=ease(clamp((raw-0.3)/0.6,0,1));
+    if(heatA>0){
       paCtx.save();
-      paCtx.beginPath();paCtx.roundRect(rx,ry,rw,rh,rr);paCtx.clip();
+      paCtx.beginPath();paCtx.rect(rx,HMTOP,rw,heatH+50);paCtx.clip();
       paCtx.globalAlpha=heatA;
+      _renderDetail(year,cssW);
+      paCtx.globalAlpha=1;
+      paCtx.restore();
+    }
+
+    // ── 4. Monthly bars arrive separately, delayed ───────────────────
+    const barsA=ease(clamp((raw-0.62)/0.38,0,1));
+    if(barsA>0){
+      paCtx.save();
+      paCtx.beginPath();paCtx.rect(0,0,cssW,HMTOP);paCtx.clip();
+      paCtx.globalAlpha=barsA;
       _renderDetail(year,cssW);
       paCtx.globalAlpha=1;
       paCtx.restore();
