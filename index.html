@@ -1974,7 +1974,7 @@ function animateYearToDetail(year, a){
   const cssW=a.W, cssH=a.H;
   const yearMx=Math.max(...YEAR_DATA.map(d=>d.count));
   const barCol=YR_BAR_COLS[year]||P.g1;
-  const DUR=1200; let s=null;
+  const DUR=1200; let s=null, _sessionsPrepared=false;
   paSetSize(cssW,cssH);
 
   // ── Pre-compute heatmap geometry so we know the target rect ────────
@@ -2047,6 +2047,16 @@ function animateYearToDetail(year, a){
       _renderDetail(year,cssW);
       paCtx.globalAlpha=1;
       paCtx.restore();
+    }
+
+    // ── 5. Sessions timeline (DOM) fades in alongside monthly bars ────
+    if(!_sessionsPrepared&&raw>=0.62){
+      _sessionsPrepared=true;
+      const tl=document.getElementById('pa-sessions-timeline');
+      tl.style.opacity='0';
+      tl.style.transition='opacity 0.45s ease';
+      drawSessionsTimeline(year);
+      requestAnimationFrame(()=>{ tl.style.opacity='1'; });
     }
 
     if(raw<1) paAnimAF=requestAnimationFrame(tick);
@@ -2180,11 +2190,11 @@ function _renderDetail(year, cssW){
   paCtx.fillStyle=P.muted; paCtx.font='14px Inter'; paCtx.textAlign='left';
   paCtx.fillText('Less',lx,ly+9);
   ['#F1F5F9','#DBEAFE','#93C5FD','#2563EB','#7C3AED'].forEach((c,ci)=>{
-    paCtx.fillStyle=c; paCtx.beginPath();paCtx.roundRect(lx+28+ci*14,ly,11,11,2);paCtx.fill();
+    paCtx.fillStyle=c; paCtx.beginPath();paCtx.roundRect(lx+40+ci*14,ly,11,11,2);paCtx.fill();
   });
-  paCtx.fillStyle=P.muted; paCtx.fillText('More',lx+28+5*14+4,ly+9);
+  paCtx.fillStyle=P.muted; paCtx.fillText('More',lx+40+5*14+4,ly+9);
   if(maxS>2){
-    const sx=lx+28+5*14+52;
+    const sx=lx+40+5*14+52;
     // swatch: orange-outlined square identical to streak cells
     paCtx.fillStyle='#93C5FD';
     paCtx.beginPath();paCtx.roundRect(sx,ly,11,11,2);paCtx.fill();
@@ -2241,7 +2251,13 @@ function drawYearDetail(year){
   document.getElementById('pa-legend').innerHTML='';
   document.getElementById('pa-panel').style.display='none';
   paUpdateStoryCards(year);
-  drawSessionsTimeline(year);
+  const tl=document.getElementById('pa-sessions-timeline');
+  if(tl.style.opacity==='1'){
+    // already faded in during the animation — just clear the transition style
+    tl.style.transition='';
+  } else {
+    drawSessionsTimeline(year);
+  }
 }
 
 // ════════════════════════════════════════════════
