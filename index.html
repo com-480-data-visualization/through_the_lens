@@ -2132,7 +2132,16 @@ function _renderDetail(year, cssW){
     paCtx.fillStyle=c; paCtx.beginPath();paCtx.roundRect(lx+28+ci*14,ly,11,11,2);paCtx.fill();
   });
   paCtx.fillStyle=P.muted; paCtx.fillText('More',lx+28+5*14+4,ly+9);
-  if(maxS>2){paCtx.fillStyle=P.accent;paCtx.font='500 13px Inter';paCtx.fillText(`● ${maxS}-day streak`,lx+28+5*14+50,ly+9);}
+  if(maxS>2){
+    const sx=lx+28+5*14+52;
+    // swatch: orange-outlined square identical to streak cells
+    paCtx.fillStyle='#93C5FD';
+    paCtx.beginPath();paCtx.roundRect(sx,ly,11,11,2);paCtx.fill();
+    paCtx.strokeStyle=P.accent;paCtx.lineWidth=1.5;
+    paCtx.beginPath();paCtx.roundRect(sx+0.75,ly+0.75,9.5,9.5,2);paCtx.stroke();
+    paCtx.fillStyle=P.muted;paCtx.font='14px Inter';paCtx.textAlign='left';
+    paCtx.fillText(`Longest streak (${maxS} days)`,sx+16,ly+9);
+  }
 
   return {months,peakIdx,mBarW,PL,PW,PT,PH,gap,HMTOP,STEP,CELL,numWeeks,startDow,totalDays,yearMax};
 }
