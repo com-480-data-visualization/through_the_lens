@@ -1063,7 +1063,8 @@ GR_C.addEventListener('mousemove',e=>{
 GR_C.addEventListener('mouseleave',hideTT);
 
 function resizeGear(){
-  const h=vizH(340,140);
+  const n=[...activeCams].length;
+  const h=32+16+n*42+Math.max(0,n-1)*6; // PT+PB + n rows at max rowH + gaps
   GR_C.height=h;GR_C.style.height=h+'px';
   GR_C.width=cardInnerWidth(GR_C);
   drawGear();
@@ -1200,7 +1201,8 @@ function lrInit(){
 }
 
 function resizeLens(){
-  const h=vizH(300,140);
+  const nL=LENSES.length;
+  const h=20+20+nL*56+Math.max(0,nL-1)*8; // PT+PB + n bars at max rowH + gaps
   LR_C.height=h;LR_C.style.height=h+'px';
   LR_C.width=cardInnerWidth(LR_C);
   if(lrInited)lrDrawFrame();
@@ -1211,14 +1213,14 @@ function resizeLens(){
 // ═══════════════════════════════════════════════
 const SK_C=document.getElementById('sankey-canvas');
 const skCtx=SK_C.getContext('2d');
+const SK_CSS_H=360;
 function skLogicalW(){return Math.max(220,cardInnerWidth(SK_C));}
-function skLogicalH(){return vizH(300,170);}
-let skCanvasCssW=-1,skCanvasCssH=-1,skCanvasDpr=-1;
+let skCanvasCssW=-1,skCanvasDpr=-1;
 function skApplyCanvasSize(){
-  const cssW=skLogicalW(),cssH=skLogicalH();
+  const cssW=skLogicalW(),cssH=SK_CSS_H;
   const dpr=Math.min(window.devicePixelRatio||1,2.5);
-  if(cssW===skCanvasCssW&&cssH===skCanvasCssH&&dpr===skCanvasDpr)return;
-  skCanvasCssW=cssW;skCanvasCssH=cssH;skCanvasDpr=dpr;
+  if(cssW===skCanvasCssW&&dpr===skCanvasDpr)return;
+  skCanvasCssW=cssW;skCanvasDpr=dpr;
   SK_C.width=Math.max(1,Math.floor(cssW*dpr));
   SK_C.height=Math.max(1,Math.floor(cssH*dpr));
   SK_C.style.width=cssW+'px';
