@@ -1965,7 +1965,7 @@ function paEnterYears(){
 function paShowYears(){ paEnterYears(); }
 
 // ════════════════════════════════════════════════
-// TRANSITION — YEAR BAR flips into HEATMAP
+// TRANSITION — YEAR BAR expands into HEATMAP
 // ════════════════════════════════════════════════
 function animateYearToDetail(year, a){
   hideTT();
@@ -1974,7 +1974,9 @@ function animateYearToDetail(year, a){
   const cssW=a.W, cssH=a.H;
   const yearMx=Math.max(...YEAR_DATA.map(d=>d.count));
   const barCol=YR_BAR_COLS[year]||P.g1;
-  const DUR=750; let s=null;
+  // use a softer ease-out so the expansion feels natural
+  const easeExp=t=>1-Math.pow(1-clamp(t,0,1),2.8);
+  const DUR=1050; let s=null;
   paSetSize(cssW,cssH);
 
   function tick(ts){
@@ -1982,81 +1984,45 @@ function animateYearToDetail(year, a){
     const raw=Math.min((ts-s)/DUR,1);
     paCtx.clearRect(0,0,cssW,cssH);
 
-    if(raw<0.5){
-      // ── Phase 1: bar face rotates AWAY ──────────────────────────────
-      const p=ease(raw/0.5);            // 0→1
-      const scaleX=Math.cos(p*Math.PI/2); // 1→0
-
-      // Other bars fade out fast
-      const outA=Math.max(0,1-ease(clamp(raw/0.35,0,1)));
-      if(outA>0){
-        YEAR_DATA.forEach((d,i)=>{
-          if(d.year===year) return;
-          const n=YEAR_DATA.length;
-          const cx=a.PL+(i+.5)*(a.PW/n);
-          const bh=(d.count/yearMx)*a.PH, by=a.PT+a.PH-bh;
-          const bw=Math.min(Math.floor((a.PW/n)*0.55),90);
-          const col=d.year===PA_PEAK?P.accent:(YR_BAR_COLS[d.year]||P.g1);
-          paCtx.fillStyle=col; paCtx.globalAlpha=(d.partial?0.35:1)*outA;
-          paCtx.beginPath();paCtx.roundRect(cx-bw/2,by,bw,bh,[4,4,0,0]);paCtx.fill();
-          paCtx.globalAlpha=1;
-        });
-      }
-
-      // Clicked bar: centre drifts to canvas midpoint, top/bottom stretch to chart bounds
-      const cx=lerp(a.barCX, cssW/2, p);
-      const rectTop=lerp(a.barTop, a.PT, ease(p));
-      const rectH=lerp(a.barH,  a.PH,  ease(p));
-      const rectW=a.barW * scaleX;
-      if(rectW>0.5){
-        // subtle perspective shadow on left/right edges to sell the 3-D rotation
-        const shadowW=Math.max(0,4*scaleX);
-        const grad=paCtx.createLinearGradient(cx-rectW/2,0,cx+rectW/2,0);
-        grad.addColorStop(0,'rgba(0,0,0,0.18)');
-        grad.addColorStop(Math.min(shadowW/rectW,0.5),'rgba(0,0,0,0)');
-        grad.addColorStop(Math.max(1-shadowW/rectW,0.5),'rgba(0,0,0,0)');
-        grad.addColorStop(1,'rgba(0,0,0,0.18)');
-        paCtx.fillStyle=barCol;
-        paCtx.beginPath();paCtx.roundRect(cx-rectW/2,rectTop,rectW,rectH,4);paCtx.fill();
-        paCtx.fillStyle=grad;
-        paCtx.beginPath();paCtx.roundRect(cx-rectW/2,rectTop,rectW,rectH,4);paCtx.fill();
-      }
-
-    } else {
-      // ── Phase 2: heatmap face rotates IN ────────────────────────────
-      const p=ease((raw-0.5)/0.5);       // 0→1
-      const scaleX=Math.sin(p*Math.PI/2); // 0→1
-
-      const clipW=cssW*scaleX;
-      const clipX=cssW/2-clipW/2;
-
-      paCtx.save();
-      paCtx.beginPath();
-      paCtx.rect(clipX,0,clipW,cssH);
-      paCtx.clip();
-
-      // Heatmap content behind the clip
-      _renderDetail(year,cssW);
-
-      // Bar-coloured overlay that fades out as the heatmap reveals (gives "flip" colour flash)
-      const flashA=Math.max(0,1-p*3);
-      if(flashA>0){
-        paCtx.fillStyle=barCol;
-        paCtx.globalAlpha=flashA;
-        paCtx.fillRect(clipX,a.PT,clipW,a.PH);
+    // ── Other bars fade out in first 40% of duration ─────────────────
+    const outA=Math.max(0,1-ease(clamp(raw/0.4,0,1)));
+    if(outA>0){
+      YEAR_DATA.forEach((d,i)=>{
+        if(d.year===year) return;
+        const n=YEAR_DATA.length;
+        const cx=a.PL+(i+.5)*(a.PW/n);
+        const bh=(d.count/yearMx)*a.PH, by=a.PT+a.PH-bh;
+        const bw=Math.min(Math.floor((a.PW/n)*0.55),90);
+        const col=d.year===PA_PEAK?P.accent:(YR_BAR_COLS[d.year]||P.g1);
+        paCtx.fillStyle=col; paCtx.globalAlpha=(d.partial?0.35:1)*outA;
+        paCtx.beginPath();paCtx.roundRect(cx-bw/2,by,bw,bh,[4,4,0,0]);paCtx.fill();
         paCtx.globalAlpha=1;
-      }
+      });
+    }
 
-      // Perspective shadow (left & right edges of growing rect)
-      const shadowW=Math.max(0,6*(1-scaleX));
-      if(shadowW>0.5){
-        const grL=paCtx.createLinearGradient(clipX,0,clipX+shadowW,0);
-        grL.addColorStop(0,'rgba(0,0,0,0.22)');grL.addColorStop(1,'rgba(0,0,0,0)');
-        paCtx.fillStyle=grL;paCtx.fillRect(clipX,0,shadowW,cssH);
-        const grR=paCtx.createLinearGradient(clipX+clipW-shadowW,0,clipX+clipW,0);
-        grR.addColorStop(0,'rgba(0,0,0,0)');grR.addColorStop(1,'rgba(0,0,0,0.22)');
-        paCtx.fillStyle=grR;paCtx.fillRect(clipX+clipW-shadowW,0,shadowW,cssH);
-      }
+    // ── Expanding rect: bar → full chart area ────────────────────────
+    // Left edge sweeps left, right edge sweeps right, top edge sweeps up.
+    // Bottom edge is already at PT+PH (bar always touches the axis).
+    const tExp=easeExp(raw);
+    const rx  = lerp(a.barCX - a.barW/2,  0,    tExp);
+    const rw  = lerp(a.barW,              cssW,  tExp);
+    const ry  = lerp(a.barTop,            a.PT,  tExp);
+    const rh  = lerp(a.barH,              a.PH,  tExp);
+    const rr  = lerp(4, 0, tExp); // radius shrinks as it becomes full-width
+
+    // 1. Bar-colour fill (shows through until heatmap takes over)
+    paCtx.fillStyle=barCol;
+    paCtx.beginPath();paCtx.roundRect(rx,ry,rw,rh,rr);paCtx.fill();
+
+    // 2. Heatmap content, revealed inside the expanding rect once it's
+    //    wide enough (starts after ~55% of the animation)
+    if(raw>0.5){
+      const heatA=ease(clamp((raw-0.5)/0.5,0,1));
+      paCtx.save();
+      paCtx.beginPath();paCtx.roundRect(rx,ry,rw,rh,rr);paCtx.clip();
+      paCtx.globalAlpha=heatA;
+      _renderDetail(year,cssW);
+      paCtx.globalAlpha=1;
       paCtx.restore();
     }
 
