@@ -56,12 +56,14 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 section{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:88px 12px;position:relative}
 
 /* HERO */
+@keyframes heroUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
 #s-hero{background:transparent;text-align:center}
 .hero-copy{position:relative;z-index:1;text-align:center;max-width:min(920px,calc(100vw - 48px))}
-#s-hero h1{font-family:'Playfair Display',serif;font-size:clamp(44px,7vw,88px);font-weight:500;line-height:.95;margin-bottom:30px;color:var(--text)}
-#s-hero h1 em{color:var(--accent);font-style:italic}
-#s-hero p{color:var(--muted);font-size:18px;max-width:540px;line-height:1.85;margin:0 auto 52px}
-.hero-stats{display:flex;gap:64px;justify-content:center;flex-wrap:wrap}
+.hero-pre{display:block;font-family:'Playfair Display',serif;font-size:clamp(20px,3vw,34px);font-weight:500;color:var(--muted);letter-spacing:.02em;margin-bottom:8px;opacity:0;animation:heroUp .7s cubic-bezier(.16,1,.3,1) .1s forwards}
+.hero-headline{display:block;font-family:'Playfair Display',serif;font-size:clamp(56px,9vw,110px);font-weight:500;line-height:.92;color:var(--accent);font-style:italic;margin-bottom:36px;opacity:0;animation:heroUp .8s cubic-bezier(.16,1,.3,1) .32s forwards}
+#s-hero h1{margin:0}
+#s-hero p{color:var(--muted);font-size:17px;max-width:480px;line-height:1.8;margin:0 auto 52px;opacity:0;animation:heroUp .7s cubic-bezier(.16,1,.3,1) .56s forwards}
+.hero-stats{display:flex;gap:64px;justify-content:center;flex-wrap:wrap;opacity:0;animation:heroUp .7s cubic-bezier(.16,1,.3,1) .76s forwards}
 .hs{text-align:center}
 .hs-n{font-family:'Playfair Display',serif;font-size:52px;color:var(--g1)}
 .hs-l{font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:6px}
@@ -206,8 +208,11 @@ canvas{display:block}
 <!-- ═══ HERO ═══ -->
 <section id="s-hero">
   <div class="viz-card hero-copy">
-  <h1>4 years.<br><em>57,000 frames.</em></h1>
-  <p>A visual story hidden in camera metadata — when, how, with what, and with what creative style.</p>
+  <h1>
+    <span class="hero-pre">4 years.</span>
+    <em class="hero-headline">57,000 frames.</em>
+  </h1>
+  <p>Camera metadata from 56,890 photos — turned into an interactive portrait of a photographer's practice.</p>
   <div class="hero-stats">
     <div class="hs"><div class="hs-n" id="c1">0</div><div class="hs-l">photographs</div></div>
     <div class="hs"><div class="hs-n" id="c2">0</div><div class="hs-l">days shooting</div></div>
