@@ -11,7 +11,7 @@ Every photograph carries an invisible layer of information: the ISO that betrays
 lighting conditions, the aperture that reveals whether you were shooting wide open in a
 dark room or stopped down in afternoon sun, the shutter speed that tells you whether you
 were freezing motion or risking blur. Individually these numbers mean little. Aggregated
-across 56,890 photographs shot over four years on the EPFL campus, they reconstruct a
+across 56,882 photographs shot over four years on the EPFL campus, they reconstruct a
 detailed portrait of how, when, and with what creative intent a photographer's practice
 evolved.
 
@@ -21,7 +21,7 @@ recorded by the camera and post-processing software — revealing patterns in ca
 shooting conditions, and stylistic evolution that would be impossible to perceive by
 browsing images individually.
 
-The dataset consists of a Lightroom EXIF export covering 56,890 photographs taken between
+The dataset consists of a Lightroom EXIF export covering 56,882 photographs taken between
 September 2021 and May 2026, with 952 metadata fields per image: capture-time parameters
 (ISO, aperture, shutter speed, focal length), camera and lens identifiers, file geometry,
 and the full record of Lightroom post-processing adjustments (Clarity, Dehaze, Shadows,
@@ -61,7 +61,7 @@ fields — DateTimeOriginal, ISO, FNumber, Model — are present for over 99% of
 Camera usage is highly concentrated: the Sony A7 IV accounts for the majority of shots,
 providing technical consistency across the dataset. Lens metadata required partial recovery
 for fixed-lens cameras (Fujifilm X100VI, Panasonic LX100) by inferring optics from the
-camera model field. After recovery, 53 distinct lenses were identified, with usage
+camera model field. After recovery, 52 distinct lenses were identified, with usage
 concentrated around a handful of frequently used Sony GM lenses.
 
 ### 2.2 The MS2 prototype

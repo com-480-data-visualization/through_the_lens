@@ -7,7 +7,7 @@
 
 ## 1. Project Overview
 
-**"Through the Lens: 4 Years of Campus Life in 57k Photos"** explores 56,890 photographs
+**"Through the Lens: 4 Years of Campus Life in 57k Photos"** explores 56,882 photographs
 taken on the EPFL campus over four years through the EXIF and Lightroom metadata hidden
 inside every image. Rather than analysing the images themselves, the project turns the
 invisible technical layer into a visual narrative about campus life and creative evolution.
@@ -15,7 +15,7 @@ invisible technical layer into a visual narrative about campus life and creative
 **Target audience:** Photographers and data-curious people who want to understand their own
 shooting habits. The personal framing makes it engaging even to non-technical visitors.
 
-**Dataset:** Lightroom EXIF export — 56,890 rows, 952 metadata fields including ISO,
+**Dataset:** Lightroom EXIF export — 56,882 rows, 952 metadata fields including ISO,
 aperture, shutter speed, focal length, camera model, lens, GPS, Lightroom post-processing
 parameters (Clarity, Dehaze, Shadows), and selection/publish flags. Covers Sep 2021–May 2026;
 2022–2025 are the four complete shooting years.
