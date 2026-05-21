@@ -1026,17 +1026,18 @@ const grCtx=GR_C.getContext('2d');
 
 // CAMERAS, CAM_COLS and GEAR_MONTHLY come from viz_data.js
 const cumGear=GEAR_MONTHLY;
+const GR_CAMERAS=CAMERAS.filter(c=>c!=='Sony A7 V');
 
-let activeCams=new Set(CAMERAS);
+let activeCams=new Set(GR_CAMERAS);
 let gearRevealT=1, gearAnimAF=null;
 const MONTH_LABELS=GEAR_MONTH_LABELS;
 const camMax={};
-CAMERAS.forEach(c=>{camMax[c]=Math.max(...cumGear[c],1)});
+GR_CAMERAS.forEach(c=>{camMax[c]=Math.max(...cumGear[c],1)});
 
 // Camera toggle buttons
 (function(){
   const cont=document.getElementById('cam-toggles');
-  CAMERAS.forEach(c=>{
+  GR_CAMERAS.forEach(c=>{
     const btn=document.createElement('button');
     const label=c.replace('Sony ','').replace('Fuji ','').replace('Canon ','').replace('Panasonic ','');
     btn.className='tg-btn on';btn.textContent=label;
