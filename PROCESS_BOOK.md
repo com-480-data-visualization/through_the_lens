@@ -209,20 +209,55 @@ button was erased from the stats panel before it could render. The fix was to se
 `expZoomed` flag *before* any programmatic brush move, and guard the `end` handler with
 an early return when already in a zoomed state.
 
-### 3.2 Sankey diagram
+### 3.2 Workflow Funnel 
 
-The Sankey diagram was migrated to the D3 Sankey layout algorithm during MS3 development.
-The automatic layout introduced label overlap on narrower viewports because the four
-stages have very different widths (160,574 shots → 56,882 selected → 56,882 edited →
-500 published), and D3's auto-placement pushed labels into each other. The final version
-reverts to the original manually specified node positions — which were designed knowing
-the data proportions — while retaining D3 for bezier link rendering.
+**The MS2 starting point.** At MS2, the Workflow Funnel was a static Sankey diagram:
+four nodes (Picture shots → Selection → Edition → Published) with loss exits at each
+stage, rendered all at once on page load. The layout was manually specified — node
+positions were chosen knowing the data proportions, which kept the bezier links readable
+given the extreme width differences between stages (160,574 shots collapsing to 500
+published). Hovering a link surfaced counts and drop-off rates. The diagram communicated
+the funnel shape correctly, but presented it as a concluded fact rather than something
+to explore.
 
-One aspect of the Sankey warrants explicit mention in the process book: the "Published"
-count (500 photos) is a user-provided estimate. The dataset does not record which photos
-were actually shared or published; Lightroom's publish services metadata was not exported.
-The number was chosen conservatively based on memory and should be read as illustrative
-rather than precise.
+[FIGURE X: MS2 Workflow Funnel — static diagram, all four stages visible simultaneously]
+
+**Making the reveal interactive.** The central design question after MS2 was whether the
+funnel should remain a single static view or become something navigable. A static diagram
+of this shape has a legibility problem: the tiny Published node at the far right is
+visually marginal — the eye goes immediately to the dominant loss flow and stays there.
+A viewer who does not read every label carefully misses that the published count is an
+estimate, and that the edition stage passes everything through intact.
+
+The solution was a **staged progressive reveal**: rather than rendering all four columns
+simultaneously, the diagram starts empty and builds left to right as the viewer selects
+each stage. Clicking "Shots" draws only the leftmost node; "Select" adds the selection
+node and its flows; "Edit" adds the edition column; "Publish" completes the funnel. Each
+step gives the viewer time to read one transition before the next appears. 
+
+**The incremental animation problem.** The first implementation animated the entire
+visible diagram from scratch on every stage transition. This created a perceptual problem:
+advancing from "Select" to "Edit" caused the already-established left columns to redraw,
+making them appear to reset rather than persist. The fix was to track which columns were
+already visible and animate only the newly added ones. The result reads as content
+flowing forward rather than the whole chart restarting. 
+
+**Illustrating the process.** The MS2 version included a legend below the diagram
+identifying the color coding of nodes and flows. As the design evolved toward a staged
+reveal, the legend became unnecessary — each stage is introduced explicitly by its
+control pill, and the color progression speaks for itself. The space was repurposed to
+bring the photography back into the picture: a scrollable strip of example images appears
+as each stage is selected, showing raw captures for Shots, kept and culled pairs for
+Select, before and after edits for Edition, and final images for Publish. Each stage now
+answers not just *how many* but *what kind* — the viewer can see the visual difference
+between a culled frame and a kept one, or between an unedited raw and its finished
+version. Clicking any image opens a full-screen lightbox for closer inspection.
+
+**Color and tone.** The node colors follow the site's blue-to-purple progression, giving
+the funnel a sense of directional movement from left to right. Loss nodes are rendered in
+muted gray — present and readable, but visually subordinate to the main flow. The
+Published node picks up the site's orange accent when the final stage is active, a small
+signal that this is the destination the entire funnel points toward.
 
 ### 3.3 Gear Timeline — camera naming
 
@@ -243,42 +278,73 @@ The fix required updating `extract_viz_data.py` to extend the year range from 20
 and Heatmap sections, where it contextualises the dataset boundary rather than creating
 misleading empty bars in the race charts.
 
-### 3.5 Photo Activity — session pinning and the year→heatmap transition
 
-**Session pinning on click.**  The sessions timeline below the heatmap originally showed
-shooting sessions as passive reference markers. Making it interactive required deciding
-what "selecting a session" should mean visually. The chosen design locks the heatmap into
-a highlight state: all days belonging to the pinned session are outlined in blue, zero-count
-days within the session are tinted light blue so they remain findable, and all other days
-dim to 12% opacity. A detail card appears below the timeline showing the session date
-range, total photo count, and peak shooting day. A second click on the same session
-(or any click outside it) releases the lock.  The pinned state persists through
-mouse-move hovering, preventing the highlight from flickering when the user moves the
-pointer to read the detail card.
+### 3.5 Photo Activity — enriching the drill-down
 
-**Iterating the year→heatmap transition.**  The original transition compressed the
-clicked bar's height to zero before re-expanding it as the heatmap — visually convincing
-in isolation but subjectively wrong: the bar appeared to shrink and vanish rather than
-*transform* into something new.
+**The MS2 starting point.** At MS2, Photo Activity was a two-level drill-down: an annual
+bar chart transitioned on click to a GitHub-style calendar heatmap for the selected year.
+Clicking a day opened a small panel below the heatmap showing the date, photo count, and
+session name. The structure was sound — year to day is the right granularity progression
+for this dataset — but the two views felt disconnected. The year chart gave no sense of
+growth or rhythm across years, and the heatmap had no way to surface which days belonged
+to the same shooting session without clicking each one individually.
 
-Several approaches were attempted before landing on the current design:
+[FIGURE X: MS2 Photo Activity — year bar chart and calendar heatmap side by side]
 
-- *3D card flip (Y axis):* the bar's width pinched to zero at the midpoint, then expanded
-  as the heatmap face — like flipping a playing card.  The effect was clean but felt
-  mechanical; the width-pinch read as a glitch rather than a physical motion.
+**Setting the scene before the chart.** The first addition was a three-figure banner
+above the year chart: Peak Month, Longest Streak, and Best Day, computed across the full
+dataset. These numbers serve as an entry point — a reader who lands on the section gets
+an immediate sense of scale and rhythm before engaging with the chart itself. When
+drilling into a specific year the banner updates to reflect that year's figures, so it
+remains relevant at every level of the exploration.
 
-- *Outward expansion:* the bar grew directly into the heatmap area without rotation.
-  This felt abrupt on short bars (the bar had little visual momentum).
+**Reading a year at a glance.** The year bar chart gained year-over-year growth badges
+— a small percentage figure above each bar showing the change from the previous year.
+The progression from +18% to +17% to −34% tells the arc of the practice in three
+numbers: steady growth through 2023 and 2024, then a tapering in 2025. This context
+was previously invisible; without it, a reader would need to mentally compute the
+differences from the bar heights alone.
 
-- *Clockwise rotation (current):* `ctx.translate(center); ctx.rotate(angle)` rotates
-  the bar 90° clockwise around its own centre, like a domino falling to the right.
-  Because a 90° CW rotation swaps the canvas axes, the drawn dimensions are deliberately
-  inverted during the morph — drawn width lerps `barW → heatH` and drawn height lerps
-  `barH → cssW` — so after the full rotation the rectangle lands in screen space at
-  exactly `cssW × heatH`, the correct heatmap dimensions.  The bar never compresses:
-  it only grows and rotates.  The bar colour cross-fades out over the second half while
-  the heatmap grid fades in, so the "flip point" is visually smooth rather than a snap.
+**Giving the months a seasonal voice.** Inside the year drill-down, the twelve monthly
+bars are colored by season — winter blues, spring teals, summer oranges, autumn purples —
+with faint background tints marking each seasonal band. The color does not encode any
+additional data dimension; it gives the monthly chart a visual rhythm that mirrors the
+actual experience of a shooting year, where activity peaks follow the academic calendar
+and the weather rather than the Gregorian months.
 
+**From a click panel to a sessions chart.** The MS2 heatmap surfaced session information
+only on individual day clicks — one day at a time, with no way to compare sessions or
+understand which ones dominated the year. This was replaced with a named sessions bar
+chart below the heatmap, showing the top sessions by total photo count. The bar chart
+answers a question the heatmap alone cannot: not just *when* shooting happened, but
+*what for*. A year that looks like scattered blue cells in the heatmap resolves, in the
+sessions chart, into a clear hierarchy — Assos EPFL at 4.9k, Mediacom at 3.0k, the
+structure of a practice that is not random but organised around recurring subjects.
+
+**Linking the two views.** Once the sessions chart existed alongside the heatmap, a
+natural question arose: which heatmap cells belong to which session? The answer was a
+bidirectional highlight: hovering a session bar dims all heatmap days that do not belong
+to it and draws an orange ring on the ones that do. The reverse also works — hovering a
+heatmap cell highlights its session row in the bar chart and dims the others. The two
+views become a single linked object, and a reader can move fluidly between the calendar
+view of time and the ranked view of subjects.
+
+**Bringing days to life with photographs.** The MS2 day click panel showed a date, a
+count, and a session name — text only. The tooltip was extended to include a photograph
+from that day when one is available, drawn either from a set of manually curated preview
+images for standout days or from the hero gallery manifest for days that appear elsewhere
+on the site. The photograph is not decorative; it gives the day a face. A cell marked
+dark blue in the heatmap might represent a concert, a wedding, or an afternoon on campus
+— the image makes that concrete in a way that a count of 927 photos cannot.
+
+**The year-to-heatmap transition.** Clicking a year bar needed to feel like a genuine
+navigation rather than a panel swap. Several approaches were tried before landing on the
+final design — each attempt revealed a different way the motion could feel wrong, and the
+full account of what failed and why is discussed in section 4. The final transition
+rotates the bar 90° clockwise around its own centre, like a domino falling to the right,
+so that the rectangle lands at exactly the heatmap dimensions after the full rotation.
+The bar never compresses — it only grows and rotates — and the color cross-fades into
+the heatmap grid at the midpoint, making the transition feel continuous rather than staged.
 ---
 
 ## 4. Challenges and What We Learned
@@ -305,7 +371,27 @@ chart looked like a static scatter plot. A visible affordance badge was necessar
 is a general lesson: interactions that feel natural to the implementer often feel invisible
 to the user.
 
-**Camera naming requires human-readable normalisation.** Raw EXIF model strings are written by firmware and do not guarantee a human-readable name. DJI's `FC3582` identifier is unambiguous to a registry but invisible to a viewer. Any pipeline that passes EXIF model strings directly into a visualisation should apply a normalisation map; the correct place to maintain that map is the extraction script, not the front-end, so that the data file always contains resolved names.
+**Getting transitions to feel like navigation.** The year-to-heatmap transition in Photo
+Activity went through three distinct attempts before reaching a design that felt right.
+The first approach compressed the clicked bar's height to zero before re-expanding it as
+the heatmap — visually the bar appeared to shrink and vanish rather than transform into
+something new. A 3D card flip along the Y axis was tried next: the bar's width pinched
+to zero at the midpoint, then expanded as the heatmap face. The effect was clean in
+isolation but felt mechanical — the width-pinch read as a glitch rather than physical
+motion. The solution that worked was a 90° clockwise rotation around the bar's own
+centre, like a domino falling to the right. Because rotation swaps the canvas axes, the
+drawn dimensions are deliberately inverted during the morph so the rectangle lands at
+exactly the heatmap dimensions after the full turn. The lesson was that transitions
+between views should preserve the visual mass of the original element throughout — any
+compression or pinch breaks the sense that the two views are the same object seen
+differently.
+
+**Camera naming requires human-readable normalisation.** Raw EXIF model strings are
+written by firmware and do not guarantee a human-readable name. DJI's `FC3582` identifier
+is unambiguous to a registry but invisible to a viewer. Any pipeline that passes EXIF
+model strings directly into a visualisation should apply a normalisation map; the correct
+place to maintain that map is the extraction script, not the front-end, so that the data
+file always contains resolved names.
 
 **D3 event semantics have sharp edges.** Programmatic calls to D3's brush `.move()` fire
 `end` handlers synchronously, which can cause re-entrant event processing. Testing the
@@ -335,13 +421,21 @@ object.
 
 ## 6. My Contributions
 
-I was responsible for the Exposure Explorer in its entirety for the final submission:
-the logarithmic axis transforms, the focal-range colour dimension replacing scene type,
-the binned median trend line, the D3 axes and SVG overlay migration, the brush selection
-with live statistics, the zoom-into-selection animation, and the UX affordance work
-(drag hint, median legend entry). I identified and fixed the data range inconsistency
-across all five visualizations, extending the dataset to 2025 in the extraction script,
-data file, and colour mapping. I corrected the Gear Timeline camera naming by adding the
-`FC3582 → DJI Mini 4 Pro` mapping to the extraction pipeline. I contributed to
-resolving the Sankey merge conflicts that arose when the D3 layout migration was
-integrated.
+**Lea** was responsible for the Exposure Explorer in its entirety for the final
+submission: the logarithmic axis transforms, the focal-range colour dimension replacing
+scene type, the binned median trend line, the D3 axes and SVG overlay migration, the
+brush selection with live statistics, the zoom-into-selection animation, and the UX
+affordance work (drag hint, median legend entry). She identified and fixed the data range
+inconsistency across all five visualizations, extending the dataset to 2025 in the
+extraction script, data file, and colour mapping. She corrected the Gear Timeline camera
+naming by adding the `FC3582 → DJI Mini 4 Pro` mapping to the extraction pipeline, and
+contributed to resolving the Sankey merge conflicts that arose when the D3 layout
+migration was integrated.
+
+**Martina** was responsible for the Photo Activity section in its entirety for the final
+submission: the story banner, year-over-year growth badges, season-colored monthly bars,
+the named sessions bar chart, the bidirectional heatmap-to-sessions highlighting, and the
+tooltip photo previews. She led the MS3 iteration of the Workflow Funnel, redesigning the
+static MS2 Sankey into the staged progressive reveal with horizontal stage controls, the
+incremental animation, the photo strip, and the lightbox. The year-to-heatmap transition
+animation was developed jointly with Lea.
