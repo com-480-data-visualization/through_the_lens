@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Through the Lens — Data Visualizations</title>
+<title>Through the Lens - Data Visualizations</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <style>
@@ -122,7 +122,7 @@ canvas{display:block}
 /* Workflow funnel */
 #s-sankey .viz-card-title{font-family:'Playfair Display',serif;font-weight:500}
 
-/* Stage strip — horizontal, full width above canvas */
+/* Stage strip - horizontal, full width above canvas */
 #sk-stage-wrap{margin-bottom:14px}
 #sk-stage-bar{display:flex;align-items:center;gap:0;width:100%;position:relative}
 #sk-stage-bar svg{display:block;width:100%;height:auto}
@@ -133,18 +133,23 @@ canvas{display:block}
 #sk-canvas-wrap{position:relative}
 
 /* Photo strip */
-#sk-photo-strip{margin-top:16px;display:none}
+#sk-photo-strip{margin-top:16px;display:none;overflow:visible;position:relative;--sk-photo-w:clamp(86px,11.2vw,118px);--sk-photo-h:calc(var(--sk-photo-w)*2/3);min-height:calc(var(--sk-photo-h)*3 + 54px)}
 .sk-strip-label{font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;padding:0 2px}
-.sk-strip-photos{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow-x:auto;padding:4px 2px 12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.sk-strip-photos{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow:visible;padding:4px 2px 12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;width:max-content;max-width:none}
+.sk-strip-photos.grid-3x4{display:grid;grid-template-columns:repeat(4,minmax(0,var(--sk-photo-w)));justify-content:start;gap:6px;overflow:visible;padding:2px 0 10px}
 .sk-strip-photos::-webkit-scrollbar{height:4px}
 .sk-strip-photos::-webkit-scrollbar-track{background:transparent}
 .sk-strip-photos::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.sk-strip-item{flex:0 0 auto;width:210px;height:140px;border-radius:8px;overflow:hidden;position:relative;border:1.5px solid var(--border);transition:opacity .3s,border-color .3s,box-shadow .3s}
+.sk-strip-item{flex:0 0 auto;width:var(--sk-photo-w);height:var(--sk-photo-h);border-radius:8px;overflow:hidden;position:relative;border:1.5px solid var(--border);transition:opacity .3s,border-color .3s,box-shadow .3s,transform .35s ease,filter .35s ease}
+.sk-strip-photos.grid-3x4 .sk-strip-item{width:var(--sk-photo-w)}
 .sk-strip-item img{width:100%;height:100%;object-fit:cover;display:block;transition:filter .3s}
 .sk-strip-item.culled{opacity:.22}.sk-strip-item.culled img{filter:grayscale(90%)}
 .sk-strip-item.culled::after{content:'✕';position:absolute;inset:0;display:grid;place-items:center;font-size:20px;font-weight:300;color:rgba(255,255,255,.9);background:rgba(15,23,42,.28)}
 .sk-strip-item.kept{border-color:var(--accent);box-shadow:0 0 0 2.5px rgba(249,115,22,.3)}
-.sk-strip-item.published{width:240px;height:160px;border-color:#8B5CF6;box-shadow:0 0 0 2.5px rgba(139,92,246,.3)}
+.sk-strip-item.fade-out{opacity:0;transform:scale(.86)}
+.sk-strip-item.published{width:var(--sk-photo-w);border-color:#8B5CF6;box-shadow:0 0 0 2.5px rgba(139,92,246,.3)}
+.sk-strip-item.published-grow{animation:skPublishGrow .35s ease-out both}
+@keyframes skPublishGrow{from{opacity:.15}to{opacity:1}}
 .sk-group-tag{flex:0 0 auto;align-self:center;font-size:11px;letter-spacing:.07em;text-transform:uppercase;padding:5px 11px;border-radius:20px;line-height:1.4;font-weight:500;white-space:nowrap}
 .sk-group-tag.kept-tag{background:rgba(249,115,22,.12);color:var(--accent);border:1px solid rgba(249,115,22,.35)}
 .sk-group-tag.culled-tag{background:rgba(148,163,184,.1);color:var(--muted);border:1px solid var(--border)}
@@ -162,14 +167,41 @@ canvas{display:block}
 #sk-lb-prev:hover,#sk-lb-next:hover{background:rgba(255,255,255,.24)}
 #sk-lb-counter{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.55);font-size:14px;font-family:'Inter',sans-serif;letter-spacing:.05em}
 #sk-lb-wrap{position:relative;display:inline-flex}
-#sk-lightbox.lb-culled #sk-lb-img{opacity:.25;filter:grayscale(85%)}
-#sk-lb-culled-cross{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:96px;font-weight:200;color:rgba(255,255,255,.85);pointer-events:none}
-#sk-lightbox.lb-culled #sk-lb-culled-cross{display:flex}
+#sk-lb-culled-cross{display:none}
 .sk-strip-item{cursor:zoom-in}
 .sk-pair{display:flex;align-items:center;gap:6px;flex:0 0 auto}
 .sk-pair-arrow{font-size:13px;color:var(--dim);line-height:1;user-select:none}
-.sk-pair-badge{position:absolute;bottom:4px;left:5px;font-size:10px;letter-spacing:.05em;text-transform:uppercase;background:rgba(15,23,42,.6);color:#fff;padding:3px 6px;border-radius:3px;line-height:1.3;pointer-events:none}
-.sk-pair-badge.after{background:rgba(139,92,246,.85)}
+.sk-pair-badge{display:none!important}
+.sk-strip-item[data-badge]::after{content:attr(data-badge);position:absolute;left:5px;bottom:4px;z-index:3;font-size:10px;letter-spacing:.05em;text-transform:uppercase;background:rgba(15,23,42,.6);color:#fff;padding:3px 6px;border-radius:3px;line-height:1;white-space:nowrap;max-width:calc(100% - 10px);overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.sk-strip-item[data-badge="After"]::after{background:rgba(139,92,246,.85)}
+.sk-edit-stack{display:flex;flex-direction:column;gap:6px;width:100%}
+.sk-edit-row{display:grid;grid-template-columns:var(--sk-photo-w) 24px var(--sk-photo-w);justify-content:start;align-items:center;gap:8px;height:var(--sk-photo-h);opacity:1;transform:translateY(0);transition:opacity .26s ease,transform .35s ease}
+.sk-edit-row .before-wrap{justify-self:end;position:relative;z-index:2}
+.sk-edit-row .after-wrap{justify-self:start;position:relative;z-index:1}
+.sk-edit-row .before-wrap,.sk-edit-row .after-wrap{display:flex}
+.sk-edit-row .before-wrap .sk-strip-item,.sk-edit-row .after-wrap .sk-strip-item{width:var(--sk-photo-w)}
+.sk-edit-row .sk-pair-arrow{opacity:1;transform:scale(1);transition:opacity .28s ease,transform .28s ease}
+.sk-edit-row .after-wrap{opacity:1;transform:translateX(0);clip-path:inset(0 0 0 0);transition:transform .38s cubic-bezier(.2,.8,.2,1),clip-path .32s cubic-bezier(.2,.8,.2,1)}
+.sk-edit-stack.pre-edit .sk-edit-row{opacity:0;transform:translateY(16px)}
+.sk-edit-stack.pre-edit .sk-edit-row .sk-pair-arrow{opacity:0;transform:scale(.85)}
+.sk-edit-stack.enter-after .sk-pair-arrow{opacity:1;transform:translateX(-8px) scale(.9)}
+.sk-edit-stack.enter-after .after-wrap{opacity:1;transform:translateX(calc(-1 * (var(--sk-photo-w) + 32px))) translateY(2px);clip-path:inset(0 0 0 0)}
+.sk-edit-stack.enter-after.reveal-after .sk-pair-arrow{opacity:1;transform:translateX(0) scale(1)}
+.sk-edit-stack.enter-after.reveal-after .after-wrap{opacity:1;transform:translateX(0);clip-path:inset(0 0 0 0)}
+.sk-edit-stack.before-only .sk-edit-row .before-wrap{justify-self:center}
+.sk-edit-stack.before-only .sk-edit-row .sk-pair-arrow{opacity:0;transform:translateX(-10px) scale(.88)}
+.sk-edit-stack.before-only .sk-edit-row .after-wrap{opacity:0;transform:translateX(-28px) scale(.95)}
+.sk-edit-stack.before-only.reveal-after .sk-edit-row .before-wrap{justify-self:end}
+.sk-edit-stack.before-only.reveal-after .sk-edit-row .sk-pair-arrow{opacity:1;transform:translateX(0) scale(1)}
+.sk-edit-stack.before-only.reveal-after .sk-edit-row .after-wrap{opacity:1;transform:translateX(0) scale(1)}
+.sk-publish-stage{display:flex;flex-direction:column;gap:12px;width:100%}
+.sk-publish-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sk-publish-row-title{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:8px}
+.sk-publish-stage .sk-strip-item{width:var(--sk-photo-w)}
+.sk-publish-stage .sk-publish-row.lost .sk-strip-item{opacity:.38}
+.sk-publish-stage .sk-strip-item.target{border-color:#8B5CF6;box-shadow:0 0 0 2px rgba(139,92,246,.33)}
+.sk-publish-stage .sk-strip-item.pop{box-shadow:0 0 0 2.5px rgba(139,92,246,.5)}
+.sk-publish-stage .sk-publish-row{transition:opacity .32s ease,transform .38s ease}
 
 @media(max-width:700px){section{padding:80px 8px}.ctrl-row{gap:8px}.hero-stats{gap:28px}.viz-card{padding:24px 20px}}
 </style>
@@ -209,14 +241,14 @@ canvas{display:block}
 <section id="s-hero">
   <div class="viz-card hero-copy">
   <h1>
-    <span class="hero-pre">4 years.</span>
-    <em class="hero-headline">56,882 frames.</em>
+    <span class="hero-pre">4 years</span>
+    <em class="hero-headline">56,882 frames</em>
   </h1>
-  <p>Camera metadata from 56,882 photos — turned into an interactive portrait of a photographer's practice.</p>
+  <p>Camera metadata from 56,882 photos turned into an interactive portrait of a photographer's practice</p>
   <div class="hero-stats">
     <div class="hs"><div class="hs-n" id="c1">0</div><div class="hs-l">photographs</div></div>
     <div class="hs"><div class="hs-n" id="c2">0</div><div class="hs-l">days shooting</div></div>
-    <div class="hs"><div class="hs-n" id="c3">0</div><div class="hs-l">lenses used</div></div>
+    <div class="hs"><div class="hs-n" id="c3">0</div><div class="hs-l">photo assignments</div></div>
   </div>
   </div>
   <div class="scroll-down"><div class="sd-line"></div><span>scroll</span></div>
@@ -230,18 +262,18 @@ canvas{display:block}
     <div id="pa-story" style="display:flex;margin-top:32px;margin-bottom:24px;border-radius:10px;border:1px solid var(--border);overflow:hidden">
       <div style="flex:1;min-width:130px;padding:18px 22px;border-right:1px solid var(--border)">
         <div style="font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Peak Month</div>
-        <div id="pa-story-peak-month" style="font-size:17px;font-weight:500;color:var(--text)">—</div>
-        <div id="pa-story-peak-count" style="font-size:14px;color:var(--accent);margin-top:4px">—</div>
+        <div id="pa-story-peak-month" style="font-size:17px;font-weight:500;color:var(--text)">N/A</div>
+        <div id="pa-story-peak-count" style="font-size:14px;color:var(--accent);margin-top:4px">N/A</div>
       </div>
       <div style="flex:1;min-width:130px;padding:18px 22px;border-right:1px solid var(--border)">
         <div style="font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Longest Streak</div>
-        <div id="pa-story-streak" style="font-size:17px;font-weight:500;color:var(--text)">—</div>
+        <div id="pa-story-streak" style="font-size:17px;font-weight:500;color:var(--text)">N/A</div>
         <div style="font-size:13px;color:var(--muted);margin-top:4px">days in a row</div>
       </div>
       <div style="flex:1;min-width:130px;padding:18px 22px">
         <div style="font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Best Day</div>
-        <div id="pa-story-max-day" style="font-size:17px;font-weight:500;color:var(--text)">—</div>
-        <div id="pa-story-max-date" style="font-size:13px;color:var(--muted);margin-top:4px">—</div>
+        <div id="pa-story-max-day" style="font-size:17px;font-weight:500;color:var(--text)">N/A</div>
+        <div id="pa-story-max-date" style="font-size:13px;color:var(--muted);margin-top:4px">N/A</div>
       </div>
     </div>
     <div id="pa-breadcrumb" style="font-size:14px;color:var(--muted);margin-bottom:6px;min-height:20px"></div>
@@ -337,7 +369,7 @@ canvas{display:block}
 <section id="s-lens">
   <div class="viz-card">
     <div class="viz-card-title">Lens Race</div>
-    <div class="viz-card-sub">Cumulative shots per interchangeable lens (objectif) over time. Fixed-lens cameras excluded.</div>
+    <div class="viz-card-sub">Cumulative shots per interchangeable lens over time. Fixed-lens cameras excluded</div>
     <div class="play-row">
       <button class="play-btn" id="lr-play-btn" onclick="lrTogglePlay()">▶</button>
       <span class="time-label" id="lr-time-label">Feb 2022</span>
@@ -354,7 +386,7 @@ canvas{display:block}
 <section id="s-sankey">
   <div class="viz-card">
     <div class="viz-card-title">Workflow Funnel</div>
-    <div class="viz-card-sub">From shutter click to final publish. Select a stage to explore the funnel.</div>
+    <div class="viz-card-sub">From shutter click to final publish. Select a stage to explore the funnel</div>
     <!-- Horizontal stage strip (replaces the vertical side panel) -->
     <div id="sk-stage-wrap">
       <div id="sk-stage-bar"></div>
@@ -625,12 +657,19 @@ function animCount(id,target,fmt){
   const f=ts=>{if(!s)s=ts;const p=clamp((ts-s)/2000,0,1);el.textContent=fmt?fmt(Math.round(ease(p)*target)):Math.round(ease(p)*target).toLocaleString();if(p<1)requestAnimationFrame(f)};
   requestAnimationFrame(f);
 }
+function heroAssignmentCount(){
+  if(typeof ALBUM_MAP==='undefined'||!ALBUM_MAP) return HERO_STATS.lenses;
+  const names=Object.values(ALBUM_MAP)
+    .map(v=>typeof v==='string'?v.trim():'')
+    .filter(Boolean);
+  return names.length?new Set(names).size:HERO_STATS.lenses;
+}
 
 // Intersection observer
 const io=new IntersectionObserver(entries=>{entries.forEach(e=>{
   if(!e.isIntersecting)return;
   const id=e.target.id;
-  if(id==='s-hero'){animCount('c1',HERO_STATS.photos);animCount('c2',HERO_STATS.days);animCount('c3',HERO_STATS.lenses)}
+  if(id==='s-hero'){animCount('c1',HERO_STATS.photos);animCount('c2',HERO_STATS.days);animCount('c3',heroAssignmentCount())}
   if(id==='s-exposure'){resizeExp();drawExposure()}
   if(id==='s-gear'){gearEnter()}
   if(id==='s-lens'){lrEnter()}
@@ -708,22 +747,22 @@ const expSprings=EXP_RAW.map(()=>({
 let expAnimAF=null;
 
 const EXP_INSIGHTS={
-  'iso|aperture':   {icon:'🌑',title:'The dark scene link',body:'Dark scenes force two things at once: high ISO (amplify the sensor) and wide aperture (low f-number, more light). As ISO rises, f-numbers fall — the orange trend line shows this downward sweep. Bright outdoor shots sit at low ISO with narrower apertures.'},
-  'aperture|iso':   {icon:'🌑',title:'The dark scene link',body:'Wide aperture (low f-number) goes hand-in-hand with high ISO: both are responses to low light. The trend line traces this: as f-numbers drop (wider lens), ISO climbs. Stop down to f/8–16 in bright sun and ISO stays low.'},
-  'iso|shutter':    {icon:'⚡',title:'Low light = slow + high ISO',body:'When light is scarce, both shutter and ISO suffer. Night events and concerts require slow shutter (motion blur risk) and high ISO simultaneously — watch the trend rise toward the top-right. Bright outdoor moments anchor bottom-left.'},
-  'shutter|iso':    {icon:'⚡',title:'Low light = slow + high ISO',body:'Fast shutters come with sunny light and low ISO; slow shutters pair with high ISO in dark scenes. The trend line shows how ISO must rise as shutter slows — both are reactions to the same lack of light.'},
-  'aperture|shutter':{icon:'⚖️',title:'The exposure tradeoff',body:'Open up the aperture (lower f-number) and you can use a faster shutter for the same brightness. This is the core creative tension: freeze motion with a fast shutter, or blur the background with a wide aperture.'},
-  'shutter|aperture':{icon:'⚖️',title:'The exposure tradeoff',body:'A faster shutter demands either more light or a wider aperture. The trend line shows how shutter speed rises as aperture opens — two sides of the same exposure equation.'},
-  'focal|aperture': {icon:'🔭',title:'Telephoto lenses are slower',body:'Wide-angle primes (14–35mm) are typically fast (f/1.4–f/2.8). Telephoto lenses (100–200mm) are usually slower (f/4–f/5.6) due to optical constraints. The trend line shows aperture narrowing as focal length grows.'},
-  'aperture|focal': {icon:'🔭',title:'Telephoto lenses are slower',body:'Wide lenses (low f-number) are usually short focal lengths; narrow lenses (high f-number) are usually telephoto. The trend line traces how focal length tends to rise as aperture narrows.'},
-  'focal|shutter':  {icon:'📐',title:'The 1/focal length rule',body:'To avoid camera shake at longer focal lengths, you need a faster shutter. At 200mm, 1/250s or faster is standard; at 14mm you can often get away with 1/30s. Watch the trend line rise as focal length grows.'},
-  'shutter|focal':  {icon:'📐',title:'The 1/focal length rule',body:'Longer focal lengths demand faster shutters to stay sharp. The trend line shows focal length climbing as shutter speed increases — reflecting the intuitive rule photographers follow to avoid shake.'},
-  'iso|focal':      {icon:'🎭',title:'Telephoto shots tend to be darker scenes',body:'Telephoto focal lengths (100–200mm) often capture events and indoor performances — high-ISO territory. Wide-angle shots are more often outdoor with plenty of light. The trend line rises slightly toward longer lenses.'},
-  'focal|iso':      {icon:'🎭',title:'Telephoto shots tend to be darker scenes',body:'As focal length grows, ISO tends to follow — telephoto is the language of concerts, sports, and indoor events where light is scarce. Wide-angle primes stay in the low-ISO zone.'},
+  'iso|aperture':   {icon:'📷',title:'Aperture priority signature',body:'Adrien usually shoots in aperture priority, so aperture is intentionally chosen while ISO adapts to exposure. That creates a fairly straight structure in this view, with ISO mostly bounded between 100 and 3200 on Sony.'},
+  'aperture|iso':   {icon:'📷',title:'f/2.8 dominates',body:'The strong vertical band at f/2.8 comes from the two most used lenses. Since aperture is often fixed first, ISO changes independently, so there is no strong global ISO-aperture correlation apart from these lens limits.'},
+  'iso|shutter':    {icon:'⚡',title:'Bright scenes sit bottom-left',body:'At very fast shutter speeds, ISO tends to stay low. Those points correspond to bright scenes where the camera limits incoming light. The rest of the cloud is more spread because shutter and ISO are both adapting.'},
+  'shutter|iso':    {icon:'⚡',title:'Auto exposure compensation',body:'High shutter speed regions are mostly low ISO, while slower shutter regions need higher ISO more often. This spread reflects automatic compensation between both settings under changing light conditions.'},
+  'aperture|shutter':{icon:'⏱️',title:'Weak direct correlation',body:'Adrien usually sets aperture first, then shutter speed adapts. The f/2.8 column is prominent because of lens limits, but outside that, shutter and aperture do not show a strong one-to-one relationship.'},
+  'shutter|aperture':{icon:'⏱️',title:'Aperture priority again',body:'Most of the time shutter speed is the adaptive variable and aperture is the controlled one. That is why the pattern stays fairly structured without a strong free-form aperture-shutter dependency.'},
+  'focal|aperture': {icon:'🔭',title:'Lens constraints are visible',body:'This view highlights lens boundaries clearly. Zoom lenses (24-70mm and 70-200mm) mostly open to f/2.8, while primes can open wider like f/1.4 at 50mm. Fuji shots cluster at 24mm with a max opening around f/2.'},
+  'aperture|focal': {icon:'🔭',title:'Lens families shape the plot',body:'You can read lens behavior directly from this chart: zooms are constrained around f/2.8, primes open wider, and focal bands reveal hard optical limits. Across focal lengths, Adrien often favors the widest available aperture.'},
+  'focal|shutter':  {icon:'📐',title:'Rule of thumb appears',body:'Lens limits form strong columns at key focal lengths, and a near-affine trend appears in shutter adaptation. In practice it follows a rule close to 1 / (4 * focal length), typical of handheld sharpness control.'},
+  'shutter|focal':  {icon:'📐',title:'Handheld stabilization logic',body:'When you invert axes, the same structure becomes very clear: focal length stays on lens-defined bands while shutter speed follows an adaptive curve close to 1 / (4 * focal length).'},
+  'iso|focal':      {icon:'🎯',title:'No strong global dependency',body:'There is no strict focal-to-ISO law here. The key insight is different: focal length is hard-bounded by lens design, while ISO has photographer-defined upper limits that can be occasionally exceeded, creating outliers.'},
+  'focal|iso':      {icon:'🎯',title:'Bounded optics vs bounded noise',body:'Focal length cannot exceed lens limits, so vertical bands appear naturally. ISO is soft-bounded by shooting choices to control noise, with a few isolated high-ISO exceptions when conditions require it.'},
 };
 
 function getInsight(xKey,yKey){
-  return EXP_INSIGHTS[xKey+'|'+yKey]||{icon:'🔍',title:'Explore freely',body:'This combination doesn\'t have a strong photographic rule behind it — but you might find unexpected patterns. Color by Focal range or Camera to see how gear choices cluster.'};
+  return EXP_INSIGHTS[xKey+'|'+yKey]||{icon:'🔍',title:'Explore freely',body:'This combination does not show a dominant photographic rule, but interesting local patterns can still appear. Try coloring by focal range or camera to reveal gear-driven clusters.'};
 }
 
 function updateInsightCard(xKey,yKey){
@@ -764,7 +803,7 @@ function drawExpFrame(){
   expCtx.strokeStyle=P.dim;expCtx.lineWidth=1;
   expCtx.beginPath();expCtx.moveTo(PL,PT);expCtx.lineTo(PL,PT+PH);expCtx.lineTo(PL+PW,PT+PH);expCtx.stroke();
 
-  // Dots — clipped to padded plot area (PAD matches computeExpTargets)
+  // Dots - clipped to padded plot area (PAD matches computeExpTargets)
   const DOT_PAD=20;
   expCtx.save();
   expCtx.beginPath();expCtx.rect(PL+DOT_PAD-6,PT+DOT_PAD-6,PW-2*(DOT_PAD-6),PH-2*(DOT_PAD-6));expCtx.clip();
@@ -918,7 +957,7 @@ function updateExpAxesSVG(){
   const yScale=d3.scaleLinear().domain([yDomLo,yDomHi]).range([PT+PH,PT]);
   const g=expSVG.append('g');
 
-  // X axis — only ticks within the current domain
+  // X axis - only ticks within the current domain
   const xTicks=axX.ticks.map(t=>({norm:clamp(axX.xform(t),0,1),label:axX.tickFmt(t)}))
     .filter(({norm})=>norm>=xDomLo&&norm<=xDomHi);
   g.append('g').attr('transform',`translate(0,${PT+PH})`)
@@ -929,7 +968,7 @@ function updateExpAxesSVG(){
       ax.selectAll('.tick text').attr('fill',P.muted).attr('font-family','Inter,sans-serif').attr('font-size',13).attr('dy',15);
     });
 
-  // Y axis — only ticks within the current domain
+  // Y axis - only ticks within the current domain
   const yTicks=axY.ticks.map(t=>({norm:clamp(axY.xform(t),0,1),label:axY.tickFmt(t)}))
     .filter(({norm})=>norm>=yDomLo&&norm<=yDomHi);
   g.append('g').attr('transform',`translate(${PL},0)`)
@@ -987,7 +1026,7 @@ function updateExpAxesSVG(){
       .text('Drag to select photos');
   }
 
-  // D3 brush — added last so it sits on top. In zoomed mode it selects only;
+  // D3 brush - added last so it sits on top. In zoomed mode it selects only;
   // in the overview it selects and then zooms into that selection.
   expD3Brush=d3.brush()
     .extent([[PL,PT],[PL+PW,PT+PH]])
@@ -1034,6 +1073,16 @@ function updateExpAxesSVG(){
 // ═══════════════════════════════════════════════
 const GR_C=document.getElementById('gear-canvas');
 const grCtx=GR_C.getContext('2d');
+let grCanvasCssW=0, grCanvasCssH=0;
+function grApplyCanvasSize(cssW,cssH){
+  const dpr=Math.min(window.devicePixelRatio||1,2.5);
+  grCanvasCssW=cssW; grCanvasCssH=cssH;
+  GR_C.width=Math.max(1,Math.floor(cssW*dpr));
+  GR_C.height=Math.max(1,Math.floor(cssH*dpr));
+  GR_C.style.width=cssW+'px';
+  GR_C.style.height=cssH+'px';
+  grCtx.setTransform(dpr,0,0,dpr,0,0);
+}
 
 // CAMERAS, CAM_COLS and GEAR_MONTHLY come from viz_data.js
 const cumGear=GEAR_MONTHLY;
@@ -1092,7 +1141,7 @@ const globalGearMax=Math.max(...GR_CAMERAS.flatMap(c=>cumGear[c]),1);
 })();
 
 function drawGear(){
-  const W=GR_C.width,H=GR_C.height;grCtx.clearRect(0,0,W,H);
+  const W=grCanvasCssW,H=grCanvasCssH;grCtx.clearRect(0,0,W,H);
   const PL=172,PR=16,PT=32,PB=16,PW=W-PL-PR,PH=H-PT-PB;
   const active=[...activeCams];
   const nM=MONTH_LABELS.length;
@@ -1201,8 +1250,8 @@ function drawGear(){
 GR_C.addEventListener('mousemove',e=>{
   const m=GR_C._meta;if(!m)return;
   const rect=GR_C.getBoundingClientRect();
-  const mx=(e.clientX-rect.left)*(GR_C.width/rect.width);
-  const my=(e.clientY-rect.top)*(GR_C.height/rect.height);
+  const mx=(e.clientX-rect.left)*(grCanvasCssW/rect.width);
+  const my=(e.clientY-rect.top)*(grCanvasCssH/rect.height);
   const {active,rowH,rowGap,PT,PL,PW,nM,cellW}=m;
   const inGrid=mx>=PL&&mx<=PL+PW;
   const hoverMonth=inGrid?clamp(Math.floor((mx-PL)/cellW),0,nM-1):null;
@@ -1245,8 +1294,8 @@ GR_C.addEventListener('mouseleave',()=>{
 GR_C.addEventListener('mousedown',e=>{
   const m=GR_C._meta;if(!m)return;
   const rect=GR_C.getBoundingClientRect();
-  const mx=(e.clientX-rect.left)*(GR_C.width/rect.width);
-  const my=(e.clientY-rect.top)*(GR_C.height/rect.height);
+  const mx=(e.clientX-rect.left)*(grCanvasCssW/rect.width);
+  const my=(e.clientY-rect.top)*(grCanvasCssH/rect.height);
   const {active,rowH,rowGap,PT,PL,PW,nM,cellW}=m;
   // Click in label area → pin camera + show stats card
   if(mx<PL){
@@ -1318,7 +1367,7 @@ function updateGearSummary(){
     el.innerHTML=`
       <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
         <span style="font-size:20px;font-weight:600;color:${col}">${cam}</span>
-        <span style="font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)">Camera stats — click label again to dismiss</span>
+        <span style="font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)">Camera stats - click label again to dismiss</span>
       </div>
       <div style="display:flex;gap:32px;flex-wrap:wrap">
         <div style="text-align:center">
@@ -1327,17 +1376,17 @@ function updateGearSummary(){
           <div style="font-size:12px;color:${col};margin-top:2px">${pct}% of dataset</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:20px;font-weight:600;color:var(--text);line-height:1">${firstIdx>=0?MONTH_LABELS[firstIdx]:'—'}</div>
+          <div style="font-size:20px;font-weight:600;color:var(--text);line-height:1">${firstIdx>=0?MONTH_LABELS[firstIdx]:'N/A'}</div>
           <div style="font-size:13px;color:var(--muted);margin-top:4px">first use</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:20px;font-weight:600;color:var(--text);line-height:1">${lastIdx>=0?MONTH_LABELS[lastIdx]:'—'}</div>
+          <div style="font-size:20px;font-weight:600;color:var(--text);line-height:1">${lastIdx>=0?MONTH_LABELS[lastIdx]:'N/A'}</div>
           <div style="font-size:13px;color:var(--muted);margin-top:4px">last use</div>
         </div>
         <div style="text-align:center">
           <div style="font-size:20px;font-weight:600;color:${col};line-height:1">${peakVal.toLocaleString()} shots</div>
           <div style="font-size:13px;color:var(--muted);margin-top:4px">peak month</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">${peakIdx>=0?MONTH_LABELS[peakIdx]:'—'}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${peakIdx>=0?MONTH_LABELS[peakIdx]:'N/A'}</div>
         </div>
       </div>`;
     return;
@@ -1369,8 +1418,7 @@ function updateGearSummary(){
 function resizeGear(){
   const n=[...activeCams].length;
   const h=32+20+n*48+Math.max(0,n-1)*8; // PT+PB + n rows at max rowH + gaps
-  GR_C.height=h;GR_C.style.height=h+'px';
-  GR_C.width=cardInnerWidth(GR_C);
+  grApplyCanvasSize(cardInnerWidth(GR_C),h);
   drawGear();
 }
 
@@ -1389,10 +1437,20 @@ function gearEnter(){
   gearAnimAF=requestAnimationFrame(tick);
 }
 // ═══════════════════════════════════════════════
-// 3. LENS RACE — animated bar chart race
+// 3. LENS RACE - animated bar chart race
 // ═══════════════════════════════════════════════
 const LR_C=document.getElementById('lens-canvas');
 const lrCtx=LR_C.getContext('2d');
+let lrCanvasCssW=0, lrCanvasCssH=0;
+function lrApplyCanvasSize(cssW,cssH){
+  const dpr=Math.min(window.devicePixelRatio||1,2.5);
+  lrCanvasCssW=cssW; lrCanvasCssH=cssH;
+  LR_C.width=Math.max(1,Math.floor(cssW*dpr));
+  LR_C.height=Math.max(1,Math.floor(cssH*dpr));
+  LR_C.style.width=cssW+'px';
+  LR_C.style.height=cssH+'px';
+  lrCtx.setTransform(dpr,0,0,dpr,0,0);
+}
 
 // Build cumulative totals per lens
 const lensCum={};
@@ -1422,7 +1480,7 @@ function lrMaxAt(fi){
 }
 
 function lrDrawFrame(){
-  const W=LR_C.width,H=LR_C.height;
+  const W=lrCanvasCssW,H=lrCanvasCssH;
   lrCtx.clearRect(0,0,W,H);
 
   const nL=LENSES.length;
@@ -1445,7 +1503,7 @@ function lrDrawFrame(){
     lrCtx.beginPath();lrCtx.roundRect(PL,y,PW,rowH,6);lrCtx.fill();
     lrCtx.globalAlpha=1;
 
-    // Bar — clipped to track
+    // Bar - clipped to track
     lrCtx.save();
     lrCtx.beginPath();lrCtx.roundRect(PL,y,PW,rowH,6);lrCtx.clip();
     lrCtx.fillStyle=col;lrCtx.globalAlpha=0.82;
@@ -1548,8 +1606,7 @@ function lrEnter(){
 function resizeLens(){
   const nL=LENSES.length;
   const h=20+20+nL*62+Math.max(0,nL-1)*10; // PT+PB + n bars at max rowH + gaps
-  LR_C.height=h;LR_C.style.height=h+'px';
-  LR_C.width=cardInnerWidth(LR_C);
+  lrApplyCanvasSize(cardInnerWidth(LR_C),h);
   if(lrInited)lrDrawFrame();
 }
 
@@ -1584,6 +1641,8 @@ let skAnimT=0;
 let skAnimAF=null;
 let skInited=false;
 let skIntroTimers=[];
+let skStripStage=null;
+let skFilmToken=0;
 const SK_STAGE_ORDER=['shots','selection','edition','published'];
 
 const SK_PHOTO_BASE='data/workflow-sankey/';
@@ -1616,31 +1675,331 @@ function sankeyDataSafe(){
 function skPopulateStory(){
   skUpdatePhotoStrip(skFocus);
 }
-
+function skNumFromFileName(name){
+  const m=(name||'').match(/(\d+)/);
+  return m?m[1]:'';
+}
+function skKeyForFileName(name){
+  const n=skNumFromFileName(name);
+  if(!n) return '';
+  if(name.startsWith('before_edit-')) return `before-${n}`;
+  if(name.startsWith('after_edit-')) return `after-${n}`;
+  if(name.startsWith('published-')) return `after-${n}`;
+  if(name.startsWith('lost-')) return `lost-${n}`;
+  return `photo-${n}`;
+}
+function skCaptureRects(root,selector){
+  const out={};
+  if(!root) return out;
+  root.querySelectorAll(selector).forEach(el=>{
+    const key=el.dataset.key;
+    if(!key) return;
+    out[key]=el.getBoundingClientRect();
+  });
+  return out;
+}
+function skAlignPhotoStripToStage(stage,animate=true){
+  const strip=document.getElementById('sk-photo-strip');
+  const wrap=strip?.querySelector('.sk-strip-photos');
+  if(!strip||!wrap||!stage) return;
+  const bar=document.getElementById('sk-stage-bar');
+  const stripRect=strip.getBoundingClientRect();
+  const pill=bar?.querySelector(`g.sk-pill[data-stage="${stage}"]`);
+  let targetCenter=null;
+  if(pill){
+    const pillRect=pill.getBoundingClientRect();
+    targetCenter=(pillRect.left+pillRect.width/2)-stripRect.left;
+  }else{
+    const idx=Math.max(0,SK_STAGE_ORDER.indexOf(stage));
+    targetCenter=strip.clientWidth*((idx+0.5)/SK_STAGE_ORDER.length);
+  }
+  const contentW=wrap.scrollWidth||wrap.getBoundingClientRect().width||0;
+  const desiredLeft=Math.round(targetCenter-contentW/2);
+  const minLeft=0;
+  const maxLeft=Math.max(0,strip.clientWidth-contentW);
+  let left=Math.max(minLeft,Math.min(maxLeft,desiredLeft));
+  if(stage==='shots') left=minLeft;
+  if(stage==='published') left=maxLeft;
+  wrap.style.transition=animate?'transform 460ms cubic-bezier(.2,.8,.2,1)':'';
+  wrap.style.transform=`translateX(${left}px)`;
+  return left;
+}
+function skQueueAlignPhotoStrip(stage,animate=true){
+  requestAnimationFrame(()=>skAlignPhotoStripToStage(stage,animate));
+}
+function skFlipToCurrent(root,selector,fromRects,{duration=420,stagger=26}={}){
+  if(!root) return;
+  const els=[...root.querySelectorAll(selector)];
+  els.forEach((el,i)=>{
+    const key=el.dataset.key;
+    const from=key?fromRects[key]:null;
+    if(!from) return;
+    const to=el.getBoundingClientRect();
+    const dx=from.left-to.left;
+    const dy=from.top-to.top;
+    el.style.willChange='transform';
+    el.style.transition='none';
+    el.style.transform=`translate(${dx}px,${dy}px)`;
+    requestAnimationFrame(()=>{
+      el.style.transition=`transform ${duration}ms cubic-bezier(.2,.8,.2,1) ${i*stagger}ms`;
+      el.style.transform='translate(0,0)';
+      setTimeout(()=>{
+        el.style.willChange='';
+        el.style.transition='';
+      },duration+i*stagger+40);
+    });
+  });
+}
+function skClearFloatingPublishGhosts(){
+  document.querySelectorAll('.sk-float-publish').forEach(el=>el.remove());
+}
 function skUpdatePhotoStrip(stage){
+  skClearFloatingPublishGhosts();
   const strip=document.getElementById('sk-photo-strip');
   if(!strip)return;
-  if(!stage){strip.style.display='none';strip.innerHTML='';return;}
-  const b=SK_PHOTO_BASE;
-  let label='',photos='';
-  if(stage==='shots'){
-    label='All captures &mdash; <span style="color:var(--muted)">'+SK_PHOTOS.shots.length+' frames</span>';
-    photos=SK_PHOTOS.shots.map(f=>`<div class="sk-strip-item"><img src="${b}${f}" alt="" loading="lazy"></div>`).join('');
-  }else if(stage==='selection'){
-    label='After culling &mdash; <span style="color:var(--muted)">9 kept &middot; 3 culled</span>';
-    photos=SK_PHOTOS.shots.map(f=>{
-      const culled=f.startsWith('lost-');
-      return `<div class="sk-strip-item${culled?' culled':''}"><img src="${b}${f}" alt="" loading="lazy"></div>`;
-    }).join('');
-  }else if(stage==='edition'){
-    label='In editing &mdash; <span style="color:var(--muted)">before &rarr; after</span>';
-    photos=SK_PHOTOS.edition.map(p=>`<div class="sk-pair"><div class="sk-strip-item"><img src="${b}${p.before}" alt="" loading="lazy"><div class="sk-pair-badge">Before</div></div><div class="sk-pair-arrow">&rarr;</div><div class="sk-strip-item"><img src="${b}${p.after}" alt="" loading="lazy"><div class="sk-pair-badge after">After</div></div></div>`).join('');
-  }else if(stage==='published'){
-    label='Published &mdash; <span style="color:var(--muted)">final edits</span>';
-    photos=SK_PHOTOS.published.map(f=>`<div class="sk-strip-item published"><img src="${b}${f}" alt="" loading="lazy"></div>`).join('');
+  if(!stage){
+    // Keep the strip visible to avoid card-height jumps.
+    stage='shots';
   }
-  strip.style.display='block';
-  strip.innerHTML=`<div class="sk-strip-label">${label}</div><div class="sk-strip-photos">${photos}</div>`;
+  if(stage!=='published') strip.style.minHeight='';
+  const b=SK_PHOTO_BASE;
+  const shotGrid=(withCull=false)=>SK_PHOTOS.shots.map(f=>`<div class="sk-strip-item${withCull&&f.startsWith('lost-')?' culled':''}" data-photo="${f}" data-key="${skKeyForFileName(f)}"><img src="${b}${f}" alt="" loading="lazy"></div>`).join('');
+  const editRows=(beforeOnly=false,enterAfter=false)=>`<div class="sk-edit-stack ${beforeOnly?'before-only':''} ${enterAfter?'enter-after':''}">${
+    SK_PHOTOS.edition.map(p=>`<div class="sk-edit-row">
+      <div class="before-wrap"><div class="sk-strip-item" data-key="${skKeyForFileName(p.before)}" data-badge="Before"><img src="${b}${p.before}" alt="" loading="lazy"><div class="sk-pair-badge">Before</div></div></div>
+      <div class="sk-pair-arrow">&rarr;</div>
+      <div class="after-wrap"><div class="sk-strip-item" data-key="${skKeyForFileName(p.after)}" data-badge="After"><img src="${b}${p.after}" alt="" loading="lazy"><div class="sk-pair-badge after">After</div></div></div>
+    </div>`).join('')
+  }</div>`;
+  const publishSorted=()=>{
+    const finalFile=SK_PHOTOS.published[0]||'';
+    const finalNum=skNumFromFileName(finalFile);
+    const edited=SK_PHOTOS.edition.map(p=>p.after);
+    const lost=SK_LOST_NUMS.map(n=>`lost-${String(n).padStart(2,'0')}.jpg`);
+    return `<div class="sk-publish-stage">
+      <div class="sk-publish-row edited"><span class="sk-publish-row-title">Edited</span>${
+        edited.map(f=>{
+          const num=skNumFromFileName(f);
+          const target=num===finalNum;
+          return `<div class="sk-strip-item${target?' target':''}" data-target="${target?'yes':'no'}" data-key="${skKeyForFileName(f)}"><img src="${b}${f}" alt="" loading="lazy"></div>`;
+        }).join('')
+      }</div>
+      <div class="sk-publish-row lost"><span class="sk-publish-row-title">Not edited</span>${
+        lost.map(f=>`<div class="sk-strip-item" data-key="${skKeyForFileName(f)}"><img src="${b}${f}" alt="" loading="lazy"></div>`).join('')
+      }</div>
+    </div>`;
+  };
+  const publishFinal=(withAnim=true)=>SK_PHOTOS.published.map(f=>`<div class="sk-strip-item published ${withAnim?'published-grow':''}" data-key="${skKeyForFileName(f)}"><img src="${b}${f}" alt="" loading="lazy"></div>`).join('');
+  function ensureShell(label,photoClass='',preserveLayout=false){
+    if(!strip.querySelector('.sk-strip-photos')){
+      strip.style.display='block';
+      strip.innerHTML=`<div class="sk-strip-label"></div><div class="sk-strip-photos"></div>`;
+    }else{
+      strip.style.display='block';
+    }
+    const labelEl=strip.querySelector('.sk-strip-label');
+    const wrap=strip.querySelector('.sk-strip-photos');
+    if(labelEl) labelEl.innerHTML=label;
+    if(!preserveLayout){
+      wrap.className='sk-strip-photos'+(photoClass?` ${photoClass}`:'');
+    }
+    return wrap;
+  }
+  let label='',photos='',photoClass='',transitionKind='none';
+  if(stage==='shots'){
+    label='Shot - <span style="color:var(--muted)">'+SK_PHOTOS.shots.length+' frames</span>';
+    photos=shotGrid(false);
+    photoClass='grid-3x4';
+  }else if(stage==='selection'){
+    label='Select - <span style="color:var(--muted)">9 kept · 3 culled</span>';
+    photos=shotGrid(skStripStage!=='shots');
+    photoClass='grid-3x4';
+    transitionKind=skStripStage==='shots'?'shotToSelect':'none';
+  }else if(stage==='edition'){
+    label='Edit - <span style="color:var(--muted)">before → after</span>';
+    photos=editRows(false);
+    transitionKind=skStripStage==='selection'?'selectToEdit':'none';
+  }else if(stage==='published'){
+    label='Publish - <span style="color:var(--muted)">final photo</span>';
+    photos=publishFinal(true);
+    transitionKind=skStripStage==='edition'?'editToPublish':'none';
+  }
+  const photoWrap=ensureShell(label,photoClass,transitionKind!=='none');
+
+  if(transitionKind==='none'){
+    photoWrap.innerHTML=photos;
+    skQueueAlignPhotoStrip(stage,skStripStage!==null);
+    skStripStage=stage;
+    return;
+  }
+
+  if(transitionKind==='shotToSelect'){
+    if(!photoWrap.querySelector('.sk-strip-item[data-photo]')){
+      photoWrap.innerHTML=shotGrid(false);
+      photoWrap.classList.add('grid-3x4');
+    }
+    requestAnimationFrame(()=>{
+      photoWrap.querySelectorAll('.sk-strip-item[data-photo^="lost-"]').forEach((el,i)=>{
+        setTimeout(()=>el.classList.add('culled'),i*34);
+      });
+    });
+    skQueueAlignPhotoStrip(stage,true);
+  }else if(transitionKind==='selectToEdit'){
+    if(!photoWrap.querySelector('.sk-strip-item[data-photo]')){
+      photoWrap.classList.add('grid-3x4');
+      photoWrap.innerHTML=shotGrid(true);
+    }
+    const PHASE1_FADE=220;
+    const PHASE2_MOVE=460;
+    const PHASE3_REVEAL=220;
+    const stripRect=strip.getBoundingClientRect();
+    const savedClass=photoWrap.className;
+    const savedTransform=photoWrap.style.transform||'';
+    const savedHtml=photoWrap.innerHTML;
+
+    // Measure exact final BEFORE column positions in the EDIT layout.
+    photoWrap.className='sk-strip-photos';
+    photoWrap.innerHTML=editRows(false);
+    skAlignPhotoStripToStage(stage,false);
+    const targetRects=skCaptureRects(photoWrap,'.before-wrap .sk-strip-item[data-key]');
+
+    // Restore SELECT layout as animation start.
+    photoWrap.className=savedClass;
+    photoWrap.innerHTML=savedHtml;
+    photoWrap.style.transform=savedTransform;
+    const startKept=[...photoWrap.querySelectorAll('.sk-strip-item[data-key^="before-"]')];
+
+    requestAnimationFrame(()=>{
+      // 1) non-kept photos fade out
+      photoWrap.querySelectorAll('.sk-strip-item[data-photo^="lost-"]').forEach((el,i)=>{
+        setTimeout(()=>el.classList.add('fade-out'),i*24);
+      });
+
+      setTimeout(()=>{
+        // 2) kept photos translate horizontally in sync to EDIT column
+        startKept.forEach(el=>{
+          const key=el.dataset.key;
+          const tgt=targetRects[key];
+          if(!tgt) return;
+          const cur=el.getBoundingClientRect();
+          const dx=(tgt.left-stripRect.left)-(cur.left-stripRect.left);
+          el.style.willChange='transform';
+          el.style.transition=`transform ${PHASE2_MOVE}ms cubic-bezier(.2,.8,.2,1)`;
+          el.style.transform=`translateX(${dx}px)`;
+        });
+
+        setTimeout(()=>{
+          // 3) swap to EDIT layout then reveal edited counterparts
+          photoWrap.classList.remove('grid-3x4');
+          photoWrap.innerHTML=editRows(false,true);
+          skAlignPhotoStripToStage(stage,false);
+          const stack=photoWrap.querySelector('.sk-edit-stack');
+          // Keep "after" briefly behind "before" before moving right.
+          setTimeout(()=>{
+            requestAnimationFrame(()=>stack?.classList.add('reveal-after'));
+          },140);
+          setTimeout(()=>{
+            stack?.classList.remove('enter-after');
+            stack?.classList.remove('reveal-after');
+          },PHASE3_REVEAL);
+        },PHASE2_MOVE);
+      },PHASE1_FADE);
+    });
+  }else if(transitionKind==='editToPublish'){
+    const editStack=photoWrap.querySelector('.sk-edit-stack');
+    editStack?.classList.remove('enter-after','reveal-after','pre-edit','before-only');
+    photoWrap.querySelectorAll('.after-wrap').forEach(w=>{
+      w.style.clipPath='inset(0 0 0 0)';
+      w.style.overflow='visible';
+      w.style.transform='translateX(0)';
+      w.style.opacity='1';
+    });
+    photoWrap.querySelectorAll('.before-wrap').forEach(w=>{
+      w.style.overflow='visible';
+      w.style.transform='translateX(0)';
+      w.style.opacity='1';
+    });
+    const finalFile=SK_PHOTOS.published[0]||'';
+    const finalKey=skKeyForFileName(finalFile);
+    const allAfter=[...photoWrap.querySelectorAll('.after-wrap .sk-strip-item[data-key]')];
+    const targetEl=allAfter.find(el=>el.dataset.key===finalKey)||allAfter[0]||null;
+    const beforeEls=[...photoWrap.querySelectorAll('.before-wrap .sk-strip-item')];
+    const nonKeptAfter=allAfter.filter(el=>el!==targetEl);
+    const arrows=[...photoWrap.querySelectorAll('.sk-pair-arrow')];
+    const PHASE_FADE_BEFORE=260;
+    const PHASE_FADE_OTHERS=320;
+    const PHASE_MOVE=380;
+    beforeEls.forEach((el,i)=>{
+      el.style.transition='opacity 240ms ease';
+      setTimeout(()=>{el.style.opacity='0';},i*36);
+    });
+    setTimeout(()=>{
+      nonKeptAfter.forEach((el,i)=>{
+        el.style.transition='opacity 280ms ease, transform 280ms ease';
+        setTimeout(()=>{
+          el.style.opacity='0';
+          el.style.transform='translateY(10px)';
+        },i*70);
+      });
+      arrows.forEach(a=>{
+        a.style.transition='opacity 240ms ease';
+        a.style.opacity='0';
+      });
+    },PHASE_FADE_BEFORE);
+
+    // Move to publish only after both fade phases are visible.
+    setTimeout(()=>{
+      // Freeze current strip height so the card size does not shrink on publish.
+      strip.style.minHeight=strip.offsetHeight+'px';
+      const startRect=targetEl?targetEl.getBoundingClientRect():null;
+      if(!targetEl||!startRect) return;
+      targetEl.style.opacity='0';
+      // Build final publish layout first, then animate toward its exact measured position.
+      photoWrap.innerHTML=publishFinal(false);
+      skAlignPhotoStripToStage(stage,false);
+      const finalEl=photoWrap.querySelector(`.sk-strip-item[data-key="${finalKey}"]`);
+      if(!finalEl) return;
+      const endRect=finalEl.getBoundingClientRect();
+      finalEl.style.visibility='hidden';
+      const ghost=document.createElement('img');
+      const src=targetEl.querySelector('img')?.src||finalEl.querySelector('img')?.src||'';
+      ghost.src=src;
+      ghost.alt='';
+      ghost.style.position='fixed';
+      ghost.style.left=startRect.left+'px';
+      ghost.style.top=startRect.top+'px';
+      ghost.style.width=startRect.width+'px';
+      ghost.style.height=startRect.height+'px';
+      ghost.style.borderRadius='8px';
+      ghost.style.objectFit='cover';
+      ghost.style.pointerEvents='none';
+      ghost.style.zIndex='4000';
+      ghost.className='sk-float-publish';
+      ghost.style.transform='translate(0,0)';
+      document.body.appendChild(ghost);
+      const dx=endRect.left-startRect.left;
+      const dy=endRect.top-startRect.top;
+      requestAnimationFrame(()=>{
+        ghost.style.transition=`transform ${PHASE_MOVE}ms cubic-bezier(.2,.8,.2,1)`;
+        ghost.style.transform=`translate(${dx}px,${dy}px)`;
+      });
+      let done=false;
+      const finish=()=>{
+        if(done) return;
+        done=true;
+        // Two-frame handoff to prevent blink at swap.
+        finalEl.style.visibility='visible';
+        requestAnimationFrame(()=>{
+          requestAnimationFrame(()=>{
+            ghost.remove();
+          });
+        });
+      };
+      ghost.addEventListener('transitionend',finish,{once:true});
+      setTimeout(()=>{ if(document.body.contains(ghost)) finish(); },PHASE_MOVE+70);
+    },PHASE_FADE_BEFORE+PHASE_FADE_OTHERS);
+  }
+  skStripStage=stage;
 }
 
 function skLabel(id){
@@ -1654,6 +2013,54 @@ function skLabel(id){
     lost_published:'Not published',
   };
   return map[id]||id;
+}
+function skSetPillStates(svg,stages){
+  svg.selectAll('g.sk-pill').each(function(_,j){
+    const pid=stages[j].id;
+    const on=skFocus===pid, dim=!!skFocus&&!on;
+    d3.select(this).select('rect')
+      .attr('opacity',dim?0.32:1)
+      .attr('stroke',on?P.accent:'rgba(15,23,42,0.08)')
+      .attr('stroke-width',on?2.5:1);
+  });
+}
+function skGotoStage(stage,svg,stages){
+  skPrevFocus=skFocus;
+  skFocus=stage;
+  skPopulateStory();
+  skRunSankeyAnim();
+  skSetPillStates(svg,stages);
+}
+function skPlayStageFilm(fromStage,toStage,svg,stages){
+  const fromIdx=SK_STAGE_ORDER.indexOf(fromStage);
+  const toIdx=SK_STAGE_ORDER.indexOf(toStage);
+  if(toIdx<0) return;
+  const path=[];
+  if(fromIdx<0){
+    for(let i=0;i<=toIdx;i++) path.push(SK_STAGE_ORDER[i]);
+  }else if(fromIdx===toIdx){
+    path.push(toStage);
+  }else{
+    const dir=toIdx>fromIdx?1:-1;
+    for(let i=fromIdx+dir; dir>0?i<=toIdx:i>=toIdx; i+=dir) path.push(SK_STAGE_ORDER[i]);
+  }
+  const token=++skFilmToken;
+  function skTransitionDuration(from,to){
+    if(from==='shots'&&to==='selection') return 520;
+    if(from==='selection'&&to==='edition') return 1040;   // 220 + 460 + 220 + buffer
+    if(from==='edition'&&to==='published') return 980;    // 220 + 220 + 420 + buffer
+    return 520;
+  }
+  const run=(i)=>{
+    if(token!==skFilmToken||i>=path.length) return;
+    const prev=i===0?fromStage:path[i-1];
+    skGotoStage(path[i],svg,stages);
+    if(i<path.length-1){
+      const t=setTimeout(()=>run(i+1),skTransitionDuration(prev,path[i]));
+      skIntroTimers.push(t);
+    }
+  };
+  run(0);
 }
 
 function skFilterSankeyByStage(fullGraph,focusId){
@@ -1904,6 +2311,7 @@ function skDrawStageBar(){
     }
 
     const g=svg.append('g').attr('class','sk-pill')
+      .attr('data-stage',s.id)
       .attr('transform',`translate(${x},0)`);
 
     // Pill background
@@ -1912,7 +2320,7 @@ function skDrawStageBar(){
       .attr('fill',SK_FUNNEL[s.id])
       .attr('stroke','rgba(15,23,42,0.08)').attr('stroke-width',1);
 
-    // Stage title — Playfair Display italic
+    // Stage title - Playfair Display italic
     g.append('text')
       .attr('x',16).attr('y',23)
       .attr('fill','#fff')
@@ -1934,31 +2342,29 @@ function skDrawStageBar(){
 
     g.on('click',function(){
       skIntroTimers.forEach(clearTimeout);skIntroTimers=[];
+      skFilmToken++;
       const wasActive=skFocus===s.id;
-      skPrevFocus=wasActive?null:skFocus; // snapshot stable state BEFORE the switch
-      skFocus=wasActive?null:s.id;
-      skPopulateStory();
-      skRunSankeyAnim();
-      svg.selectAll('g.sk-pill').each(function(p,j){
-        const pid=stages[j].id;
-        const on=skFocus===pid, dim=!!skFocus&&!on;
-        d3.select(this).select('rect')
-          .attr('opacity',dim?0.32:1)
-          .attr('stroke',on?P.accent:'rgba(15,23,42,0.08)')
-          .attr('stroke-width',on?2.5:1);
-      });
+      if(wasActive){
+        skPrevFocus=null;
+        skFocus=null;
+        skPopulateStory();
+        skRunSankeyAnim();
+        skSetPillStates(svg,stages);
+        return;
+      }
+      const curIdx=SK_STAGE_ORDER.indexOf(skFocus);
+      const targetIdx=SK_STAGE_ORDER.indexOf(s.id);
+      if(curIdx<0||Math.abs(targetIdx-curIdx)>1){
+        skPlayStageFilm(skFocus,s.id,svg,stages);
+      }else{
+        skGotoStage(s.id,svg,stages);
+      }
     });
   });
 
   // Restore active states after redraw
-  svg.selectAll('g.sk-pill').each(function(p,j){
-    const pid=stages[j].id;
-    const on=skFocus===pid, dim=!!skFocus&&!on;
-    d3.select(this).select('rect')
-      .attr('opacity',dim?0.32:1)
-      .attr('stroke',on?P.accent:'rgba(15,23,42,0.08)')
-      .attr('stroke-width',on?2.5:1);
-  });
+  skSetPillStates(svg,stages);
+  if(skFocus) skQueueAlignPhotoStrip(skFocus,false);
 }
 
 function skRunSankeyAnim(){
@@ -1977,6 +2383,7 @@ function skRunSankeyAnim(){
 
 function sankeyStart(withIntro=false){
   skIntroTimers.forEach(clearTimeout);skIntroTimers=[];
+  skFilmToken++;
   if(!skInited){
     skInited=true;
     const lg=document.getElementById('sankey-legend');
@@ -1999,15 +2406,17 @@ function sankeyStart(withIntro=false){
 
 function skRunIntro(){
   skIntroTimers.forEach(clearTimeout);skIntroTimers=[];
+  skFilmToken++;
   skPrevFocus=null;
-  skFocus='published';
-  skUpdatePhotoStrip(null);
+  skFocus='shots';
+  skUpdatePhotoStrip('shots');
   skRunSankeyAnim();
   skDrawStageBar();
 }
 
 SK_C.addEventListener('click',e=>{
   skIntroTimers.forEach(clearTimeout);skIntroTimers=[];
+  skFilmToken++;
   const m=SK_C._meta;if(!m)return;
   const rect=SK_C.getBoundingClientRect();
   const lw=skLogicalW(),lh=SK_CSS_H;
@@ -2074,12 +2483,11 @@ SK_C.addEventListener('mouseleave',()=>{skHover=null;hideTT();drawSankey()});
     lbIdx=(i+lbItems.length)%lbItems.length;
     const it=lbItems[lbIdx];
     lbImg.src=it.src;
-    lb.classList.toggle('lb-culled',!!it.culled);
     lbCounter.textContent=(lbIdx+1)+' / '+lbItems.length;
     lbPrev.style.opacity=lbNext.style.opacity=lbItems.length>1?'1':'0';
   }
   function openLb(items,idx){lbItems=items;lb.classList.add('open');document.body.style.overflow='hidden';showAt(idx);}
-  function closeLb(){lb.classList.remove('open','lb-culled');document.body.style.overflow='';}
+  function closeLb(){lb.classList.remove('open');document.body.style.overflow='';}
   document.getElementById('sk-photo-strip').addEventListener('click',e=>{
     const item=e.target.closest('.sk-strip-item');
     if(!item)return;
@@ -2107,7 +2515,7 @@ function resizeSankey(){
 }
 
 // ═══════════════════════════════════════════════
-// 5. PHOTO ACTIVITY  (enhanced — 3-level drill-down with rotation morph)
+// 5. PHOTO ACTIVITY  (enhanced - 3-level drill-down with zoom transition)
 // ═══════════════════════════════════════════════
 const PA_C = document.getElementById('pa-canvas');
 const paCtx = PA_C.getContext('2d');
@@ -2148,15 +2556,15 @@ function paSetStoryCards(s){
 }
 function paUpdateStoryCards(year){
   const mE=Object.entries(monthlyTotals).filter(([k])=>k.startsWith(String(year))).sort((a,b)=>b[1]-a[1]);
-  const peakMonth=mE.length?new Date(...mE[0][0].split('-').map((v,i)=>i===1?Number(v)-1:Number(v)),1).toLocaleDateString('en-US',{month:'long',year:'numeric'}):'—';
-  const peakCount=mE.length?mE[0][1].toLocaleString()+' photos':'—';
+  const peakMonth=mE.length?new Date(...mE[0][0].split('-').map((v,i)=>i===1?Number(v)-1:Number(v)),1).toLocaleDateString('en-US',{month:'long',year:'numeric'}):'N/A';
+  const peakCount=mE.length?mE[0][1].toLocaleString()+' photos':'N/A';
   const yDates=DAILY_DATA.filter(d=>d.date.startsWith(String(year))).map(d=>d.date).sort();
   let maxS=yDates.length?1:0,curS=1;
   for(let i=1;i<yDates.length;i++){const diff=(new Date(yDates[i])-new Date(yDates[i-1]))/86400000;curS=diff===1?curS+1:1;maxS=Math.max(maxS,curS);}
   const yData=DAILY_DATA.filter(d=>d.date.startsWith(String(year)));
   const maxDay=yData.length?yData.reduce((a,b)=>b.count>a.count?b:a):null;
-  const maxDayLbl=maxDay?new Date(maxDay.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
-  paSetStoryCards({peakMonth,peakCount,streak:maxS||'—',maxDay:maxDay?maxDay.count.toLocaleString()+' photos':'—',maxDate:maxDayLbl});
+  const maxDayLbl=maxDay?new Date(maxDay.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'N/A';
+  paSetStoryCards({peakMonth,peakCount,streak:maxS||'N/A',maxDay:maxDay?maxDay.count.toLocaleString()+' photos':'N/A',maxDate:maxDayLbl});
 }
 
 // ── palette helpers ──────────────────────────────
@@ -2196,12 +2604,12 @@ function paMonthCol(i){
   const t=i/11;
   return `rgb(${Math.round(lerp(0x25,0x8B,t))},${Math.round(lerp(0x63,0x5C,t))},${Math.round(lerp(0xEB,0xF6,t))})`;
 }
-// season-tinted colour for monthly bar chart — tones match the heatmap palette
+// season-tinted colour for monthly bar chart - tones match the heatmap palette
 function paSeasonCol(monthIdx){
-  if(monthIdx<=2) return PA_BAR_BLUE; // Winter — same blue as yearly bar chart
-  if(monthIdx<=5) return P.g3;      // Spring  — same teal as yearly chart (e.g. 2023 bar)
-  if(monthIdx<=8) return '#F97316'; // Summer  — exact heatmap accent orange
-  return '#8B5CF6';                  // Autumn  — exact heatmap purple end
+  if(monthIdx<=2) return PA_BAR_BLUE; // Winter - same blue as yearly bar chart
+  if(monthIdx<=5) return P.g3;      // Spring  - same teal as yearly chart (e.g. 2023 bar)
+  if(monthIdx<=8) return '#F97316'; // Summer  - exact heatmap accent orange
+  return '#8B5CF6';                  // Autumn  - exact heatmap purple end
 }
 
 const YR_BAR_COLS = {2021:PA_BAR_BLUE,2022:PA_BAR_BLUE,2023:P.g3,2024:P.g6,2025:P.g8,2026:PA_BAR_BLUE};
@@ -2257,7 +2665,7 @@ function paSetSize(cssW,cssH){
 function paCSSW(){ return cardInnerWidth(PA_C); }
 
 // ════════════════════════════════════════════════
-// VIEW 1 — YEAR BARS (animated entry)
+// VIEW 1 - YEAR BARS (animated entry)
 // ════════════════════════════════════════════════
 function drawYears(animT=1){
   const paLegend=document.getElementById('pa-legend');
@@ -2294,7 +2702,7 @@ function drawYears(animT=1){
     paCtx.fillStyle=col;
     paCtx.beginPath();paCtx.roundRect(cx-barW/2,by,barW,bh,[4,4,0,0]);paCtx.fill();
     paCtx.globalAlpha=1;
-    // growth badge — uses the bar's own colour
+    // growth badge - uses the bar's own colour
     if(animT>0.8&&i>0&&!d.partial&&!yearDisplay[i-1].partial){
       const prev=yearDisplay[i-1];
       const pct=(d.count-prev.count)/prev.count*100;
@@ -2304,7 +2712,7 @@ function drawYears(animT=1){
       paCtx.fillText((pct>=0?'+':'')+pct.toFixed(0)+'%',cx,by-18);
       paCtx.globalAlpha=1;
     }
-    // count label — always muted, weight only varies for peak
+    // count label - always muted, weight only varies for peak
     if(animT>0.5){
       paCtx.globalAlpha=clamp((animT-0.5)/0.3,0,1);
       const lbl=d.count>=1000?(d.count/1000).toFixed(1)+'k':String(d.count);
@@ -2339,7 +2747,15 @@ function paEnterYears(){
   document.getElementById('pa-panel').style.display='none';
   document.getElementById('pa-session-card').style.display='none';
   document.getElementById('pa-sessions-timeline').style.display='none';
-  document.getElementById('pa-story').style.display='flex';
+  const story=document.getElementById('pa-story');
+  story.style.display='flex';
+  story.style.opacity='1';
+  story.style.maxHeight='';
+  story.style.marginTop='32px';
+  story.style.marginBottom='24px';
+  story.style.transform='translateY(0)';
+  story.style.transition='';
+  paSetLowerLift(0,0);
   if(PA_GLOBAL_STATS) paSetStoryCards(PA_GLOBAL_STATS);
   if(paAnimAF){cancelAnimationFrame(paAnimAF);paAnimAF=null;}
   let s=null;
@@ -2352,16 +2768,78 @@ function paEnterYears(){
   paAnimAF=requestAnimationFrame(tick);
 }
 function paShowYears(){ paEnterYears(); }
+function paSetLowerLift(px,durMs){
+  const ids=['pa-breadcrumb','pa-sub','pa-canvas','pa-sessions-timeline','pa-panel','pa-legend'];
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.style.transition=durMs>0?`transform ${durMs}ms cubic-bezier(.2,.8,.2,1)`:'';
+    el.style.transform=px?`translateY(${px}px)`:'translateY(0)';
+  });
+}
+function paRenderDetailNav(year,{fadeIn=false}={}){
+  const years=paNavigableYears();
+  const idx=years.indexOf(year);
+  const prevYear=idx>0?years[idx-1]:null;
+  const nextYear=idx>=0&&idx<years.length-1?years[idx+1]:null;
+  const sub=document.getElementById('pa-sub');
+  sub.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;width:100%">
+      <button onclick="paShowYears()" style="font-family:inherit;font-size:15px;font-weight:600;color:var(--accent);background:rgba(249,115,22,0.1);border:1.5px solid var(--accent);border-radius:6px;padding:6px 14px;cursor:pointer;letter-spacing:.01em;transition:background .2s">← All years</button>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto">
+        <button onclick="paMoveYear(-1)" ${prevYear?'':'disabled'} style="font-family:inherit;font-size:14px;font-weight:600;color:${prevYear?'var(--g1)':'var(--muted)'};background:${prevYear?'rgba(37,99,235,0.08)':'rgba(148,163,184,0.12)'};border:1.5px solid ${prevYear?'var(--g1)':'var(--border)'};border-radius:6px;padding:6px 11px;cursor:${prevYear?'pointer':'not-allowed'}">← ${prevYear||'Previous'}</button>
+        <div style="font-size:14px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;padding:0 2px">Year ${year}</div>
+        <button onclick="paMoveYear(1)" ${nextYear?'':'disabled'} style="font-family:inherit;font-size:14px;font-weight:600;color:${nextYear?'var(--g1)':'var(--muted)'};background:${nextYear?'rgba(37,99,235,0.08)':'rgba(148,163,184,0.12)'};border:1.5px solid ${nextYear?'var(--g1)':'var(--border)'};border-radius:6px;padding:6px 11px;cursor:${nextYear?'pointer':'not-allowed'}">${nextYear||'Next'} →</button>
+      </div>
+    </div>`;
+  if(fadeIn){
+    sub.style.opacity='0';
+    sub.style.transition='opacity 220ms ease-out';
+    requestAnimationFrame(()=>{sub.style.opacity='1';});
+  }else{
+    sub.style.transition='';
+    sub.style.opacity='1';
+  }
+}
+function paAnimateStoryOut(durMs){
+  const story=document.getElementById('pa-story');
+  if(!story||story.style.display==='none') return;
+  const h=story.offsetHeight||150;
+  story.style.overflow='hidden';
+  story.style.maxHeight=h+'px';
+  story.style.opacity='1';
+  story.style.transform='translateY(0)';
+  story.style.marginTop='32px';
+  story.style.marginBottom='24px';
+  story.style.transition=`opacity ${durMs}ms ease, max-height ${durMs}ms cubic-bezier(.2,.8,.2,1), margin ${durMs}ms cubic-bezier(.2,.8,.2,1), transform ${durMs}ms ease`;
+  requestAnimationFrame(()=>{
+    story.style.opacity='0';
+    story.style.maxHeight='0px';
+    story.style.marginTop='0px';
+    story.style.marginBottom='0px';
+    story.style.transform='translateY(-8px)';
+  });
+  paSetLowerLift(-6,durMs);
+}
+function paNavigableYears(){
+  return YEAR_DATA
+    .filter(d=>d.year!==2021&&!d.partial)
+    .map(d=>d.year)
+    .sort((a,b)=>a-b);
+}
+function paMoveYear(delta){
+  if(paView!=='detail'||!paYear) return;
+  const years=paNavigableYears();
+  const idx=years.indexOf(paYear);
+  if(idx<0) return;
+  const next=years[idx+delta];
+  if(!next) return;
+  paAnimateDetailYearSwitch(next,delta>=0?1:-1);
+}
 
 // ════════════════════════════════════════════════
-// TRANSITION — YEAR BAR rotates (clockwise 0→90°) into HEATMAP
+// TRANSITION - YEAR BAR zooms into detail view
 // ════════════════════════════════════════════════
-// TRANSITION — YEAR BAR rotates clockwise into HEATMAP
-// After a 90° CW rotation the canvas axes swap:
-//   drawn width  : barW → heatH   (lands as screen height = heatH ✓)
-//   drawn height : barH → cssW    (lands as screen width  = cssW  ✓)
-// Heatmap reveals via a left→right clip sweep (no nested transforms or
-// globalAlpha inside _renderDetail — works identically in all browsers).
 function animateYearToDetail(year, a){
   hideTT();
   paView='morphing';
@@ -2369,11 +2847,13 @@ function animateYearToDetail(year, a){
   const cssW=a.W, cssH=a.H;
   const yearMx=Math.max(...YEAR_DATA.map(d=>d.count));
   const barCol=YR_BAR_COLS[year]||P.g1;
-  const DUR=1600; let s=null, _sessionsPrepared=false;
+  const DUR=780; let s=null, _sessionsPrepared=false;
+  paRenderDetailNav(year,{fadeIn:true});
+  paAnimateStoryOut(DUR);
   const paLegend=document.getElementById('pa-legend');
-  paLegend.style.transition='opacity 0.18s ease';
+  paLegend.style.transition='opacity 0.14s ease';
   paLegend.style.opacity='0';
-  setTimeout(()=>{ if(paView==='morphing') paLegend.innerHTML=''; },180);
+  setTimeout(()=>{ if(paView==='morphing') paLegend.innerHTML=''; },140);
   paSetSize(cssW,cssH);
 
   // ── Pre-compute heatmap geometry ──────────────────────────────────
@@ -2388,7 +2868,7 @@ function animateYearToDetail(year, a){
   const HMTOP=PT+heatH+PB+4+16;
 
   const barCY=a.barTop+a.barH/2;
-  const heatCX=cssW/2, heatCY=HMTOP+heatH/2;
+  const targetCX=cssW/2, targetCY=(HMTOP+heatH/2)*0.98;
 
   function tick(ts){
     if(!s) s=ts;
@@ -2396,7 +2876,7 @@ function animateYearToDetail(year, a){
     paCtx.clearRect(0,0,cssW,cssH);
 
     // ── 1. Other bars fade out (first 25%) ───────────────────────────
-    const outA=Math.max(0,1-ease(clamp(raw/0.25,0,1)));
+    const outA=Math.max(0,1-ease(clamp(raw/0.2,0,1)));
     if(outA>0){
       YEAR_DATA.forEach((d,i)=>{
         if(d.year===year) return;
@@ -2411,50 +2891,38 @@ function animateYearToDetail(year, a){
       });
     }
 
-    // ── 2. Bar rotates 0→90° CW (pure transform, no nested clips) ────
-    const p=ease(raw);
-    const angle=p * Math.PI/2;
-    const rcx=lerp(a.barCX, heatCX, p);
-    const rcy=lerp(barCY,   heatCY, p);
-    const rw =lerp(a.barW,  heatH,  p);
-    const rh =lerp(a.barH,  cssW,   p);
-    const barA=Math.max(0,1-ease(clamp((raw-0.25)/0.5,0,1)));
+    // ── 2. Main bar zooms into a large rectangle ──────────────────────
+    const p=raw*raw*(3-2*raw);
+    const rcx=lerp(a.barCX,targetCX,p);
+    const rcy=lerp(barCY,targetCY,p);
+    const rw =lerp(a.barW,cssW*0.92,p);
+    const rh =lerp(a.barH,cssH*0.86,p);
+    const barA=Math.max(0,1-ease(clamp((raw-0.25)/0.45,0,1)));
     if(barA>0){
-      paCtx.save();
-      paCtx.translate(rcx,rcy); paCtx.rotate(angle);
       paCtx.fillStyle=barCol; paCtx.globalAlpha=barA;
-      paCtx.beginPath(); paCtx.roundRect(-rw/2,-rh/2,rw,rh,4); paCtx.fill();
-      paCtx.restore();
+      paCtx.beginPath(); paCtx.roundRect(rcx-rw/2,rcy-rh/2,rw,rh,8); paCtx.fill();
+      paCtx.globalAlpha=1;
     }
 
-    // ── 3. Heatmap grid sweeps in left→right as bar falls ────────────
-    // Clip-based (no globalAlpha) — _renderDetail resets alpha internally
-    // so a clip is the only cross-browser-safe reveal mechanism.
-    const revealP=ease(clamp((raw-0.45)/0.45,0,1));
+    // ── 3. Detail content reveals from center zoom window ─────────────
+    const revealP=raw<=0.34?0:Math.pow(clamp((raw-0.34)/0.56,0,1),0.9);
     if(revealP>0){
       paCtx.save();
-      paCtx.beginPath(); paCtx.rect(0,HMTOP,cssW*revealP,heatH+50); paCtx.clip();
+      const clipW=cssW*(0.18+0.82*revealP);
+      const clipH=cssH*(0.22+0.78*revealP);
+      paCtx.beginPath();
+      paCtx.rect((cssW-clipW)/2,(cssH-clipH)/2,clipW,clipH);
+      paCtx.clip();
       _renderDetail(year,cssW);
       paCtx.restore();
     }
 
-    // ── 4. Monthly bars arrive after heatmap ─────────────────────────
-    const barsA=ease(clamp((raw-0.68)/0.32,0,1));
-    if(barsA>0){
-      paCtx.save();
-      paCtx.beginPath(); paCtx.rect(0,0,cssW,HMTOP); paCtx.clip();
-      paCtx.globalAlpha=barsA;
-      _renderDetail(year,cssW);
-      paCtx.globalAlpha=1;
-      paCtx.restore();
-    }
-
-    // ── 5. Sessions timeline fades in with monthly bars ───────────────
-    if(!_sessionsPrepared&&raw>=0.62){
+    // ── 4. Sessions timeline fades in near the end ────────────────────
+    if(!_sessionsPrepared&&raw>=0.68){
       _sessionsPrepared=true;
       const tl=document.getElementById('pa-sessions-timeline');
       tl.style.opacity='0';
-      tl.style.transition='opacity 0.45s ease';
+      tl.style.transition='opacity 0.24s ease-out';
       drawSessionsTimeline(year);
       requestAnimationFrame(()=>{ tl.style.opacity='1'; });
     }
@@ -2465,8 +2933,60 @@ function animateYearToDetail(year, a){
   paAnimAF=requestAnimationFrame(tick);
 }
 
+function paDetailCssHeightForYear(year, cssW){
+  const isLeap=(year%4===0&&year%100!==0)||year%400===0;
+  const totalDays=isLeap?366:365;
+  const jan1=new Date(year,0,1);
+  const startDow=jan1.getDay()===0?6:jan1.getDay()-1;
+  const numWeeks=Math.ceil((startDow+totalDays)/7);
+  const STEP=Math.floor((cssW-56-16)/numWeeks);
+  const PT=14,PH=7*STEP,PB=20,HTOP_OFF=PT+PH+PB+4,HMTOP=HTOP_OFF+16;
+  return {cssH:HMTOP+7*STEP+46,PT,PH,PB,HMTOP,STEP,numWeeks,startDow,totalDays};
+}
+
+function paAnimateDetailYearSwitch(nextYear,direction=1){
+  if(paView!=='detail'||!paYear){drawYearDetail(nextYear);return;}
+  hideTT();
+  const fromYear=paYear;
+  const cssW=paCSSW();
+  const fromGeo=paDetailCssHeightForYear(fromYear,cssW);
+  const nextGeo=paDetailCssHeightForYear(nextYear,cssW);
+  const cssH=Math.max(fromGeo.cssH,nextGeo.cssH);
+  const tl=document.getElementById('pa-sessions-timeline');
+  tl.style.transition='opacity 0.18s ease';
+  tl.style.opacity='0';
+  paPinnedSession=null;
+  paHighlightSession=null;
+  document.getElementById('pa-session-card').style.display='none';
+  document.getElementById('pa-panel').style.display='none';
+  paView='morphing';
+  if(paAnimAF){cancelAnimationFrame(paAnimAF);paAnimAF=null;}
+  paSetSize(cssW,cssH);
+  const DUR=300;
+  let s=null;
+  function tick(ts){
+    if(!s) s=ts;
+    const raw=Math.min((ts-s)/DUR,1);
+    const t=raw*raw*(3-2*raw);
+    paCtx.clearRect(0,0,cssW,cssH);
+    paCtx.save();
+    paCtx.globalAlpha=1-t;
+    paCtx.translate(-direction*24*t,0);
+    _renderDetail(fromYear,cssW);
+    paCtx.restore();
+    paCtx.save();
+    paCtx.globalAlpha=t;
+    paCtx.translate(direction*24*(1-t),0);
+    _renderDetail(nextYear,cssW);
+    paCtx.restore();
+    if(raw<1) paAnimAF=requestAnimationFrame(tick);
+    else drawYearDetail(nextYear);
+  }
+  paAnimAF=requestAnimationFrame(tick);
+}
+
 // ════════════════════════════════════════════════
-// HELPER — draw monthly bars + heatmap into paCtx
+// HELPER - draw monthly bars + heatmap into paCtx
 // (used by animation and final view)
 // Returns hit-geometry object for paHits building.
 // NOTE: avoids explicit globalAlpha so the animation
@@ -2486,11 +3006,11 @@ function _renderDetail(year, cssW, opts={}){
   const mMax=Math.max(...months.map(d=>d.count),1);
   const peakIdx=months.reduce((a,b)=>b.count>a.count?b:a).m-1;
 
-  // season bands — use rgba directly so animation wrapper's globalAlpha is respected
+  // season bands - use rgba directly so animation wrapper's globalAlpha is respected
   [[0,2,'rgba(14,165,233,0.06)','Winter'],[3,5,'rgba(34,197,94,0.06)','Spring'],
    [6,8,'rgba(249,115,22,0.06)','Summer'],[9,11,'rgba(139,92,246,0.06)','Autumn']].forEach(([st,en,c,lbl])=>{
     paCtx.fillStyle=c; paCtx.fillRect(PL+st*gap,PT,(en-st+1)*gap,PH);
-    // season label pinned to fixed row (y=11) — always above count labels which start at PT-5=25
+    // season label pinned to fixed row (y=11) - always above count labels which start at PT-5=25
     paCtx.fillStyle='rgba(71,85,105,0.40)'; paCtx.font='14px Inter'; paCtx.textAlign='center';
     paCtx.fillText(lbl,PL+(st+1.5)*gap,11);
   });
@@ -2504,7 +3024,7 @@ function _renderDetail(year, cssW, opts={}){
   });
   paCtx.strokeStyle=P.dim; paCtx.lineWidth=1;
   paCtx.beginPath();paCtx.moveTo(PL,PT);paCtx.lineTo(PL,PT+PH);paCtx.lineTo(PL+PW,PT+PH);paCtx.stroke();
-  // bars — coloured by season, no peak overlay text (avoids label collision)
+  // bars - coloured by season, no peak overlay text (avoids label collision)
   months.forEach((d,i)=>{
     const cx=PL+(i+.5)*gap, bh=(d.count/mMax)*PH, by=PT+PH-bh;
     const col=paSeasonCol(i);
@@ -2612,29 +3132,26 @@ function _renderDetail(year, cssW, opts={}){
 }
 
 // ════════════════════════════════════════════════
-// VIEW 2 — YEAR DETAIL (monthly bars + heatmap)
+// VIEW 2 - YEAR DETAIL (monthly bars + heatmap)
 // ════════════════════════════════════════════════
 function drawYearDetail(year){
   hideTT();
   paView='detail'; paYear=year; paHits=[];
-  document.getElementById('pa-story').style.display='none';
+  paPinnedSession=null;
+  paHighlightSession=null;
+  const story=document.getElementById('pa-story');
+  story.style.display='none';
+  story.style.transition='';
+  paSetLowerLift(0,0);
   const cssW=paCSSW();
-  // dynamic canvas height
-  const isLeap=(year%4===0&&year%100!==0)||year%400===0;
-  const totalDays=isLeap?366:365;
-  const jan1=new Date(year,0,1);
-  const startDow=jan1.getDay()===0?6:jan1.getDay()-1;
-  const numWeeks=Math.ceil((startDow+totalDays)/7);
-  const STEP=Math.floor((cssW-56-16)/numWeeks);
-  const PT=14,PH=7*STEP,PB=20, HTOP_OFF=PT+PH+PB+4, HMTOP=HTOP_OFF+16;
-  const cssH=HMTOP+7*STEP+46;
+  const {cssH,PT,PH}=paDetailCssHeightForYear(year,cssW);
   paSetSize(cssW,cssH);
   paCtx.clearRect(0,0,cssW,cssH);
 
   const geo=_renderDetail(year,cssW);
   const {months,mBarW,PL,PW,gap,HMTOP:HT,STEP:ST,CELL,numWeeks:nW,startDow:sDow,totalDays:totD,yearMax:yMx}=geo;
 
-  // build paHits — month bars (hover only)
+  // build paHits - month bars (hover only)
   const mMax=Math.max(...months.map(d=>d.count),1);
   months.forEach((d,i)=>{
     if(!d.count) return;
@@ -2650,23 +3167,21 @@ function drawYearDetail(year){
     paHits.push({type:'day',x:56+w*ST,y:HT+dow*ST,w:CELL,h:CELL,date:ds,count,col:paColorForCount(count,yMx)});
   }
 
-  document.getElementById('pa-sub').innerHTML=`<button onclick="paShowYears()" style="font-family:inherit;font-size:15px;font-weight:600;color:var(--accent);background:rgba(249,115,22,0.1);border:1.5px solid var(--accent);border-radius:6px;padding:6px 16px;cursor:pointer;letter-spacing:.01em;transition:background .2s">← All years</button>`;
+  paRenderDetailNav(year);
   document.getElementById('pa-breadcrumb').innerHTML='';
   document.getElementById('pa-legend').innerHTML='';
   document.getElementById('pa-panel').style.display='none';
+  document.getElementById('pa-session-card').style.display='none';
   paUpdateStoryCards(year);
   const tl=document.getElementById('pa-sessions-timeline');
-  if(tl.style.opacity==='1'){
-    // already faded in during the animation — just clear the transition style
-    tl.style.transition='';
-  } else {
-    drawSessionsTimeline(year);
-  }
+  tl.style.transition='';
+  tl.style.opacity='1';
+  drawSessionsTimeline(year);
 }
 
 // ════════════════════════════════════════════════
 // D3 SESSIONS BAR CHART (shown below combined view)
-// Top sessions by photo count — horizontal lollipop
+// Top sessions by photo count - horizontal lollipop
 // ════════════════════════════════════════════════
 function drawSessionsTimeline(year){
   if(typeof d3==='undefined') return;
