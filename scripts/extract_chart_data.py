@@ -1,16 +1,17 @@
 """
-Run: python extract_viz_data.py
-Writes viz_data.js with real data for index.html.
+Run: python extract_chart_data.py
+Writes data/generated/chart_data.js with real data for index.html.
 """
 import json
 import pandas as pd
 import numpy as np
+import os
 
-CSV = "./data/metadata/photos_metadatas_filtered_v3.csv"
+CSV = "../data/metadata/photos.csv"
 df = pd.read_csv(CSV, low_memory=False)
 print(f"Loaded {len(df)} rows")
 
-# ── Normalise camera model ──────────────────────────────────────────────────
+# Normalise camera model
 model_map = {
     "ILCE-7M4":  "Sony A7 IV",
     "ILCE-7M5":  "Sony A7 V",
@@ -29,14 +30,14 @@ model_map = {
 }
 df["Model_norm"] = df["Model"].replace(model_map)
 
-# ── Parse date ──────────────────────────────────────────────────────────────
+# Parse date 
 df["DateTime"] = pd.to_datetime(df["DateTimeOriginal"], errors="coerce", format="%Y:%m:%d %H:%M:%S")
 df = df.dropna(subset=["DateTime"]).copy()
 df["Year"]  = df["DateTime"].dt.year.astype(int)
 df["Month"] = df["DateTime"].dt.month.astype(int)
 df["Date"]  = df["DateTime"].dt.date
 
-# ── Hero stats ──────────────────────────────────────────────────────────────
+# Hero stats 
 total_photos = len(df)
 shooting_days = df["Date"].nunique()
 
@@ -58,9 +59,7 @@ print(f"Hero: {total_photos} photos, {shooting_days} shooting days, {unique_lens
 df4 = df[df["Year"].between(2021, 2025)].copy()
 print(f"2021-2025: {len(df4)} rows")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 0. SANKEY — photo flow estimation
-# ══════════════════════════════════════════════════════════════════════════════
+# SANKEY — photo flow estimation
 def _to_bool(series):
     return series.astype(str).str.strip().str.lower().isin({"true", "1", "yes"})
 
@@ -117,7 +116,7 @@ selected_photos = int(len(df))
 picture_shots_est = estimate_picture_shots(df)
 picture_shots_est = max(picture_shots_est, selected_photos)
 
-# Business rule: current dataset already corresponds to selected (and edited) photos.
+# Current dataset already corresponds to selected (and edited) photos.
 edited_photos = selected_photos
 
 published_photos = 500  # User-provided estimate
@@ -144,9 +143,8 @@ sankey_data = {
 }
 print(f"Sankey totals: {sankey_data['totals']}")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 1. EXPOSURE EXPLORER
-# ══════════════════════════════════════════════════════════════════════════════
+
+# EXPOSURE EXPLORER
 def cam_label(m):
     if "Sony" in str(m):       return "Sony"
     if "Fuji" in str(m):       return "Fuji"
@@ -190,10 +188,9 @@ exp_points = [
     for _, r in sample.iterrows()
 ]
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 2. GEAR RACE — % share per month, top 6 cameras incl. Sony A7 IV
+
+# GEAR RACE - % share per month, top 6 cameras incl. Sony A7 IV
 #    Timeline trimmed to first month any camera has data.
-# ══════════════════════════════════════════════════════════════════════════════
 top6 = df4["Model_norm"].value_counts().head(6).index.tolist()
 print(f"\nTop 6 cameras: {top6}")
 
@@ -220,11 +217,11 @@ print("\nPeak monthly shots per camera:")
 for cam in top6:
     print(f"  {cam}: max {max(monthly[cam])} shots/month")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 3. LENS RACE — top 5 interchangeable lenses, monthly shot count
+
+
+# LENS RACE — top 5 interchangeable lenses, monthly shot count
 #    Excludes fixed-lens cameras (Fuji X100VI, Panasonic LX100, Insta360).
 #    Timeline trimmed to first month any lens has data.
-# ══════════════════════════════════════════════════════════════════════════════
 FIXED_LENS_MODELS = {"Fuji X100VI", "Panasonic LX100", "Insta360 OneRS", "Fuji X-T30",
                      "iPhone 13 Pro", "iPhone 15"}
 lens_df = df4[~df4["Model_norm"].isin(FIXED_LENS_MODELS)].copy()
@@ -270,11 +267,9 @@ print("\nPeak monthly shots per lens:")
 for l in top5_lenses:
     print(f"  {l}: max {max(lens_monthly[l])} shots/month")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 4. PHOTO ACTIVITY — year counts + daily counts
-# ══════════════════════════════════════════════════════════════════════════════
+# PHOTO ACTIVITY — year counts + daily counts
 year_counts = df.groupby('Year').size().reset_index(name='count')
-partial_years = {2021, 2026}  # adjust if needed
+partial_years = {2022, 2026} 
 year_data = [
     {"year": int(r['Year']), "count": int(r['count']), "partial": int(r['Year']) in partial_years}
     for _, r in year_counts.iterrows()
@@ -295,9 +290,8 @@ album_daily = (df2.groupby(['date_str', 'album'])
                .drop_duplicates('date_str'))
 album_map = {row['date_str']: row['album'] for _, row in album_daily.iterrows()}
 
-# ══════════════════════════════════════════════════════════════════════════════
+
 # Write viz_data.js
-# ══════════════════════════════════════════════════════════════════════════════
 cameras_js = json.dumps(top6)
 cam_cols_js = json.dumps({
     top6[0]: "#2563EB",
@@ -311,8 +305,7 @@ cam_cols_js = json.dumps({
 lens_col_list = ["#2563EB", "#F97316", "#14B8A6", "#8B5CF6", "#22C55E"]
 lens_cols_js = json.dumps({top5_lenses[i]: lens_col_list[i] for i in range(len(top5_lenses))})
 
-out = f"""// AUTO-GENERATED by extract_viz_data.py — do not edit by hand.
-// Re-run the script to refresh.
+out = f"""// AUTO-GENERATED by extract_viz_data.py.
 
 const HERO_STATS = {{
   photos: {total_photos},
@@ -339,7 +332,8 @@ const ALBUM_MAP = {json.dumps(album_map)};
 const SANKEY_DATA = {json.dumps(sankey_data, indent=2)};
 """
 
-with open("viz_data.js", "w") as f:
+out_path = os.path.join(os.path.dirname(__file__), "../data/generated/chart_data.js")
+with open(out_path, "w") as f:
     f.write(out)
-
+    
 print("\nWrote viz_data.js")

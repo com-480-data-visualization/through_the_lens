@@ -400,7 +400,7 @@ canvas{display:block}
 </section>
 </div>
 
-<script src="viz_data.js"></script>
+<script src="data/generated/chart_data.js"></script>
 <script src="data/hero-gallery/gallery-data.js"></script>
 <script>
 // ═══════════════════════════════════════════════
@@ -1645,7 +1645,7 @@ let skStripStage=null;
 let skFilmToken=0;
 const SK_STAGE_ORDER=['shots','selection','edition','published'];
 
-const SK_PHOTO_BASE='data/workflow-sankey/';
+const SK_PHOTO_BASE='data/sankey-previews/';
 // ── Update these arrays when you add/remove files ────────────────────────
 const SK_BEFORE_NUMS=[1,8,9];               // numbers that have before_edit-XX.jpg
 const SK_LOST_NUMS=[2,3,4,5,6,7,10,11,12]; // numbers that have lost-XX.jpg
@@ -1661,8 +1661,8 @@ const SK_PHOTOS=(function(){
   return {
     shots,
     edition:SK_BEFORE_NUMS.filter(n=>SK_AFTER_NUMS.includes(n))
-      .map(n=>({before:`before_edit-${pad(n)}.jpg`,after:`after_edit-${n}.jpg`})),
-    published:SK_PUBLISHED_NUMS.map(n=>`published-${n}.jpg`)
+      .map(n=>({before:`before_edit-${pad(n)}.jpg`,after:`after_edit-${pad(n)}.jpg`})),
+    published:SK_PUBLISHED_NUMS.map(n=>`published-${pad(n)}.jpg`)
   };
 })();
 
@@ -2617,32 +2617,6 @@ const PA_PEAK = YEAR_DATA.reduce((a,b)=>b.count>a.count?b:a).year;
 const PA_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PA_MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-// Previews on heatmap hover: PA_YEAR_THUMB = one image per year (data/pa-previews/2024.jpg).
-// PA_DAY_THUMB overrides specific dates (e.g. data/pa-previews/day-2024-05-03.jpg).
-const PA_YEAR_THUMB={};
-const PA_GALLERY_THUMB={};
-const PA_DAY_THUMB={
-  '2022-07-23':'data/pa-previews/day-2022-07-23.jpg',
-  '2023-01-17':'data/pa-previews/day-2023-01-17.jpg',
-  '2024-05-03':'data/pa-previews/day-2024-05-03.jpg',
-  '2025-10-14':'data/pa-previews/day-2025-10-14.jpg',
-};
-function paYearPlaceholderSvgUri(year){
-  const hue=210+(year%6)*22;
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200"><rect fill="hsl(${hue},28%,94%)" width="320" height="200"/><text x="160" y="104" text-anchor="middle" fill="#94a3b8" font-family="Inter,sans-serif" font-size="14" font-weight="500">${year}</text><text x="160" y="128" text-anchor="middle" fill="#cbd5e1" font-family="Inter,sans-serif" font-size="10">Drop preview in data/pa-previews/</text></svg>`;
-  return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
-}
-function paThumbSrc(isoDate){
-  if(PA_DAY_THUMB[isoDate]) return PA_DAY_THUMB[isoDate];
-  if(PA_GALLERY_THUMB[isoDate]) return PA_GALLERY_THUMB[isoDate];
-  const y=+isoDate.slice(0,4);
-  return PA_YEAR_THUMB[y]||null;
-}
-function paThumbTooltipHtml(isoDate){
-  const src=paThumbSrc(isoDate);
-  if(!src) return '';
-  return `<div class="tt-preview-wrap"><img class="tt-preview-img" src="${src}" alt="" loading="eager" decoding="sync" onerror="this.closest('.tt-preview-wrap').style.display='none'"/></div>`;
-}
 
 // ── state ────────────────────────────────────────
 // paView: 'years' | 'months' | 'heatmap' | 'morphing'
@@ -3370,7 +3344,7 @@ PA_C.addEventListener('mousemove',e=>{
           const s=ALBUM_MAP[b.date]||null;
           const dl=new Date(b.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'long'});
           const tc=(b.col==='#F1F5F9'||b.col==='#DBEAFE')?'#93C5FD':(b.col||P.g1);
-          showTT(e,`<span style="color:${tc}">${dl}</span>`,b.count.toLocaleString()+' photos'+(s?'<br>'+s:'')+paThumbTooltipHtml(b.date),{preview:true});
+          showTT(e,`<span style="color:${tc}">${dl}</span>`,b.count.toLocaleString()+' photos'+(s?'<br>'+s:''),{preview:true});
           if(s!==paHighlightSession){
             paHighlightSession=s;
             document.querySelectorAll('#pa-sessions-timeline .sr').forEach(g=>{g.style.opacity=(!s||g.dataset.session===s)?'1':'0.3';});

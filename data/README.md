@@ -1,63 +1,71 @@
-# Shared dataset (DataViz)
+# Data
 
-Paquet prêt à partager : métadonnées, histogrammes RGB 128 bins (avant / après), embeddings CLIP Immich (sous-ensemble matché).
+This folder contains all assets used by the website. Below is an overview of what each folder contains and how it fits into the project.
 
-## Contenu
-
-| Élément | Fichier / dossier | Rôle |
-|--------|-------------------|------|
-| Métadonnées | `metadata/photos_metadatas_filtered_v3.csv` | Chemins (`Directory`, `FileName`), EXIF, Lightroom, etc. — **une ligne par photo**, ordre stable. |
-| Histogrammes | `histograms/rgb128_before_after_merged.parquet` | Même tableau + colonnes `hist_before_*`, `hist_after_*`, `before_ok`, `after_ok`, etc. + `row_index`. |
-| Qualité histo | `histograms/manifest.json`, `histograms/errors.jsonl` | Paramètres du run (128 bins) et lignes en erreur. |
-| Immich | `immich_embeddings/immich_clip_alignment.csv` | Pour chaque ligne du CSV : `row_index`, chemin, méthode de match, `matched`, ids Immich. |
-| Immich | `immich_embeddings/immich_clip_embeddings.npz` | `row_index` (51220) + `embedding` (512 flottants) — **uniquement les photos matchées**. |
-| Immich | `immich_embeddings/immich_clip_summary.json` | Statistiques de jointure. |
-| Doc histo | `docs/README_histrgb128.md` | Détail des colonnes histogrammes (schéma d’origine ; le Parquet fusionné suit la même logique). |
-| Galerie hero | `hero-gallery/manifest.json`, `hero-gallery/thumb/` | 124 vignettes WebP + dates de prise (mosaïque intro). Voir `hero-gallery/README.md`. Régénération : `python scripts/build_hero_gallery.py`. |
-
-## Clés de jointure (recommandé)
-
-1. **`row_index`** : entier `0 … 56889`, identique entre le CSV, le Parquet fusionné, et `immich_clip_alignment.csv`. C’est la clé la plus simple.
-2. **`DocumentID`** : identifiant XMP (quelques valeurs vides dans le CSV — voir `docs/README_histrgb128.md`).
-
-### Exemple Python
-
-```python
-import numpy as np
-import pandas as pd
-
-meta = pd.read_csv("metadata/photos_metadatas_filtered_v3.csv", low_memory=False)
-meta.insert(0, "row_index", range(len(meta)))
-
-hist = pd.read_parquet("histograms/rgb128_before_after_merged.parquet")
-# hist contient déjà row_index après fusion
-
-align = pd.read_csv("immich_embeddings/immich_clip_alignment.csv")
-z = np.load("immich_embeddings/immich_clip_embeddings.npz", allow_pickle=True)
-emb_rows = z["row_index"]
-emb = z["embedding"]  # (51220, 512)
-
-m = meta.merge(align[["row_index", "matched", "match_method", "immich_asset_id"]], on="row_index", how="left")
-emb_df = pd.DataFrame({"row_index": emb_rows, **{f"clip_{i}": emb[:, i] for i in range(emb.shape[1])}}})
-# ou indexer emb par row_index via un dict / xarray selon besoin
+```
+data/
+├── metadata/
+│   └── photos.csv          # not committed — download from Google Drive
+├── generated/
+│   └── chart_data.js       # auto-generated
+├── hero-gallery/
+│   ├── thumb/              # 124 WebP thumbnails
+│   ├── manifest.json
+│   └── gallery-data.js
+└── sankey-previews/
+    ├── before_edit-XX.jpg
+    ├── after_edit-XX.jpg
+    ├── lost-XX.jpg
+    └── published-XX.jpg
 ```
 
-Pour ne charger que `row_index` et les colonnes d’histogramme : ouvrir le Parquet avec `pandas` ou `pyarrow`, filtrer `df.columns` par préfixe `hist_before_` / `hist_after_`, puis `read_parquet(..., columns=[...])`.
+---
 
-## Ce qui n’est pas inclus (volontairement ou optionnel)
+## `metadata/`
 
-- **Pixels / miniatures** : chemins absolus vers le disque ; pas de copie des fichiers RAW/JPEG.
-- **Export brut Immich** (`smart_search_export.csv`) : très lourd ; les embeddings livrés suffisent pour la plupart des usages si la jointure via `alignment.csv` convient.
-- **Chunks Parquet intermédiaires** : le fichier fusionné remplace les ~190 chunks du dossier de travail.
+Contains the source dataset that powers all charts and visualizations on the site.
 
-### Idées d’extensions utiles pour le groupe (à ajouter plus tard si besoin)
+- **`photos.csv`** — one row per photo, with EXIF metadata (camera model, focal length, aperture, date, etc.) and Lightroom editing data. This file is **not committed** to the repository due to its size (192 MB).
 
-- Taxonomie / règles de tags : copies dans `docs/tag_taxonomy_v1.json` et `docs/album_tag_rules_v1.json` (alignées sur le dépôt principal).
-- Sorties **vision multilabel** ou tags fusionnés, si vous en générez.
-- **Manifest miniatures** (`thumbs256_*`) si une analyse image se fait sur JPEG 256 plutôt que sur RAW.
-- Petit **schéma** (JSON/YAML) listant les groupes de colonnes du CSV pour navigation dans Observable / Vega.
+  Download it from Google Drive: https://drive.google.com/drive/folders/13Vj7DCE1lWUc6e9tgYaZV9_f0R77TpIG?usp=sharing
 
-## Reproductibilité
+  Once downloaded, place it at `data/metadata/photos.csv`, then run the extraction script to regenerate the chart data:
 
-- Histogrammes : script `scripts/build_rgb_histograms.py`, run `histogram_outputs_rgb128_full` (voir `manifest.json`).
-- Immich : `scripts/immich_embedding_join.py` sur l’export smart search.
+  ```bash
+  python scripts/extract_chart_data.py
+  ```
+
+---
+
+## `generated/`
+
+Contains files produced by scripts.
+
+- **`chart_data.js`** — generated from `metadata/photos.csv` by `scripts/extract_chart_data.py`. Exposes the JavaScript globals (`CAMERAS`, `CAM_COLS`, `GEAR_MONTHLY`) that are loaded by `index.html` to render the charts.
+
+---
+
+## `hero-gallery/`
+
+Assets for the animated photo mosaic shown in the intro section of the site.
+
+- **`thumb/`** — 124 WebP thumbnails displayed in the mosaic background.
+- **`manifest.json`** — list of thumbnails with metadata used to lay out the mosaic.
+- **`gallery-data.js`** — precomputed gallery data loaded by `index.html`.
+
+To regenerate this gallery from a new set of source photos:
+```bash
+python scripts/build_hero_gallery.py
+```
+See `hero-gallery/README.md` for details on the source folder and options.
+
+---
+
+## `sankey-previews/`
+
+JPEG photos illustrating the workflow Sankey diagram section. Each file corresponds to a step in the photo editing workflow:
+
+- `before_edit-XX.jpg` — raw shots before editing
+- `after_edit-XX.jpg` — photos after editing
+- `lost-XX.jpg` — photos that were culled
+- `published-XX.jpg` — final published photo

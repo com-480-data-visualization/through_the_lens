@@ -462,13 +462,13 @@ tr:last-child td{border-bottom:none}
   </div>
 
   <div style="display:flex;gap:2mm;margin-top:4mm">
-    <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="data/hero-gallery/thumb/epfl-004.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
-    <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="data/hero-gallery/thumb/epfl-009.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
-    <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="data/hero-gallery/thumb/epfl-015.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
-    <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="data/hero-gallery/thumb/epfl-024.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
-    <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="data/hero-gallery/thumb/epfl-028.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
-    <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="data/hero-gallery/thumb/epfl-037.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
-    <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="data/hero-gallery/thumb/epfl-041.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+    <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="../data/hero-gallery/thumb/epfl-004.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+    <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="../data/hero-gallery/thumb/epfl-009.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+    <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="../data/hero-gallery/thumb/epfl-015.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+    <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="../data/hero-gallery/thumb/epfl-024.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+    <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="../data/hero-gallery/thumb/epfl-028.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+    <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="../data/hero-gallery/thumb/epfl-037.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+    <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="../data/hero-gallery/thumb/epfl-041.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
   </div>
   <div style="font-size:8pt;color:var(--muted);margin-top:2mm;line-height:1.5">A selection from the archive — every photograph also a row of numbers.</div>
 
@@ -796,7 +796,7 @@ tr:last-child td{border-bottom:none}
       const idx = (pi * 7 + i) % all.length;
       const s = pi * 70 + i;
       const img = document.createElement('img');
-      img.src = 'data/hero-gallery/thumb/' + all[idx] + '.webp';
+      img.src = '../data/hero-gallery/thumb/' + all[idx] + '.webp';
       const w = 110 + seed(s*3)*80;
       const h = w * 0.67;
       const x = seed(s*7)*92;

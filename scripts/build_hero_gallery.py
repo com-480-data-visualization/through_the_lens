@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Build web thumbnails + manifest for hero mosaic from EPFL shutterstock JPGs."""
 
 from __future__ import annotations
