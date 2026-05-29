@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Through the Lens — Process Book</title>
+<title>Through the Lens · Process Book</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
 <style>
 /* ── Reset ── */
@@ -56,6 +56,7 @@ body{
 }
 
 @media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   html{background:white}
   body{
     max-width:100%;
@@ -445,17 +446,17 @@ tr:last-child td{border-bottom:none}
 <div class="page">
 <div class="content">
 
-  <div class="section-label">1 — The project</div>
+  <div class="section-label">1 · The project</div>
   <h2 class="section-title">Where the idea came from</h2>
   <div class="section-rule"></div>
 
-  <p>The project started with Adrien's pitch: he had spent over four years photographing EPFL campus life — events, concerts, associations, sport, studying, everyday moments — and had never thought of looking at the metadata as data. Lightroom had been recording everything silently: 56,882 frames, each stamped with ISO, aperture, shutter speed, focal length, every post-processing slider touched. He knew the photographs. He had no idea what the numbers said.</p>
+  <p>The project started with Adrien's pitch: he had spent over four years photographing EPFL campus life (events, concerts, associations, sport, studying, everyday moments) and had never thought of looking at the metadata as data. Lightroom had been recording everything silently: 56,882 frames, each stamped with ISO, aperture, shutter speed, focal length, every post-processing slider touched. He knew the photographs. He had no idea what the numbers said.</p>
 
-  <p>One external project shaped how we thought about showing it. The Pudding's <a href="https://pudding.cool/2024/11/love-songs" target="_blank"><em>Is the Love Song Dying?</em></a> places thousands of songs as individual dots and lets collective behaviour emerge — we borrowed that idea for the Exposure Explorer. The aesthetic — thousands of dots forming a shape — is what we were going for.</p>
+  <p>One external project shaped how we thought about showing it. The Pudding's <a href="https://pudding.cool/2024/11/love-songs" target="_blank"><em>Is the Love Song Dying?</em></a> places thousands of songs as individual dots and lets collective behaviour emerge, and we borrowed that idea for the Exposure Explorer. The aesthetic we were going for is exactly that: thousands of dots forming a shape.</p>
 
   <p>The project was always going to be led by Adrien's feedback. Every row in the dataset is a photo he actually took, so whenever we found a pattern, the first question was: does this match what actually happened? Only he could answer that. Lea and Martina brought the technical and visualization side; Adrien kept the analysis grounded in reality.</p>
 
-  <p>We are all EPFL students — we recognised the events, the associations, the campus rhythms in the data. It wasn't abstract. It was places we'd been and things we'd also lived through.</p>
+  <p>We are all EPFL students, so we recognised the events, the associations, the campus rhythms in the data. It wasn't abstract. It was places we'd been and things we'd also lived through.</p>
 
   <div class="callout" style="margin-top:5mm">
     Every spike in the chart is a day Adrien remembers. The numbers already knew the story. We just had to find a way to show it.
@@ -470,7 +471,7 @@ tr:last-child td{border-bottom:none}
     <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="../data/hero-gallery/thumb/epfl-037.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
     <div style="flex:1;height:46mm;overflow:hidden;border-radius:4px"><img src="../data/hero-gallery/thumb/epfl-041.webp" style="width:100%;height:100%;object-fit:cover;display:block"></div>
   </div>
-  <div style="font-size:8pt;color:var(--muted);margin-top:2mm;line-height:1.5">A selection from the archive — every photograph also a row of numbers.</div>
+  <div style="font-size:8pt;color:var(--muted);margin-top:2mm;line-height:1.5">A selection from the archive, where every photograph is also a row of numbers.</div>
 
 </div>
 <div class="page-footer">
@@ -487,20 +488,20 @@ tr:last-child td{border-bottom:none}
 <div class="page">
 <div class="content">
 
-  <div class="section-label">2 — The five visualizations</div>
+  <div class="section-label">2 · The five visualizations</div>
   <h2 class="section-title">What we built and why</h2>
   <div class="section-rule"></div>
 
-  <p>The scroll order tells a story. We start with time — when was Adrien shooting, and how often — because you need to understand the person before the technical stuff means anything. Then gear and exposure: how did the equipment and technique change? The Sankey closes it: of 57k frames, how many survived?</p>
+  <p>The scroll order tells a story. We start with time, asking when Adrien was shooting and how often, because you need to understand the person before the technical stuff means anything. Then gear and exposure: how did the equipment and technique change? The Sankey closes it: of 57k frames, how many survived?</p>
 
-  <p>Our original ambition was broader. Early on we wanted to show how Adrien's editing style had evolved in Lightroom — whether his use of shadows, clarity, or exposure correction had shifted over four years. The EDA showed it was much more complicated than expected. Lightroom sliders don't work in isolation — adjusting shadows automatically affects how exposure reads, pulling one parameter shifts others. Any pattern we tried to surface was immediately entangled with everything else, and the variation was too personal and context-dependent to produce anything readable. The Sankey became the replacement: not how the photos were edited, but how ruthlessly they were culled.</p>
+  <p>Our original ambition was broader. Early on we wanted to show how Adrien's editing style had evolved in Lightroom, whether his use of shadows, clarity, or exposure correction had shifted over four years. The EDA showed it was much more complicated than expected. Lightroom sliders don't work in isolation: adjusting shadows automatically affects how exposure reads, and pulling one parameter shifts others. Any pattern we tried to surface was immediately entangled with everything else, and the variation was too personal and context-dependent to produce anything readable. The Sankey became the replacement: not how the photos were edited, but how ruthlessly they were culled.</p>
 
   <div class="spacer-sm"></div>
 
   <div class="cols">
     <div class="col">
       <h4 class="sub2">Photo Activity</h4>
-      <p><em>When does Adrien shoot, and does the rhythm repeat across years?</em> Year-to-day drill-down. Weekly or monthly views were too coarse — only day-level granularity surfaces individual named sessions.</p>
+      <p><em>When does Adrien shoot, and does the rhythm repeat across years?</em> Year-to-day drill-down. Weekly or monthly views were too coarse; only day-level granularity surfaces individual named sessions.</p>
 
       <h4 class="sub2">Gear Timeline</h4>
       <p><em>Which camera was active when, and how abruptly did transitions happen?</em> Swimlane heatmap, one row per body, intensity normalised per camera so all bodies stay visible. A bar chart race was rejected: the Sony A7 IV at ~96% of shots would immediately swamp everything else.</p>
@@ -513,7 +514,7 @@ tr:last-child td{border-bottom:none}
       <p><em>How did the mix of lenses shift over time, and which focal lengths gained favour?</em> Animated bar chart race of cumulative shots per interchangeable lens. Fixed-lens cameras excluded.</p>
 
       <h4 class="sub2">Workflow Funnel</h4>
-      <p><em>Of 57k frames captured, how many survived to publication?</em> Sankey from Shots → Selection → Edition → Published. The 160k-to-500 ratio is so extreme that D3's automatic layout produced unreadable overlaps — we placed nodes manually.</p>
+      <p><em>Of 57k frames captured, how many survived to publication?</em> Sankey from Shots → Selection → Edition → Published. The 160k-to-500 ratio is so extreme that D3's automatic layout produced unreadable overlaps, so we placed nodes manually.</p>
 
     </div>
   </div>
@@ -533,24 +534,24 @@ tr:last-child td{border-bottom:none}
 <div class="page">
 <div class="content">
 
-  <div class="section-label">3 — Exposure Explorer</div>
+  <div class="section-label">3 · Exposure Explorer</div>
   <h2 class="section-title">Getting the scatter plot right</h2>
   <div class="section-rule"></div>
 
-  <p>The chart shows 2,000 photographs, not all 56,882. Two reasons: spring-physics animation at 60fps becomes unusable past a few thousand points, and a random sample wouldn't work anyway — the Sony A7 IV accounts for ~96% of all shots, so it would swamp everything else. Instead we use a stratified sample capped at 400 shots per camera per year, so every body stays visible.</p>
+  <p>The chart shows 2,000 photographs, not all 56,882. Two reasons: spring-physics animation at 60fps becomes unusable past a few thousand points, and a random sample wouldn't work anyway, since the Sony A7 IV accounts for ~96% of all shots and would swamp everything else. Instead we use a stratified sample capped at 400 shots per camera per year, so every body stays visible.</p>
 
   <h3 class="sub">Log scales</h3>
-  <p>On a linear axis, the gap between ISO 100 and ISO 200 looks identical to the gap between ISO 6400 and ISO 6500. But the first doubles the light sensitivity — a huge practical difference — while the second barely changes anything. The result: the range where most shots actually live gets squished into a corner, while the high end stretches out mostly empty. Switching to log scale means equal visual distance equals equal photographic difference, so the chart finally matched how the settings actually behave.</p>
+  <p>On a linear axis, the gap between ISO 100 and ISO 200 looks identical to the gap between ISO 6400 and ISO 6500. But the first doubles the light sensitivity, a huge practical difference, while the second barely changes anything. The result: the range where most shots actually live gets squished into a corner, while the high end stretches out mostly empty. Switching to log scale means equal visual distance equals equal photographic difference, so the chart finally matched how the settings actually behave.</p>
 
   <div class="compare" style="margin-top:4mm">
     <div class="compare-item">
-      <div class="compare-label">First version — year as default, no selection</div>
+      <div class="compare-label">First version: year as default, no selection</div>
       <div class="fig-inline" style="overflow:hidden">
         <img src="screenshots_website/ms2_exposure_before.png" alt="Exposure Explorer first version" style="width:100%;height:50mm;object-fit:cover;object-position:top">
       </div>
     </div>
     <div class="compare-item">
-      <div class="compare-label">Current — focal range default, brush + zoom</div>
+      <div class="compare-label">Current: focal range default, brush + zoom</div>
       <div class="fig-inline" style="overflow:hidden">
         <img src="screenshots_website/exposure_explorer_TTL.png" alt="Current Exposure Explorer" style="width:100%;height:50mm;object-fit:cover;object-position:top">
       </div>
@@ -576,35 +577,35 @@ tr:last-child td{border-bottom:none}
 <div class="page">
 <div class="content">
 
-  <div class="section-label">4 — Photo Activity &amp; Workflow Funnel</div>
+  <div class="section-label">4 · Photo Activity &amp; Workflow Funnel</div>
   <h2 class="section-title">What a year actually looks like</h2>
   <div class="section-rule"></div>
 
   <h3 class="sub">Photo Activity</h3>
-  <p>The year chart gave no sense of growth; the heatmap couldn't show which days belonged to the same session. The most useful addition was a named sessions bar chart below the heatmap — it tells you <em>what</em> each cluster of shooting was: Balélec, an association event, a sports day. The two views are bidirectionally linked so you can move between the pattern and the event behind it.</p>
-  <p>The year→heatmap transition went through many iterations before it felt right. A card flip and a height-collapse both looked broken. The final version: the remaining bars fade out, the selected bar zooms and expands until it fills the full canvas, then the heatmap content clips in from a rectangle that grows outward from the centre — so the bar becomes the heatmap container rather than being replaced by it.</p>
+  <p>The year chart gave no sense of growth; the heatmap couldn't show which days belonged to the same session. The most useful addition was a named sessions bar chart below the heatmap, which tells you <em>what</em> each cluster of shooting was: Balélec, an association event, a sports day. The two views are bidirectionally linked so you can move between the pattern and the event behind it.</p>
+  <p>The year→heatmap transition went through many iterations before it felt right. A card flip and a height-collapse both looked broken. The final version: the remaining bars fade out, the selected bar zooms and expands until it fills the full canvas, then the heatmap content clips in from a rectangle that grows outward from the centre, so the bar becomes the heatmap container rather than being replaced by it.</p>
 
   <div class="section-rule" style="margin-top:5mm"></div>
 
   <h3 class="sub">Workflow Funnel</h3>
-  <p>The original Sankey showed all four stages at once. The Published node — 500 photos out of 160k — was easy to miss; the eye went straight to the big loss flow.</p>
+  <p>The original Sankey showed all four stages at once. The Published node, 500 photos out of 160k, was easy to miss; the eye went straight to the big loss flow.</p>
 
   <div class="compare" style="margin-top:3mm;margin-bottom:3mm">
     <div class="compare-item">
-      <div class="compare-label">First version — everything visible at once</div>
+      <div class="compare-label">First version: everything visible at once</div>
       <div class="fig-inline" style="overflow:hidden">
         <img src="screenshots_website/ms2_sankey_before.png" alt="Sankey first version" style="width:100%;height:28mm;object-fit:cover;object-position:top">
       </div>
     </div>
     <div class="compare-item">
-      <div class="compare-label">Current — staged reveal with photo strip</div>
+      <div class="compare-label">Current: staged reveal with photo strip</div>
       <div class="fig-inline" style="overflow:hidden">
         <img src="screenshots_website/workflow_tunnel_TTL.png" alt="Current Workflow Funnel" style="width:100%;height:48mm;object-fit:cover;object-position:top">
       </div>
     </div>
   </div>
 
-  <p>We redesigned it as a <strong>staged progressive reveal</strong>, building left to right as the viewer advances. The first build re-animated all visible columns on every step — fixed by animating only the newly added stage. A photo strip shows what each stage looks like; at Edit, before/after pairs slide in side by side.</p>
+  <p>We redesigned it as a <strong>staged progressive reveal</strong>, building left to right as the viewer advances. The first build re-animated all visible columns on every step, which we fixed by animating only the newly added stage. A photo strip shows what each stage looks like; at Edit, before/after pairs slide in side by side.</p>
 
 </div>
 <div class="page-footer">
@@ -621,23 +622,23 @@ tr:last-child td{border-bottom:none}
 <div class="page">
 <div class="content">
 
-  <div class="section-label">5 — Context and decisions</div>
+  <div class="section-label">5 · Context and decisions</div>
   <h2 class="section-title">Behind the visualizations</h2>
   <div class="section-rule"></div>
 
   <p>The person whose data we were visualizing was also on the team. Every pattern had to hold up against someone who'd actually lived through the four years it describes.</p>
 
   <h3 class="sub">Organising the archive</h3>
-  <p>Before the project started, Adrien had already tagged every photo in his Lightroom library with a named collection — "Assos EPFL", "Balélec", "AGEPoly", and dozens more. All 56,882 photos carry a label. Without four years of quiet cataloguing, the sessions timeline in Photo Activity wouldn't be possible.</p>
+  <p>Before the project started, Adrien had already tagged every photo in his Lightroom library with a named collection: "Assos EPFL", "Balélec", "AGEPoly", and dozens more. All 56,882 photos carry a label. Without four years of quiet cataloguing, the sessions timeline in Photo Activity wouldn't be possible.</p>
 
   <h3 class="sub">Shaping the narrative</h3>
-  <p>An earlier draft opened with the Exposure Explorer. The pushback: a visitor landing on a scatter plot of ISO values has no idea whose photos these are. The site now opens with Photo Activity — time and volume — and the technical charts come later.</p>
+  <p>An earlier draft opened with the Exposure Explorer. The pushback: a visitor landing on a scatter plot of ISO values has no idea whose photos these are. The site now opens with Photo Activity, time and volume first, and the technical charts come later.</p>
 
   <h3 class="sub">The photo mosaic</h3>
-  <p>124 photographs from the archive, curated and processed as WebP thumbnails, form the parallax grid that drifts as you scroll. The reveal effect — photos materialising under the cursor across blank space — was a separate piece of the same idea. It's what visitors notice first.</p>
+  <p>124 photographs from the archive, curated and processed as WebP thumbnails, form the parallax grid that drifts as you scroll. The reveal effect, where photos materialise under the cursor across blank space, was a separate piece of the same idea. It's what visitors notice first.</p>
 
   <h3 class="sub">Insight work for the Exposure Explorer</h3>
-  <p>The chart was technically correct, but hard to read without photographic context. A cluster could be named: <em>handheld indoor events, high ISO, wide open</em>. All 12 axis combinations have insight cards — the handheld sharpness rule, optical limits by lens family, the aperture-priority shooting structure. Without someone who'd taken those photos, the plot is just dots.</p>
+  <p>The chart was technically correct, but hard to read without photographic context. A cluster could be named: <em>handheld indoor events, high ISO, wide open</em>. All 12 axis combinations have insight cards covering the handheld sharpness rule, optical limits by lens family, and the aperture-priority shooting structure. Without someone who'd taken those photos, the plot is just dots.</p>
 
 </div>
 <div class="page-footer">
@@ -654,15 +655,15 @@ tr:last-child td{border-bottom:none}
 <div class="page">
 <div class="content">
 
-  <div class="section-label">6 — Design decisions</div>
+  <div class="section-label">6 · Design decisions</div>
   <h2 class="section-title">What we got wrong first</h2>
   <div class="section-rule"></div>
 
-  <p>The hardest design problem was the scatter plot axes. Photographers think in stops — each a doubling of light — so a linear scale misrepresents everything. The gap between f/1.4 and f/2 is a full stop; between f/8 and f/9 it's barely a third; on a linear axis they look identical. Switching to log scale made the clusters readable. Colour was the same problem: year tells you <em>when</em> a shot was taken, not <em>how</em>. Focal range turned out to be the most useful option — it's independent of any axis and adds information the other two don't.</p>
+  <p>The hardest design problem was the scatter plot axes. Photographers think in stops, each a doubling of light, so a linear scale misrepresents everything. The gap between f/1.4 and f/2 is a full stop; between f/8 and f/9 it's barely a third; on a linear axis they look identical. Switching to log scale made the clusters readable. Colour was the same problem: year tells you <em>when</em> a shot was taken, not <em>how</em>. Focal range turned out to be the most useful option, because it's independent of any axis and adds information the other two don't.</p>
 
   <p>Interaction with the scatter plot went through a few versions. Dimming non-selected dots showed which points were chosen but gave no sense of how they clustered together. The zoom-into-selection approach works differently: spring physics re-run on the selection alone, the chosen points expanding to fill the canvas so their internal structure becomes readable.</p>
 
-  <p>The Sankey layout hit a hard constraint. D3's automatic algorithm places nodes by flow optimisation, which produced overlapping labels given the extreme 160k-to-500 funnel ratio. We ended up placing all nodes manually and using D3 only for bezier link rendering — which also let us control label positions without fighting the layout engine.</p>
+  <p>The Sankey layout hit a hard constraint. D3's automatic algorithm places nodes by flow optimisation, which produced overlapping labels given the extreme 160k-to-500 funnel ratio. We ended up placing all nodes manually and using D3 only for bezier link rendering, which also let us control label positions without fighting the layout engine.</p>
 
   <h3 class="sub">What stayed and why</h3>
 
@@ -692,7 +693,7 @@ tr:last-child td{border-bottom:none}
 <div class="page">
 <div class="content">
 
-  <div class="section-label">7 — Team contributions</div>
+  <div class="section-label">7 · Team contributions</div>
   <h2 class="section-title">Who did what</h2>
   <div class="section-rule"></div>
 
@@ -707,23 +708,23 @@ tr:last-child td{border-bottom:none}
     </thead>
     <tbody>
       <tr>
-        <td>Exposure Explorer — axes, brush selection, zoom animation</td>
+        <td>Exposure Explorer: axes, brush selection, zoom animation</td>
         <td class="td-check">●</td><td></td><td></td>
       </tr>
       <tr>
-        <td>Exposure Explorer — insight cards (content &amp; interpretation)</td>
+        <td>Exposure Explorer: insight cards (content &amp; interpretation)</td>
         <td></td><td class="td-check-b">●</td><td></td>
       </tr>
       <tr>
-        <td>Gear Timeline — swimlane heatmap, hover/drag, stats card</td>
+        <td>Gear Timeline: swimlane heatmap, hover/drag, stats card</td>
         <td class="td-check">●</td><td></td><td></td>
       </tr>
       <tr>
-        <td>Lens Race — animated bar chart race</td>
+        <td>Lens Race: animated bar chart race</td>
         <td class="td-check">●</td><td></td><td></td>
       </tr>
       <tr>
-        <td>Photo Activity — banner, season colours, sessions chart, highlights</td>
+        <td>Photo Activity: banner, season colours, sessions chart, highlights</td>
         <td></td><td></td><td class="td-check-m">●</td>
       </tr>
       <tr>
@@ -731,15 +732,15 @@ tr:last-child td{border-bottom:none}
         <td class="td-check">●</td><td class="td-check-b">●</td><td class="td-check-m">●</td>
       </tr>
       <tr>
-        <td>Workflow Funnel — original Sankey + before/after animation</td>
+        <td>Workflow Funnel: original Sankey + before/after animation</td>
         <td></td><td class="td-check-b">●</td><td></td>
       </tr>
       <tr>
-        <td>Workflow Funnel — staged reveal, photo strip, lightbox</td>
+        <td>Workflow Funnel: staged reveal, photo strip, lightbox</td>
         <td></td><td></td><td class="td-check-m">●</td>
       </tr>
       <tr>
-        <td>Hero mosaic — curation, thumbnails, parallax (Adrien); cursor reveal effect (Lea)</td>
+        <td>Hero mosaic: curation, thumbnails, parallax (Adrien); cursor reveal effect (Lea)</td>
         <td class="td-check">●</td><td class="td-check-b">●</td><td></td>
       </tr>
       <tr>
@@ -761,7 +762,7 @@ tr:last-child td{border-bottom:none}
     </tbody>
   </table>
 
-  <div class="section-label" style="margin-top:5mm">8 — Reflection</div>
+  <div class="section-label" style="margin-top:5mm">8 · Reflection</div>
   <h3 class="sub" style="margin-top:0">What we learned</h3>
 
   <p>Making five separate visualizations feel like one coherent thing was harder than any single technical problem. The order and framing matter as much as the charts, and we didn't get that right until late.</p>
