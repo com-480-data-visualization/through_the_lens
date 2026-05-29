@@ -1,12 +1,14 @@
-# Through the Lens — A Visual Story of 57,000 Frames
+# Through the Lens: A Visual Story of 57,000 Frames
 
-**Through the Lens** is a data visualization project created for EPFL's [COM-480 Data Visualization](https://com-480.github.io/) course. It explores four years of personal photography through EXIF metadata exported from Lightroom — uncovering temporal patterns, gear evolution, exposure habits, and workflow across ~56,890 photos.
+**Through the Lens** is a data visualization project created for EPFL's [COM-480 Data Visualization](https://com-480.github.io/) course. It explores four years of personal photography through EXIF metadata exported from Lightroom, uncovering temporal patterns, gear evolution, exposure habits, and workflow across ~56,890 photos.
 
 **Website:** https://com-480-data-visualization.github.io/through_the_lens/
 
 **Team:** Lea Grieder, Adrien Buttier, Martina Gatti
 
 **Process book:** [`milestone_3/process_book.pdf`](milestone_3/process_book.pdf)
+
+**Screencast:** [`Screencast.mov`](Screencast.mov)
 
 ---
 
@@ -21,7 +23,7 @@
 ```
 through_the_lens/
 ├── data/                       # all data assets (see data/README.md)
-│   ├── metadata/               # source CSV — not committed, download required
+│   ├── metadata/               # source CSV (not committed, download required)
 │   ├── generated/              # auto-generated JS data files
 │   ├── hero-gallery/           # thumbnails for the intro mosaic
 │   └── sankey-previews/        # images for the workflow funnel section
@@ -40,7 +42,7 @@ through_the_lens/
 
 ## Getting Started
 
-Running the website needs only the two steps below — the processed data it reads (`data/generated/chart_data.js`), the hero gallery, and the workflow previews are all committed to the repository. The raw dataset and Python tooling are **only** required if you want to regenerate that data (see "Regenerating the data" below).
+Running the website needs only the two steps below: the processed data it reads (`data/generated/chart_data.js`), the hero gallery, and the workflow previews are all committed to the repository. The raw dataset and Python tooling are **only** required if you want to regenerate that data (see "Regenerating the data" below).
 
 ### 1. Clone the repository
 
@@ -103,6 +105,6 @@ This reads `data/metadata/photos.csv` and writes `data/generated/chart_data.js`,
 
 | Milestone | Description |
 |-----------|-------------|
-| `milestone_1/` | Project proposal — initial concept, dataset description, research questions, exploratory analysis |
-| `milestone_2/` | Website draft — visualization concepts, design decisions, and first prototype |
-| `milestone_3/` | Final delivery — process book |
+| `milestone_1/` | Project proposal: initial concept, dataset description, research questions, exploratory analysis |
+| `milestone_2/` | Website draft: visualization concepts, design decisions, and first prototype |
+| `milestone_3/` | Final delivery: process book |
