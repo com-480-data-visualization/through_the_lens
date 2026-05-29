@@ -19,7 +19,7 @@
 ## Repository Structure
 
 ```
-plot_twisters/
+through_the_lens/
 ├── data/                       # all data assets (see data/README.md)
 │   ├── metadata/               # source CSV — not committed, download required
 │   ├── generated/              # auto-generated JS data files
@@ -40,6 +40,8 @@ plot_twisters/
 
 ## Getting Started
 
+Running the website needs only the two steps below — the processed data it reads (`data/generated/chart_data.js`), the hero gallery, and the workflow previews are all committed to the repository. The raw dataset and Python tooling are **only** required if you want to regenerate that data (see "Regenerating the data" below).
+
 ### 1. Clone the repository
 
 ```bash
@@ -47,27 +49,7 @@ git clone https://github.com/com-480-data-visualization/through_the_lens.git
 cd through_the_lens
 ```
 
-### 2. Download the dataset
-
-The source dataset (`photos.csv`) is not committed to the repository due to its size (192 MB). Download it from Google Drive and place it at `data/metadata/photos.csv`:
-
-[Download photos.csv](https://drive.google.com/drive/folders/13Vj7DCE1lWUc6e9tgYaZV9_f0R77TpIG?usp=sharing)
-
-### 3. Install Python dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Generate the chart data
-
-```bash
-python scripts/extract_chart_data.py
-```
-
-This reads `data/metadata/photos.csv` and writes `data/generated/chart_data.js`, which is loaded by `index.html`.
-
-### 5. Run the website locally
+### 2. Run the website locally
 
 The website requires a local HTTP server (a direct `file://` open will not load assets correctly):
 
@@ -76,6 +58,32 @@ python3 -m http.server 8000
 ```
 
 Then open `http://localhost:8000` in your browser.
+
+---
+
+## Regenerating the data (optional)
+
+The site ships with pre-computed data, so these steps are **not** needed to view it. Follow them only to rebuild `data/generated/chart_data.js` from the raw export (e.g. after adding new photos).
+
+### 1. Download the dataset
+
+The source dataset (`photos.csv`) is not committed to the repository due to its size (192 MB). Download it from Google Drive and place it at `data/metadata/photos.csv`:
+
+[Download photos.csv](https://drive.google.com/drive/folders/13Vj7DCE1lWUc6e9tgYaZV9_f0R77TpIG?usp=sharing)
+
+### 2. Install Python dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Generate the chart data
+
+```bash
+python scripts/extract_chart_data.py
+```
+
+This reads `data/metadata/photos.csv` and writes `data/generated/chart_data.js`, which is loaded by `index.html`.
 
 ---
 
