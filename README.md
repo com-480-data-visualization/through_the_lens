@@ -8,7 +8,7 @@
 
 **Process book:** [`milestone_3/process_book.pdf`](milestone_3/process_book.pdf)
 
-**Screencast:** [`Screencast.mov`](Screencast.mov)
+**Screencast:** [`milestone_3/Screencast.mov`](milestone_3/Screencast.mov)
 
 ---
 
