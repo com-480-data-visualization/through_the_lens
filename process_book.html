@@ -25,7 +25,7 @@
 /* ── Page setup ── */
 @page{
   size:A4;
-  margin:18mm 20mm 18mm 20mm;
+  margin:12mm 14mm 12mm 14mm;
 }
 
 /* Screen: centred pages with a visible gap between them */
@@ -34,8 +34,8 @@ html{
 }
 body{
   font-family:'Inter',sans-serif;
-  font-size:10pt;
-  line-height:1.6;
+  font-size:12.5pt;
+  line-height:1.7;
   color:var(--text);
   background:transparent;
   max-width:820px;
@@ -49,7 +49,7 @@ body{
   border-radius:4px;
   box-shadow:0 2px 16px rgba(0,0,0,0.18);
   margin:0 0 28px 0;
-  padding:14mm 16mm 10mm 16mm;
+  padding:5mm 8mm 5mm 8mm;
   height:261mm;
   overflow:hidden;
   position:relative;
@@ -66,7 +66,8 @@ body{
     border-radius:0;
     box-shadow:none;
     margin:0;
-    padding:0;
+    padding:5mm 8mm 5mm 8mm;
+    min-height:261mm;
     height:auto;
     overflow:visible;
     page-break-after:always;
@@ -170,7 +171,7 @@ em{font-style:italic}
 /* ── Content pages ── */
 /* No extra padding needed — .page already carries 16mm sides */
 .content{
-  padding:0 0 7mm 0;
+  padding:0 0 4mm 0;
 }
 
 /* ── Section headings ── */
@@ -184,7 +185,7 @@ em{font-style:italic}
   margin-bottom:1.5mm;
 }
 .section-title{
-  font-size:17pt;
+  font-size:20pt;
   font-weight:500;
   color:var(--text);
   line-height:1.15;
@@ -197,7 +198,7 @@ em{font-style:italic}
 }
 
 h3.sub{
-  font-size:10.5pt;
+  font-size:12pt;
   font-weight:500;
   color:var(--text);
   margin-top:3mm;
@@ -205,7 +206,7 @@ h3.sub{
   font-family:'Playfair Display',serif;
 }
 h4.sub2{
-  font-size:9pt;
+  font-size:10.5pt;
   font-weight:600;
   font-family:'Inter',sans-serif;
   color:var(--g1);
@@ -452,9 +453,9 @@ tr:last-child td{border-bottom:none}
 
   <p>One external project shaped how we thought about showing it. The Pudding's <a href="https://pudding.cool/2024/11/love-songs" target="_blank"><em>Is the Love Song Dying?</em></a> places thousands of songs as individual dots and lets collective behaviour emerge — we borrowed that idea for the Exposure Explorer. The aesthetic — thousands of dots forming a shape — is what we were going for.</p>
 
-  <p>From the start, the project was always going to be led by Adrien's feedback. The data is his — every row in the dataset is a photo he actually took — so whenever we found a pattern, the first question was always: does this match what actually happened? Only he could answer that. Lea and Martina brought the technical and visualization side; Adrien kept the analysis grounded in reality.</p>
+  <p>The project was always going to be led by Adrien's feedback. Every row in the dataset is a photo he actually took, so whenever we found a pattern, the first question was: does this match what actually happened? Only he could answer that. Lea and Martina brought the technical and visualization side; Adrien kept the analysis grounded in reality.</p>
 
-  <p>That also made it easy for all three of us to care about the project. We are all EPFL students, we recognised the events, the associations, the campus rhythms in the data. It wasn't abstract. It was places we'd been and things we'd also lived through.</p>
+  <p>We are all EPFL students — we recognised the events, the associations, the campus rhythms in the data. It wasn't abstract. It was places we'd been and things we'd also lived through.</p>
 
   <div class="callout" style="margin-top:5mm">
     Every spike in the chart is a day Adrien remembers. The numbers already knew the story. We just had to find a way to show it.
@@ -624,7 +625,7 @@ tr:last-child td{border-bottom:none}
   <h2 class="section-title">Behind the visualizations</h2>
   <div class="section-rule"></div>
 
-  <p>This project had an unusual property: the person whose data we were visualizing was also on the team. That changed how design decisions got made — every pattern had to hold up against someone who'd actually lived through the four years it describes.</p>
+  <p>The person whose data we were visualizing was also on the team. Every pattern had to hold up against someone who'd actually lived through the four years it describes.</p>
 
   <h3 class="sub">Organising the archive</h3>
   <p>Before the project started, Adrien had already tagged every photo in his Lightroom library with a named collection — "Assos EPFL", "Balélec", "AGEPoly", and dozens more. All 56,882 photos carry a label. Without four years of quiet cataloguing, the sessions timeline in Photo Activity wouldn't be possible.</p>
@@ -657,7 +658,7 @@ tr:last-child td{border-bottom:none}
   <h2 class="section-title">What we got wrong first</h2>
   <div class="section-rule"></div>
 
-  <p>The hardest design problem was the scatter plot axes. Photographers think in stops — each a doubling of light — so a linear scale misrepresents everything. The gap between f/1.4 and f/2 is a full stop; between f/8 and f/9 it's barely a third; on a linear axis they look identical. Switching to log scale made the clusters readable. The colour encoding needed the same rethink: colouring by year tells you <em>when</em> a shot was taken, not <em>how</em>. We replaced it with focal range (Wide / Normal / Tele), which is independent of any axis and actually adds information.</p>
+  <p>The hardest design problem was the scatter plot axes. Photographers think in stops — each a doubling of light — so a linear scale misrepresents everything. The gap between f/1.4 and f/2 is a full stop; between f/8 and f/9 it's barely a third; on a linear axis they look identical. Switching to log scale made the clusters readable. Colour was the same problem: year tells you <em>when</em> a shot was taken, not <em>how</em>. Focal range turned out to be the most useful option — it's independent of any axis and adds information the other two don't.</p>
 
   <p>Interaction with the scatter plot went through a few versions. Dimming non-selected dots showed which points were chosen but gave no sense of how they clustered together. The zoom-into-selection approach works differently: spring physics re-run on the selection alone, the chosen points expanding to fill the canvas so their internal structure becomes readable.</p>
 
@@ -667,12 +668,12 @@ tr:last-child td{border-bottom:none}
 
   <div class="cols">
     <div class="col">
-      <p><strong>Spring-physics dot animation</strong> — it makes clear that it's the same photos rearranging, not a new chart being drawn. It also handles the zoom animation for free.</p>
-      <p><strong>Canvas + D3 SVG hybrid</strong> — Canvas handles 2,000 animated dots at 60fps; D3 SVG handles axes, brush, and trend line where correct hit-testing matters. Right call from the start.</p>
+      <p><strong>Spring-physics dot animation.</strong> It makes clear that it's the same photos rearranging, not a new chart being drawn. It also handles the zoom animation for free.</p>
+      <p><strong>Canvas + D3 SVG hybrid.</strong> Canvas handles 2,000 animated dots at 60fps; D3 SVG handles axes, brush, and trend line where correct hit-testing matters. Right call from the start.</p>
     </div>
     <div class="col">
-      <p><strong>Contextual insight cards</strong> — they exist because Adrien could read clusters that Lea and Martina could only see as dots. The text explains the photographic reason for each pattern, not just what the pattern is.</p>
-      <p><strong>Scroll-driven single-page layout</strong> — time → gear → technique → curation. Adrien pushed back on an earlier draft that opened with the Exposure Explorer; a scatter plot of ISO values means nothing without knowing whose data it is. The order stayed.</p>
+      <p><strong>Contextual insight cards.</strong> They exist because one person on the team could read clusters that the others could only see as dots. The text explains the photographic reason for each pattern, not just what the pattern is.</p>
+      <p><strong>Scroll-driven single-page layout.</strong> Time → gear → technique → curation. An earlier draft opened with the Exposure Explorer; a scatter plot of ISO values means nothing without knowing whose data it is. The order stayed.</p>
     </div>
   </div>
 
@@ -763,9 +764,9 @@ tr:last-child td{border-bottom:none}
   <div class="section-label" style="margin-top:5mm">8 — Reflection</div>
   <h3 class="sub" style="margin-top:0">What we learned</h3>
 
-  <p>The hardest part wasn't any single technical problem — it was making five separate visualizations feel like one coherent thing. The order and framing matter as much as the charts themselves, and we didn't get that right until late in the project.</p>
+  <p>Making five separate visualizations feel like one coherent thing was harder than any single technical problem. The order and framing matter as much as the charts, and we didn't get that right until late.</p>
 
-  <p>Working with personal data changed the dynamic in ways we didn't expect. Every design decision had to hold up against someone who'd actually lived through the four years it describes. It also taught us that data cleaning isn't a pre-step — camera model normalisation, fixed-lens EXIF recovery, and stratified sampling are design decisions as consequential as anything on the visual layer.</p>
+  <p>Working with personal data changed the dynamic. Every design decision had to hold up against someone who'd actually lived through the four years it describes. It also taught us that data cleaning isn't a pre-step: camera model normalisation, fixed-lens EXIF recovery, and stratified sampling are design decisions, as consequential as anything on the visual layer.</p>
 
 </div>
 <div class="page-footer">
