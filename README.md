@@ -6,6 +6,14 @@
 
 **Team:** Lea Grieder, Adrien Buttier, Martina Gatti
 
+**Process book:** [`milestone_3/process_book.pdf`](milestone_3/process_book.pdf)
+
+---
+
+## Dataset
+
+~56,890 photos (2022–2026), one row per shot with EXIF + Lightroom metadata (camera, lens, ISO, aperture, shutter, focal length, capture date).
+
 ---
 
 ## Repository Structure
@@ -20,10 +28,11 @@ plot_twisters/
 ├── scripts/                    # data processing scripts
 │   ├── extract_chart_data.py   # generates data/generated/chart_data.js
 │   └── build_hero_gallery.py   # generates data/hero-gallery/
+├── js/                         # website JavaScript, split by visualization
 ├── milestone_1/                # project proposal and exploratory analysis
 ├── milestone_2/                # website draft and visualization concepts
 ├── milestone_3/                # process book
-├── index.html                  # main website (single-page)
+├── index.html                  # main website (loads js/ modules)
 └── requirements.txt            # Python dependencies
 ```
 
@@ -70,10 +79,22 @@ Then open `http://localhost:8000` in your browser.
 
 ---
 
+## Visualizations
+
+| Section | Question it answers |
+|---------|--------------------|
+| Photo Activity | When does Adrien shoot, and does the rhythm repeat across years? |
+| Gear Timeline | Which camera was active when, and how abrupt were transitions? |
+| Lens Race | How did lens usage shift over time? |
+| Exposure Explorer | What exposure choices does Adrien make, and do they cluster? |
+| Workflow Funnel | Of 57k frames captured, how many survived to publication? |
+
+---
+
 ## Milestones
 
 | Milestone | Description |
 |-----------|-------------|
 | `milestone_1/` | Project proposal — initial concept, dataset description, research questions, exploratory analysis |
 | `milestone_2/` | Website draft — visualization concepts, design decisions, and first prototype |
-| `milestone_3/` | Final delivery — process book (`process_book.html`) |
+| `milestone_3/` | Final delivery — process book |
